@@ -15,6 +15,9 @@ export interface Meeting {
   risks: string[]
 }
 
+import { getContentLang } from './contentLang'
+import { meetingKo } from './contentKo'
+
 export const meetings: Meeting[] = [
   {
     id: 'mtg-yeogi-0605',
@@ -370,8 +373,14 @@ export const meetings: Meeting[] = [
   },
 ]
 
+const loc = (m: Meeting): Meeting => {
+  if (getContentLang() !== 'ko') return m
+  const ko = meetingKo[m.id]
+  return ko ? { ...m, ...ko } : m
+}
+
 export const meetingsByEntity = (entityId: string): Meeting[] =>
-  meetings.filter((m) => m.entityId === entityId)
+  meetings.filter((m) => m.entityId === entityId).map(loc)
 
 export const latestMeetings = (n: number): Meeting[] =>
-  [...meetings].sort((a, b) => b.date.localeCompare(a.date)).slice(0, n)
+  [...meetings].sort((a, b) => b.date.localeCompare(a.date)).slice(0, n).map(loc)

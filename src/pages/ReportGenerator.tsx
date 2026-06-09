@@ -22,6 +22,7 @@ import {
 } from '../data/reports'
 import { insightByEntity } from '../data/insights'
 import { metricsByEntity } from '../data/salesData'
+import { getContentLang } from '../data/contentLang'
 import { formatUsd, formatNumber, formatPct, formatDate, TODAY } from '../utils/format'
 
 type DetailLevel = '3-line summary' | 'Executive summary' | 'Detailed report'
@@ -168,14 +169,18 @@ function buildReport(entityId: string, type: ReportType, audience: Audience, lan
       : `${m.pendingConfirmationCount} pending confirmations, setup ${m.productSetupProgress}%, risk ${m.riskLevel}.`
     : 'No production data yet.'
 
+  const ko = getContentLang() === 'ko'
+  const h = ko
+    ? { ctx: '감지된 맥락', status: '현황', data: '핵심 데이터', issues: '오픈 이슈', risks: '리스크', rec: '제안', next: '다음 액션', conf: '% 신뢰도', focus: '현재 포커스' }
+    : { ctx: 'Detected Context', status: 'Status', data: 'Key Data', issues: 'Open Issues', risks: 'Risks', rec: 'Recommendation', next: 'Next Action', conf: '% confidence', focus: 'Current focus' }
   const sections: ReportSection[] = [
-    { heading: 'Detected Context', body: `${entity.detectedContext} (${entity.contextConfidence}% confidence). Current focus: ${entity.currentFocus}.` },
-    { heading: 'Status', body: entity.summary },
-    { heading: 'Key Data', body: dataLine },
-    { heading: 'Open Issues', body: entity.openIssues.map((i) => `• ${i}`).join('\n') },
-    { heading: 'Risks', body: entity.risks.map((r) => `• ${r}`).join('\n') },
-    { heading: 'Recommendation', body: insight?.strategicDirection ?? entity.recommendedAction },
-    { heading: 'Next Action', body: entity.nextBestAction },
+    { heading: h.ctx, body: `${entity.detectedContext} (${entity.contextConfidence}${h.conf}). ${h.focus}: ${entity.currentFocus}.` },
+    { heading: h.status, body: entity.summary },
+    { heading: h.data, body: dataLine },
+    { heading: h.issues, body: entity.openIssues.map((i) => `• ${i}`).join('\n') },
+    { heading: h.risks, body: entity.risks.map((r) => `• ${r}`).join('\n') },
+    { heading: h.rec, body: insight?.strategicDirection ?? entity.recommendedAction },
+    { heading: h.next, body: entity.nextBestAction },
   ]
   return {
     id: `gen-${entityId}-${type}`,

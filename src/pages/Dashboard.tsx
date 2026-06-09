@@ -7,8 +7,8 @@ import { ContextBadge } from '../components/ContextBadge'
 import { Button } from '../components/Button'
 import { useToast } from '../components/Toast'
 import { useT } from '../i18n'
-import { entities, healthBand, contextGroups, entityById } from '../data/entities'
-import { todaysBriefing, insightByEntity } from '../data/insights'
+import { entities, getEntities, healthBand, contextGroups, entityById } from '../data/entities'
+import { getTodaysBriefing, insightByEntity } from '../data/insights'
 import { openTasksSorted } from '../data/tasks'
 import { latestMeetings } from '../data/meetings'
 import { draftEmails } from '../data/emails'
@@ -41,8 +41,9 @@ export function Dashboard() {
   const meetings = latestMeetings(4)
   const drafts = draftEmails().slice(0, 4)
 
-  const atRisk = entities.filter((e) => healthBand(e.relationshipHealthScore) === 'At Risk').length
-  const priorities = [...entities]
+  const localized = getEntities()
+  const atRisk = localized.filter((e) => healthBand(e.relationshipHealthScore) === 'At Risk').length
+  const priorities = [...localized]
     .sort((a, b) => a.relationshipHealthScore - b.relationshipHealthScore)
     .slice(0, 6)
 
@@ -80,10 +81,10 @@ export function Dashboard() {
           </span>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wide text-brand-700">OAC Morning Briefing</span>
+              <span className="text-xs font-bold uppercase tracking-wide text-brand-700">{t('l.morningBriefing')}</span>
               <Badge tone="brand" dot>June 9, 2026</Badge>
             </div>
-            <p className="mt-2 text-[15px] leading-relaxed text-slate-700">{todaysBriefing}</p>
+            <p className="mt-2 text-[15px] leading-relaxed text-slate-700">{getTodaysBriefing()}</p>
             <p className="mt-2 text-xs text-slate-400">
               Generated from meetings, emails, Teams, Excel, and internal DB · AI Engine Demo
             </p>
@@ -93,10 +94,10 @@ export function Dashboard() {
 
       {/* Metrics */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard label="Active Relationships" value={entities.length} delta={`${atRisk} at risk`} deltaTone={atRisk ? 'down' : 'neutral'} icon={<UsersIcon />} />
-        <MetricCard label="Monthly TTV (Demo)" value={formatUsd(totals.totalTtv)} delta="+6.0% QoQ" deltaTone="up" icon={<DollarIcon />} />
-        <MetricCard label="Monthly Bookings" value={formatNumber(totals.totalBookings)} delta="+5.4% QoQ" deltaTone="up" icon={<BedIcon />} />
-        <MetricCard label="Open Follow-ups" value={tasks.length} delta={`${tasks.filter((t) => t.priority === 'High').length} high`} deltaTone="neutral" icon={<CheckIcon />} />
+        <MetricCard label={t('l.activeRel')} value={entities.length} delta={`${atRisk} ${t('l.atRisk')}`} deltaTone={atRisk ? 'down' : 'neutral'} icon={<UsersIcon />} />
+        <MetricCard label={t('l.monthlyTtv')} value={formatUsd(totals.totalTtv)} delta="+6.0% QoQ" deltaTone="up" icon={<DollarIcon />} />
+        <MetricCard label={t('l.monthlyBookings')} value={formatNumber(totals.totalBookings)} delta="+5.4% QoQ" deltaTone="up" icon={<BedIcon />} />
+        <MetricCard label={t('l.openFollowups')} value={tasks.length} delta={`${tasks.filter((tk) => tk.priority === 'High').length} ${t('l.high')}`} deltaTone="neutral" icon={<CheckIcon />} />
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -105,8 +106,8 @@ export function Dashboard() {
           {/* Priority Relationships */}
           <Card padded={false}>
             <div className="flex items-center justify-between px-5 pt-5">
-              <CardHeader title="Priority Relationships" subtitle="Ranked by health & open risk" />
-              <button onClick={() => navigate('/relationship')} className="mb-4 text-xs font-medium text-brand-600 hover:text-brand-700">View all →</button>
+              <CardHeader title={t('l.priorityRel')} subtitle={t('l.rankedHealth')} />
+              <button onClick={() => navigate('/relationship')} className="mb-4 text-xs font-medium text-brand-600 hover:text-brand-700">{t('common.viewAll')} →</button>
             </div>
             <div className="divide-y divide-slate-100">
               {priorities.map((e) => {
@@ -121,10 +122,10 @@ export function Dashboard() {
                         <ContextBadge context={e.detectedContext} size="sm" />
                       </div>
                       <div className="mt-1 text-xs text-slate-500">
-                        <span className="font-medium text-slate-600">Issue:</span> {e.openIssues[0]}
+                        <span className="font-medium text-slate-600">{t('l.issue')}:</span> {e.openIssues[0]}
                       </div>
                       <div className="mt-0.5 text-xs text-brand-700">
-                        <span className="font-medium">Next best action:</span> {e.nextBestAction}
+                        <span className="font-medium">{t('l.nextBestActionShort')}:</span> {e.nextBestAction}
                       </div>
                     </div>
                   </button>
@@ -135,7 +136,7 @@ export function Dashboard() {
 
           {/* Recent Meetings */}
           <Card padded={false}>
-            <div className="px-5 pt-5"><CardHeader title="Recent Meetings" subtitle="Captured by Meeting Recorder Demo" /></div>
+            <div className="px-5 pt-5"><CardHeader title={t('l.recentMeetings')} subtitle={t('l.capturedRecorder')} /></div>
             <div className="divide-y divide-slate-100">
               {meetings.map((m) => {
                 const ent = entityById(m.entityId)
@@ -150,16 +151,16 @@ export function Dashboard() {
                 )
               })}
             </div>
-            <button onClick={() => navigate('/meeting')} className="block w-full border-t border-slate-100 px-5 py-2.5 text-xs font-medium text-brand-600 hover:bg-slate-50">Open Meeting Recorder →</button>
+            <button onClick={() => navigate('/meeting')} className="block w-full border-t border-slate-100 px-5 py-2.5 text-xs font-medium text-brand-600 hover:bg-slate-50">{t('l.openMeetingRecorder')} →</button>
           </Card>
 
           {/* Contexts Needing Attention */}
           <Card>
-            <CardHeader title="Contexts Needing Attention" subtitle="Grouped by OAC Detected Context — not account type" />
+            <CardHeader title={t('l.contextsAttention')} subtitle={t('l.groupedContext')} />
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {groups.map((g) => (
                 <div key={g.context} className="rounded-xl border border-slate-200 p-3">
-                  <ContextBadge context={g.context} size="sm" />
+                  <ContextBadge context={entityById(g.entityIds[0])?.detectedContext ?? g.context} size="sm" />
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {g.entityIds.map((id) => {
                       const ent = entityById(id)!
@@ -178,7 +179,7 @@ export function Dashboard() {
         <div className="space-y-5">
           {/* Open Follow-ups */}
           <Card padded={false}>
-            <div className="px-5 pt-5"><CardHeader title="Open Follow-ups" subtitle={`${tasks.length} across relationships`} /></div>
+            <div className="px-5 pt-5"><CardHeader title={t('l.openFollowups')} subtitle={`${tasks.length} ${t('l.acrossRel')}`} /></div>
             <ul className="divide-y divide-slate-100">
               {tasks.slice(0, 6).map((t) => {
                 const ent = entityById(t.entityId)
@@ -201,7 +202,7 @@ export function Dashboard() {
 
           {/* Draft Emails */}
           <Card>
-            <CardHeader title="Draft Emails" subtitle="Suggested by OAC" icon={<MailIcon />} />
+            <CardHeader title={t('l.draftEmails')} subtitle={t('l.suggestedByOAC')} icon={<MailIcon />} />
             <ul className="space-y-2.5">
               {drafts.map((d) => {
                 const ent = entityById(d.entityId)
@@ -210,7 +211,7 @@ export function Dashboard() {
                     <div className="text-xs font-semibold text-slate-500">{ent?.name}</div>
                     <div className="mt-0.5 text-sm font-medium text-slate-800">{d.subject}</div>
                     <div className="mt-0.5 line-clamp-1 text-[11px] text-slate-400">{d.aiIntent}</div>
-                    <Button size="sm" variant="secondary" className="mt-2 w-full" onClick={() => navigate(`/email?entity=${d.entityId}`)}>Open in Email Assistant</Button>
+                    <Button size="sm" variant="secondary" className="mt-2 w-full" onClick={() => navigate(`/email?entity=${d.entityId}`)}>{t('l.openInEmail')}</Button>
                   </li>
                 )
               })}
@@ -221,7 +222,7 @@ export function Dashboard() {
           <Card className="bg-gradient-to-br from-slate-900 to-brand-900 text-white">
             <div className="flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/15"><SparkIcon /></span>
-              <span className="text-xs font-bold uppercase tracking-wide text-white/80">AI Recommended Actions</span>
+              <span className="text-xs font-bold uppercase tracking-wide text-white/80">{t('l.aiRecActions')}</span>
             </div>
             <ul className="mt-3 space-y-2.5">
               {recommendedActions.map((r, i) => (

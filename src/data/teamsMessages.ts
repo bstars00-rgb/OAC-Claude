@@ -11,6 +11,9 @@ export interface TeamsMessage {
   relatedAction: string
 }
 
+import { getContentLang } from './contentLang'
+import { teamsKo } from './contentKo'
+
 export const teamsMessages: TeamsMessage[] = [
   {
     id: 'tm-yeogi-1',
@@ -191,4 +194,10 @@ export const teamsMessages: TeamsMessage[] = [
 ]
 
 export const teamsByEntity = (entityId: string): TeamsMessage[] =>
-  teamsMessages.filter((t) => t.entityId === entityId)
+  teamsMessages
+    .filter((t) => t.entityId === entityId)
+    .map((t) => {
+      if (getContentLang() !== 'ko') return t
+      const ko = teamsKo[t.id]
+      return ko ? { ...t, ...ko } : t
+    })

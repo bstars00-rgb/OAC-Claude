@@ -46,6 +46,9 @@ export interface Entity {
   relatedSources: DataSource[]
 }
 
+import { getContentLang } from './contentLang'
+import { entityKo } from './contentKo'
+
 export const healthBand = (score: number): HealthBand => {
   if (score >= 78) return 'Healthy'
   if (score >= 66) return 'Stable'
@@ -517,24 +520,43 @@ export const entities: Entity[] = [
   },
 ]
 
-export const entityById = (id: string): Entity | undefined =>
-  entities.find((e) => e.id === id)
+// ── Localization ────────────────────────────────────────────────────────────
+// Returns a copy with Korean text fields swapped in when the content language
+// is Korean. Names, owners, region, scores and dates are not translated.
+export const localizeEntity = (e: Entity): Entity => {
+  if (getContentLang() !== 'ko') return e
+  const ko = entityKo[e.id]
+  if (!ko) return e
+  return { ...e, ...ko }
+}
 
-export const entityByName = (name: string): Entity | undefined =>
-  entities.find((e) => e.name.toLowerCase() === name.toLowerCase())
+/** Localized full list, for display components. */
+export const getEntities = (): Entity[] => entities.map(localizeEntity)
 
-/** Lightweight fuzzy search for the global search bar & Ask OAC. */
+export const entityById = (id: string): Entity | undefined => {
+  const e = entities.find((x) => x.id === id)
+  return e ? localizeEntity(e) : undefined
+}
+
+export const entityByName = (name: string): Entity | undefined => {
+  const e = entities.find((x) => x.name.toLowerCase() === name.toLowerCase())
+  return e ? localizeEntity(e) : undefined
+}
+
+/** Lightweight fuzzy search (matches the English source), returns localized. */
 export const searchEntities = (query: string): Entity[] => {
   const q = query.trim().toLowerCase()
-  if (!q) return entities
-  return entities.filter(
-    (e) =>
-      e.name.toLowerCase().includes(q) ||
-      e.detectedContext.toLowerCase().includes(q) ||
-      e.region.toLowerCase().includes(q) ||
-      e.owner.toLowerCase().includes(q) ||
-      e.currentFocus.toLowerCase().includes(q),
-  )
+  if (!q) return getEntities()
+  return entities
+    .filter(
+      (e) =>
+        e.name.toLowerCase().includes(q) ||
+        e.detectedContext.toLowerCase().includes(q) ||
+        e.region.toLowerCase().includes(q) ||
+        e.owner.toLowerCase().includes(q) ||
+        e.currentFocus.toLowerCase().includes(q),
+    )
+    .map(localizeEntity)
 }
 
 /** Unique detected contexts, used to group "Contexts Needing Attention". */

@@ -22,6 +22,9 @@ export interface Task {
   source: TaskSource
 }
 
+import { getContentLang } from './contentLang'
+import { taskKo } from './contentKo'
+
 export const tasks: Task[] = [
   {
     id: 'tk-1',
@@ -203,10 +206,16 @@ export const tasks: Task[] = [
   },
 ]
 
-export const tasksByEntity = (entityId: string): Task[] =>
-  tasks.filter((t) => t.entityId === entityId)
+const loc = (t: Task): Task => {
+  if (getContentLang() !== 'ko') return t
+  const ko = taskKo[t.id]
+  return ko ? { ...t, ...ko } : t
+}
 
-export const openTasks = (): Task[] => tasks.filter((t) => t.status !== 'Done')
+export const tasksByEntity = (entityId: string): Task[] =>
+  tasks.filter((t) => t.entityId === entityId).map(loc)
+
+export const openTasks = (): Task[] => tasks.filter((t) => t.status !== 'Done').map(loc)
 
 export const openTasksSorted = (): Task[] => {
   const rank: Record<TaskPriority, number> = { High: 0, Medium: 1, Low: 2 }

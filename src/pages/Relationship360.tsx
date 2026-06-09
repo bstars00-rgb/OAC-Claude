@@ -12,7 +12,7 @@ import { EntitySelector } from '../components/EntitySelector'
 import { Sparkline, GaugeBar, Donut } from '../components/DemoChart'
 import { useToast } from '../components/Toast'
 import { useT } from '../i18n'
-import { entities, entityById, healthBand, type Entity } from '../data/entities'
+import { entities, getEntities, entityById, healthBand, type Entity } from '../data/entities'
 import { metricsByEntity } from '../data/salesData'
 import { tasksByEntity } from '../data/tasks'
 import { emailsByEntity, draftSeedForEntity } from '../data/emails'
@@ -47,7 +47,7 @@ const statusTone: Record<string, BadgeTone> = {
 export function Relationship360() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const entity = id ? entityById(id) : entities[0]
+  const entity = id ? entityById(id) : getEntities()[0]
   if (!entity) return <RelationshipPicker />
   return <RelationshipDetail entity={entity} key={entity.id} navigateTo={navigate} />
 }
@@ -95,7 +95,7 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
       {/* Header card */}
       <Card className="mb-5">
         <div className="mb-4 max-w-xs">
-          <EntitySelector value={entity.id} onChange={(id) => navigateTo(`/relationship/${id}`)} label="Switch relationship" />
+          <EntitySelector value={entity.id} onChange={(id) => navigateTo(`/relationship/${id}`)} label={t('l.switchRel')} />
         </div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3.5">
@@ -105,14 +105,14 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
                 <h2 className="text-xl font-bold tracking-tight text-slate-900">{entity.name}</h2>
                 <Badge tone={bandTone[band]} dot>{band}</Badge>
               </div>
-              <div className="mt-1 text-sm text-slate-500">Owner {entity.owner} · {entity.region} · Last contact {formatDate(entity.lastContactDate)} ({daysAgo(entity.lastContactDate)})</div>
+              <div className="mt-1 text-sm text-slate-500">{t('l.owner')} {entity.owner} · {entity.region} · {t('l.lastContact')} {formatDate(entity.lastContactDate)} ({daysAgo(entity.lastContactDate)})</div>
               <div className="mt-2.5"><ContextBadge context={entity.detectedContext} confidence={entity.contextConfidence} /></div>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Donut value={entity.relationshipHealthScore} label={`${entity.relationshipHealthScore}`} tone={entity.relationshipHealthScore < 60 ? '#e11d48' : '#1f48f0'} />
             <div className="text-right">
-              <div className="text-[10px] uppercase tracking-wide text-slate-400">Health Score</div>
+              <div className="text-[10px] uppercase tracking-wide text-slate-400">{t('l.healthScore')}</div>
               <div className="text-sm font-semibold text-slate-700">{band}</div>
             </div>
           </div>
@@ -123,22 +123,22 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
           <div className="flex items-start gap-2.5">
             <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white"><BoltIcon /></span>
             <div>
-              <div className="text-[11px] font-bold uppercase tracking-wide text-brand-600">Next Best Action</div>
+              <div className="text-[11px] font-bold uppercase tracking-wide text-brand-600">{t('l.nextBestAction')}</div>
               <div className="text-sm font-medium text-slate-800">{entity.nextBestAction}</div>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" onClick={() => navigateTo(`/email?entity=${entity.id}`)}>Draft Email</Button>
-            <Button size="sm" variant="secondary" onClick={() => navigateTo(`/report?entity=${entity.id}`)}>Create Report</Button>
+            <Button size="sm" variant="secondary" onClick={() => navigateTo(`/email?entity=${entity.id}`)}>{t('b.draftEmail')}</Button>
+            <Button size="sm" variant="secondary" onClick={() => navigateTo(`/report?entity=${entity.id}`)}>{t('b.createReport')}</Button>
             <Button size="sm" variant="demo" onClick={() => demoAction('Save to Timeline Demo')}>Save to Timeline Demo</Button>
           </div>
         </div>
       </Card>
 
       {/* Main AI summary */}
-      <InsightBox label="OAC Relationship Summary" title={`What's happening with ${entity.name}?`} variant={entity.relationshipHealthScore < 60 ? 'critical' : 'ai'}>
+      <InsightBox label={t('l.relSummary')} title={`${entity.name} — ${t('l.whatsHappening')}`} variant={entity.relationshipHealthScore < 60 ? 'critical' : 'ai'}>
         {entity.summary}
-        <div className="mt-2 text-xs text-slate-400">Generated from meetings, emails, Teams, Excel, and internal DB · AI Engine Demo</div>
+        <div className="mt-2 text-xs text-slate-400">{t('l.generatedFrom')}</div>
       </InsightBox>
 
       {/* Tabs */}
@@ -165,30 +165,30 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
           <Card>
-            <CardHeader title="Current Focus & Opportunity" />
+            <CardHeader title={t('l.currentFocusOpp')} />
             <div className="space-y-3">
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Current Focus</div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('l.currentFocus')}</div>
                 <p className="text-sm font-medium text-slate-700">{entity.currentFocus}</p>
               </div>
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Opportunity</div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('l.opportunity')}</div>
                 <p className="text-sm text-slate-600">{entity.opportunity}</p>
               </div>
             </div>
           </Card>
           <Card>
-            <CardHeader title="Recommended Action" subtitle="OAC strategy" />
+            <CardHeader title={t('l.recommendedAction')} subtitle={t('l.oacStrategy')} />
             <p className="text-sm leading-relaxed text-slate-700">{entity.recommendedAction}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button size="sm" variant="demo" onClick={() => demoAction('Create Task Demo')}>Create Task Demo</Button>
-              <Button size="sm" variant="secondary" onClick={() => navigateTo(`/email?entity=${entity.id}`)}>Draft the email</Button>
+              <Button size="sm" variant="secondary" onClick={() => navigateTo(`/email?entity=${entity.id}`)}>{t('l.draftTheEmail')}</Button>
             </div>
           </Card>
         </div>
         <div className="space-y-5">
           <Card>
-            <CardHeader title="Open Issues" />
+            <CardHeader title={t('l.openIssues')} />
             <ul className="space-y-2">
               {entity.openIssues.map((i, idx) => (
                 <li key={idx} className="flex gap-2 text-sm text-slate-600"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />{i}</li>
@@ -196,7 +196,7 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
             </ul>
           </Card>
           <Card>
-            <CardHeader title="Risks" />
+            <CardHeader title={t('l.risks')} />
             <ul className="space-y-2">
               {entity.risks.map((r, idx) => (
                 <li key={idx} className="flex gap-2 text-sm text-slate-600"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />{r}</li>
@@ -204,7 +204,7 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
             </ul>
           </Card>
           <Card>
-            <CardHeader title="Related Data Sources" />
+            <CardHeader title={t('l.relatedSources')} />
             <div className="flex flex-wrap gap-1.5">
               {entity.relatedSources.map((s) => <Badge key={s} tone="slate" dot>{s} Connected Demo</Badge>)}
             </div>

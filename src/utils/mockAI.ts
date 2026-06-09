@@ -4,7 +4,7 @@
 // called. The Ask OAC page composes the rich briefing from the data helpers;
 // this module resolves intent + entity and generates email drafts.
 
-import { entities, type Entity } from '../data/entities'
+import { entities, localizeEntity, type Entity } from '../data/entities'
 import { draftSeedForEntity } from '../data/emails'
 
 export type Intent =
@@ -26,9 +26,10 @@ export interface OACResult {
 
 const matchEntity = (query: string): Entity | undefined => {
   const q = query.toLowerCase()
-  return [...entities]
+  const found = [...entities]
     .sort((a, b) => b.name.length - a.name.length)
     .find((e) => q.includes(e.name.toLowerCase()))
+  return found ? localizeEntity(found) : undefined
 }
 
 export const detectIntent = (query: string): Intent => {

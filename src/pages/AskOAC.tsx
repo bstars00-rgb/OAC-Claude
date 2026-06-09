@@ -145,13 +145,13 @@ export function AskOAC() {
     return (
       <div>
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <h4 className="text-base font-bold text-slate-900">{entity.name} Briefing</h4>
+          <h4 className="text-base font-bold text-slate-900">{entity.name} {t('l.briefing')}</h4>
           <ContextBadge context={entity.detectedContext} confidence={entity.contextConfidence} size="sm" />
         </div>
 
-        <Section label="Current Status">{entity.summary}</Section>
+        <Section label={t('s.currentStatus')}>{entity.summary}</Section>
 
-        <Section label="Recent Communication">
+        <Section label={t('s.recentComm')}>
           <ul className="space-y-1.5">
             {meeting && <CommLine source="Meeting Recorder" date={meeting.date} text={meeting.title} />}
             {email && <CommLine source="Outlook" date={email.date} text={`${email.subject} — ${email.aiIntent}`} />}
@@ -159,29 +159,29 @@ export function AskOAC() {
           </ul>
         </Section>
 
-        <Section label="Open Issues">
+        <Section label={t('s.openIssues')}>
           <BulletList items={entity.openIssues} tone="amber" />
         </Section>
 
-        <Section label="Risks">
+        <Section label={t('s.risks')}>
           <BulletList items={entity.risks} tone="rose" />
         </Section>
 
-        <Section label="Next Best Action">
+        <Section label={t('s.nextBestAction')}>
           <p className="font-medium text-brand-700">{entity.nextBestAction}</p>
           <p className="mt-1 text-slate-600">{entity.recommendedAction}</p>
         </Section>
 
-        <Section label="Suggested Email">
+        <Section label={t('s.suggestedEmail')}>
           {seed ? `“${seed.subject}” → ${seed.to}` : `Draft a context-aware email for ${entity.name}.`}
         </Section>
 
-        <Section label="Suggested CEO Report">
+        <Section label={t('s.suggestedReport')}>
           {ceoReport ? `“${ceoReport.title}” is ready to generate.` : `Generate a CEO briefing summarizing ${entity.detectedContext.toLowerCase()} status and next actions.`}
         </Section>
 
         {metrics && (
-          <Section label="Related Sales / Data Insight">
+          <Section label={t('s.relatedData')}>
             {metrics.kind === 'booking'
               ? `${formatNumber(metrics.bookings)} bookings · ${formatUsd(metrics.ttv)} TTV · ${metrics.failureRate}% failure rate. ${insight?.strategicDirection ?? ''}`
               : `${metrics.pendingConfirmationCount} pending confirmations · setup ${metrics.productSetupProgress}% · risk ${metrics.riskLevel}. ${metrics.aiComment}`}
@@ -190,16 +190,16 @@ export function AskOAC() {
 
         {/* Action buttons */}
         <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-          <Button size="sm" variant="demo" onClick={() => navigate(`/email?entity=${entity.id}`)}>Draft Email</Button>
-          <Button size="sm" variant="secondary" onClick={() => navigate(`/report?entity=${entity.id}`)}>Create CEO Report</Button>
-          <Button size="sm" variant="secondary" onClick={() => navigate(`/relationship/${entity.id}`)}>View Relationship 360</Button>
-          <Button size="sm" variant="secondary" onClick={() => demoAction('Create Task Demo')}>Create Follow-up Task</Button>
-          <Button size="sm" variant="secondary" onClick={() => navigate(`/data?entity=${entity.id}`)}>Show Data Insight</Button>
+          <Button size="sm" variant="demo" onClick={() => navigate(`/email?entity=${entity.id}`)}>{t('b.draftEmail')}</Button>
+          <Button size="sm" variant="secondary" onClick={() => navigate(`/report?entity=${entity.id}`)}>{t('b.createCeoReport')}</Button>
+          <Button size="sm" variant="secondary" onClick={() => navigate(`/relationship/${entity.id}`)}>{t('b.viewRel360')}</Button>
+          <Button size="sm" variant="secondary" onClick={() => demoAction('Create Task Demo')}>{t('b.createTask')}</Button>
+          <Button size="sm" variant="secondary" onClick={() => navigate(`/data?entity=${entity.id}`)}>{t('b.showData')}</Button>
         </div>
 
         {suggestions.length > 0 && (
           <div className="mt-3 border-t border-slate-100 pt-3">
-            <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Suggested follow-ups</div>
+            <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t('l.suggestedFollowups')}</div>
             <div className="flex flex-wrap gap-1.5">
               {suggestions.map((s) => (
                 <button key={s} onClick={() => onAsk(s)} className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">{s}</button>
@@ -268,10 +268,11 @@ function ContextPanel({
   navigate: (to: string) => void
   demoAction: (label: string) => void
 }) {
+  const { t } = useT()
   if (!entity) {
     return (
       <Card className="sticky top-0">
-        <div className="text-xs font-bold uppercase tracking-wide text-slate-400">Source & Context</div>
+        <div className="text-xs font-bold uppercase tracking-wide text-slate-400">Source &amp; Context</div>
         <p className="mt-3 text-sm text-slate-500">Ask about a relationship and OAC will show the detected context, confidence, and every connected source it used.</p>
         <div className="mt-4 space-y-1.5">
           {['Outlook', 'Teams', 'Excel', 'Internal DB'].map((s) => (
@@ -285,16 +286,16 @@ function ContextPanel({
   }
 
   const records = [
-    { label: 'Meetings', count: meetingsByEntity(entity.id).length },
-    { label: 'Emails', count: emailsByEntity(entity.id).length },
-    { label: 'Teams messages', count: teamsByEntity(entity.id).length },
-    { label: 'Tasks', count: tasksByEntity(entity.id).length },
-    { label: 'Sales data', count: metricsByEntity(entity.id) ? 1 : 0 },
+    { label: t('r.meetings'), count: meetingsByEntity(entity.id).length },
+    { label: t('r.emails'), count: emailsByEntity(entity.id).length },
+    { label: t('r.teams'), count: teamsByEntity(entity.id).length },
+    { label: t('r.tasks'), count: tasksByEntity(entity.id).length },
+    { label: t('r.sales'), count: metricsByEntity(entity.id) ? 1 : 0 },
   ]
 
   return (
     <Card className="sticky top-0">
-      <div className="text-xs font-bold uppercase tracking-wide text-slate-400">Detected Relationship</div>
+      <div className="text-xs font-bold uppercase tracking-wide text-slate-400">{t('l.detectedRel')}</div>
       <div className="mt-1.5 text-base font-bold text-slate-900">{entity.name}</div>
       <div className="text-xs text-slate-400">{entity.owner} · {entity.region}</div>
 
@@ -302,14 +303,14 @@ function ContextPanel({
         <ContextBadge context={entity.detectedContext} confidence={entity.contextConfidence} />
       </div>
       <div className="mt-3">
-        <div className="mb-1 flex justify-between text-[11px] text-slate-500"><span>Context confidence</span><span className="font-semibold text-slate-700">{entity.contextConfidence}%</span></div>
+        <div className="mb-1 flex justify-between text-[11px] text-slate-500"><span>{t('l.contextConfidence')}</span><span className="font-semibold text-slate-700">{entity.contextConfidence}%</span></div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
           <div className="h-full rounded-full bg-brand-600" style={{ width: `${entity.contextConfidence}%` }} />
         </div>
       </div>
 
       <div className="mt-4">
-        <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Connected Sources</div>
+        <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('l.connectedSources')}</div>
         <div className="space-y-1.5">
           {['Outlook', 'Teams', 'Excel', 'Internal DB'].map((s) => (
             <div key={s} className="flex items-center gap-2 text-xs text-slate-600">
@@ -320,7 +321,7 @@ function ContextPanel({
       </div>
 
       <div className="mt-4">
-        <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Related Records</div>
+        <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('l.relatedRecords')}</div>
         <div className="grid grid-cols-2 gap-1.5">
           {records.map((r) => (
             <div key={r.label} className="rounded-lg border border-slate-100 px-2.5 py-1.5">
@@ -332,7 +333,7 @@ function ContextPanel({
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
-        <Button size="sm" variant="primary" onClick={() => navigate(`/relationship/${entity.id}`)}>Open Relationship 360</Button>
+        <Button size="sm" variant="primary" onClick={() => navigate(`/relationship/${entity.id}`)}>{t('l.openRel360')}</Button>
         <Button size="sm" variant="secondary" onClick={() => demoAction('Save to Timeline Demo')}>Save to Timeline Demo</Button>
       </div>
     </Card>
@@ -340,10 +341,11 @@ function ContextPanel({
 }
 
 function EmptyState({ onPick }: { onPick: (q: string) => void }) {
+  const { t } = useT()
   return (
     <div className="flex h-full flex-col items-center justify-center py-8 text-center">
       <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-lg shadow-brand-600/20"><SparkIcon big /></span>
-      <h2 className="mt-4 text-lg font-bold text-slate-900">Ask OAC anything</h2>
+      <h2 className="mt-4 text-lg font-bold text-slate-900">{t('l.askAnything')}</h2>
       <p className="mt-1 max-w-md text-sm text-slate-500">OAC reads your meetings, emails, Teams messages, Excel and internal data — then detects the business context automatically. You never classify an account.</p>
       <p className="mt-2 text-sm font-medium text-brand-700">검색만 하세요. 분류와 정리는 OAC가 합니다.</p>
       <div className="mt-6 grid w-full max-w-2xl grid-cols-1 gap-2 sm:grid-cols-2">

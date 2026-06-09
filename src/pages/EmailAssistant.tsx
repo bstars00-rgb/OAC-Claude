@@ -39,12 +39,12 @@ const defaultPurpose = (entityId: string): EmailPurpose => {
 export function EmailAssistant() {
   const [params] = useSearchParams()
   const { demoAction, notify } = useToast()
-  const { t } = useT()
+  const { t, lang } = useT()
   const initial = params.get('entity') && entityById(params.get('entity')!) ? params.get('entity')! : entities[1].id // iTANK
   const [entityId, setEntityId] = useState(initial)
   const [purpose, setPurpose] = useState<EmailPurpose>(defaultPurpose(initial))
   const [tone, setTone] = useState<EmailTone>('Professional')
-  const [language, setLanguage] = useState<EmailLanguage>('English')
+  const [language, setLanguage] = useState<EmailLanguage>(lang === 'ko' ? 'Korean' : 'English')
   const [instructions, setInstructions] = useState('')
   const [generating, setGenerating] = useState(false)
   const [draft, setDraft] = useState<GeneratedDraft>(() => buildEmailDraft(entityById(initial)!, defaultPurpose(initial), 'Professional', 'English'))

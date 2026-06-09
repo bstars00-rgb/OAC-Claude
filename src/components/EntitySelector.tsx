@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { entities, entityById } from '../data/entities'
+import { getEntities, entityById } from '../data/entities'
 import { initials } from '../utils/format'
+import { useT } from '../i18n'
 
 // A dropdown to pick a business relationship. Used by the tool pages
 // (Email Assistant, Report Generator, Meeting Recorder, Data Insight).
@@ -16,7 +17,9 @@ export function EntitySelector({
 }) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
+  useT() // re-render on language change
   const selected = entityById(value)
+  const list = getEntities()
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -50,7 +53,7 @@ export function EntitySelector({
 
       {open && (
         <div className="absolute z-30 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl shadow-slate-900/10">
-          {entities.map((e) => (
+          {list.map((e) => (
             <button
               key={e.id}
               onClick={() => {

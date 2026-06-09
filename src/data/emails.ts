@@ -17,6 +17,9 @@ export interface Email {
   unread?: boolean
 }
 
+import { getContentLang } from './contentLang'
+import { emailKo } from './contentKo'
+
 export const emails: Email[] = [
   {
     id: 'em-yeogi-1',
@@ -175,13 +178,19 @@ export const emails: Email[] = [
   },
 ]
 
+const loc = (e: Email): Email => {
+  if (getContentLang() !== 'ko') return e
+  const ko = emailKo[e.id]
+  return ko ? { ...e, ...ko } : e
+}
+
 export const emailsByEntity = (entityId: string): Email[] =>
-  emails.filter((e) => e.entityId === entityId)
+  emails.filter((e) => e.entityId === entityId).map(loc)
 
 export const latestEmails = (n: number): Email[] =>
-  [...emails].sort((a, b) => b.date.localeCompare(a.date)).slice(0, n)
+  [...emails].sort((a, b) => b.date.localeCompare(a.date)).slice(0, n).map(loc)
 
-export const draftEmails = (): Email[] => emails.filter((e) => e.followUpNeeded)
+export const draftEmails = (): Email[] => emails.filter((e) => e.followUpNeeded).map(loc)
 
 // ── Base draft seeds used by the Email Assistant as a starting point ─────────
 export interface EmailDraftSeed {

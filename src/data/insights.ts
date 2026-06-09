@@ -11,6 +11,9 @@ export interface Insight {
   nextBestAction: string
 }
 
+import { getContentLang } from './contentLang'
+import { insightKo, todaysBriefingKo } from './contentKo'
+
 export const insights: Insight[] = [
   {
     entityId: 'yeogi',
@@ -275,9 +278,17 @@ export const insights: Insight[] = [
   },
 ]
 
-export const insightByEntity = (entityId: string): Insight | undefined =>
-  insights.find((i) => i.entityId === entityId)
+export const insightByEntity = (entityId: string): Insight | undefined => {
+  const i = insights.find((x) => x.entityId === entityId)
+  if (!i) return undefined
+  if (getContentLang() !== 'ko') return i
+  const ko = insightKo[entityId]
+  return ko ? { ...i, ...ko } : i
+}
 
 // Natural-language portfolio briefing for the Dashboard "Today's AI Briefing".
-export const todaysBriefing =
+const todaysBriefingEn =
   'Today, OAC detected several priority contexts. Yeogi Eottae requires an official iTANK inquiry for API connectivity. Klook has SLA risk related to 24/7 support and compensation wording. Grand Hyatt Jeju requires hotel contracting follow-up for July rates and availability. Medical Korea Service needs a clear net-rate and prepaid settlement explanation. Dida requires technical review due to offline accuracy issues.'
+
+export const getTodaysBriefing = (): string =>
+  getContentLang() === 'ko' ? todaysBriefingKo : todaysBriefingEn

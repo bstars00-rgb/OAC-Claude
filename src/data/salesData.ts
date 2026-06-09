@@ -60,6 +60,9 @@ export interface OperationalMetrics {
 
 export type Metrics = BookingMetrics | OperationalMetrics
 
+import { getContentLang } from './contentLang'
+import { salesAiCommentKo } from './contentKo'
+
 const m = (month: string, bookings: number, ttv: number): MonthlyPoint => ({ month, bookings, ttv })
 
 export const salesData: Metrics[] = [
@@ -496,8 +499,13 @@ export const salesData: Metrics[] = [
   },
 ]
 
-export const metricsByEntity = (entityId: string): Metrics | undefined =>
-  salesData.find((s) => s.entityId === entityId)
+export const metricsByEntity = (entityId: string): Metrics | undefined => {
+  const m = salesData.find((s) => s.entityId === entityId)
+  if (!m) return undefined
+  if (getContentLang() !== 'ko') return m
+  const ko = salesAiCommentKo[entityId]
+  return ko ? { ...m, aiComment: ko } : m
+}
 
 export const bookingEntities = (): BookingMetrics[] =>
   salesData.filter((s): s is BookingMetrics => s.kind === 'booking')
