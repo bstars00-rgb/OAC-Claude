@@ -4,17 +4,17 @@ type Variant = 'ai' | 'critical' | 'opportunity'
 
 const styles: Record<Variant, { wrap: string; chip: string; label: string }> = {
   ai: {
-    wrap: 'border-brand-100 bg-gradient-to-br from-brand-50/80 to-violet-50/50',
+    wrap: 'border-brand-100 bg-gradient-to-br from-brand-50/80 to-violet-50/50 dark:bg-none dark:bg-brand-500/10',
     chip: 'bg-brand-600 text-white',
     label: 'text-brand-700',
   },
   critical: {
-    wrap: 'border-rose-100 bg-gradient-to-br from-rose-50/80 to-amber-50/40',
+    wrap: 'border-rose-100 bg-gradient-to-br from-rose-50/80 to-amber-50/40 dark:bg-none dark:bg-rose-500/10',
     chip: 'bg-rose-600 text-white',
     label: 'text-rose-700',
   },
   opportunity: {
-    wrap: 'border-emerald-100 bg-gradient-to-br from-emerald-50/80 to-brand-50/40',
+    wrap: 'border-emerald-100 bg-gradient-to-br from-emerald-50/80 to-brand-50/40 dark:bg-none dark:bg-emerald-500/10',
     chip: 'bg-emerald-600 text-white',
     label: 'text-emerald-700',
   },

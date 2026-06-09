@@ -11,6 +11,7 @@ import { MetricCard } from '../components/MetricCard'
 import { EntitySelector } from '../components/EntitySelector'
 import { Sparkline, GaugeBar, Donut } from '../components/DemoChart'
 import { useToast } from '../components/Toast'
+import { useT } from '../i18n'
 import { entities, entityById, healthBand, type Entity } from '../data/entities'
 import { metricsByEntity } from '../data/salesData'
 import { tasksByEntity } from '../data/tasks'
@@ -53,9 +54,10 @@ export function Relationship360() {
 
 function RelationshipPicker() {
   const navigate = useNavigate()
+  const { t } = useT()
   return (
     <div className="oac-fade-in">
-      <PageHeader title="Relationship 360" subtitle="One place for every meeting, email, Teams message, task, report, and data insight." />
+      <PageHeader title={t('page.relationship.title')} subtitle={t('page.relationship.subtitle')} />
       <Card>
         <EntitySelector value={entities[0].id} onChange={(id) => navigate(`/relationship/${id}`)} />
       </Card>
@@ -67,6 +69,7 @@ type Tab = 'overview' | 'timeline' | 'communication' | 'tasks' | 'data' | 'ai'
 
 function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo: (to: string) => void }) {
   const { demoAction } = useToast()
+  const { t } = useT()
   const [tab, setTab] = useState<Tab>('overview')
   const band = healthBand(entity.relationshipHealthScore)
   const tasks = tasksByEntity(entity.id)
@@ -76,18 +79,18 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
   const metrics = metricsByEntity(entity.id)
   const insight = insightByEntity(entity.id)
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'timeline', label: 'Timeline' },
-    { id: 'communication', label: 'Communication' },
-    { id: 'tasks', label: 'Tasks' },
-    { id: 'data', label: 'Data' },
-    { id: 'ai', label: 'AI Recommendation' },
+  const tabs: { id: Tab; tKey: string }[] = [
+    { id: 'overview', tKey: 'tab.overview' },
+    { id: 'timeline', tKey: 'tab.timeline' },
+    { id: 'communication', tKey: 'tab.communication' },
+    { id: 'tasks', tKey: 'tab.tasks' },
+    { id: 'data', tKey: 'tab.data' },
+    { id: 'ai', tKey: 'tab.ai' },
   ]
 
   return (
     <div className="oac-fade-in">
-      <PageHeader title="Relationship 360" subtitle="One place for every meeting, email, Teams message, task, report, and data insight." />
+      <PageHeader title={t('page.relationship.title')} subtitle={t('page.relationship.subtitle')} />
 
       {/* Header card */}
       <Card className="mb-5">
@@ -140,10 +143,10 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
 
       {/* Tabs */}
       <div className="mb-5 mt-5 flex gap-1 overflow-x-auto border-b border-slate-200">
-        {tabs.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)} className={`relative whitespace-nowrap px-3.5 py-2.5 text-sm font-medium transition ${tab === t.id ? 'text-brand-700' : 'text-slate-500 hover:text-slate-800'}`}>
-            {t.label}
-            {tab === t.id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand-600" />}
+        {tabs.map((tb) => (
+          <button key={tb.id} onClick={() => setTab(tb.id)} className={`relative whitespace-nowrap px-3.5 py-2.5 text-sm font-medium transition ${tab === tb.id ? 'text-brand-700' : 'text-slate-500 hover:text-slate-800'}`}>
+            {t(tb.tKey)}
+            {tab === tb.id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand-600" />}
           </button>
         ))}
       </div>

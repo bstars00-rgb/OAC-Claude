@@ -6,6 +6,7 @@ import { ContextBadge } from '../components/ContextBadge'
 import { Button } from '../components/Button'
 import { Badge } from '../components/Badge'
 import { useToast } from '../components/Toast'
+import { useT } from '../i18n'
 import { askOAC, examplePrompts, type OACResult } from '../utils/mockAI'
 import { type Entity } from '../data/entities'
 import { meetingsByEntity } from '../data/meetings'
@@ -30,6 +31,7 @@ export function AskOAC() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const { demoAction } = useToast()
+  const { t } = useT()
   const [turns, setTurns] = useState<ChatTurn[]>([])
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -64,10 +66,7 @@ export function AskOAC() {
 
   return (
     <div className="oac-fade-in">
-      <PageHeader
-        title="Ask OAC"
-        subtitle="Search a name or ask a question. OAC will find the context, summarize the status, and prepare the next action."
-      />
+      <PageHeader title={t('page.ask.title')} subtitle={t('page.ask.subtitle')} />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Chat */}

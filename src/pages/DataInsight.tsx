@@ -9,6 +9,7 @@ import { InsightBox } from '../components/InsightBox'
 import { EntitySelector } from '../components/EntitySelector'
 import { BarChart, Sparkline, Donut, GaugeBar } from '../components/DemoChart'
 import { useToast } from '../components/Toast'
+import { useT } from '../i18n'
 import { entityById } from '../data/entities'
 import { metricsByEntity } from '../data/salesData'
 import { insightByEntity } from '../data/insights'
@@ -20,6 +21,7 @@ export function DataInsight() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { demoAction } = useToast()
+  const { t } = useT()
   const initial = params.get('entity') && entityById(params.get('entity')!) ? params.get('entity')! : 'yeogi'
   const [entityId, setEntityId] = useState(initial)
   const [range, setRange] = useState('Last 6 months')
@@ -30,7 +32,7 @@ export function DataInsight() {
 
   return (
     <div className="oac-fade-in">
-      <PageHeader title="Data Insight" subtitle="Turn booking, revenue, cancellation, failure, and operational data into AI-powered business strategy." />
+      <PageHeader title={t('page.data.title')} subtitle={t('page.data.subtitle')} />
 
       {/* Top controls */}
       <Card className="mb-5">

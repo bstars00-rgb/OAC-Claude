@@ -92,3 +92,99 @@ body {
 .oac-typing span:nth-child(3) {
   animation-delay: 0.3s;
 }
+
+/* ───────────────────────────── Dark mode ─────────────────────────────────
+   Class-based dark mode. A `.dark` class on <html> remaps the light utility
+   classes the app uses, so individual components don't need dark: variants
+   (except a few gradient surfaces handled inline). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark {
+  color-scheme: dark;
+}
+.dark body {
+  background-color: #0b1220;
+  color: #e2e8f0;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #2a3552;
+  background-clip: content-box;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3a4767;
+  background-clip: content-box;
+}
+.dark ::placeholder {
+  color: #5b6a82;
+}
+
+/* Surfaces */
+.dark .bg-white { background-color: #121b30; }
+.dark .bg-white\/80 { background-color: rgba(18, 27, 48, 0.85); }
+.dark .bg-white\/70 { background-color: rgba(11, 18, 32, 0.7); }
+.dark .bg-slate-50 { background-color: #172238; }
+.dark .bg-slate-50\/60 { background-color: rgba(23, 34, 56, 0.6); }
+.dark .bg-slate-50\/40 { background-color: rgba(23, 34, 56, 0.45); }
+.dark .bg-slate-100 { background-color: #1d2a44; }
+.dark .bg-slate-200 { background-color: #2a3a57; }
+
+/* Borders */
+.dark .border-slate-100 { border-color: #1d2942; }
+.dark .border-slate-200 { border-color: #24314c; }
+.dark .border-slate-300 { border-color: #2c3a57; }
+.dark .border-white { border-color: #0b1220; }
+
+/* Dividers (Tailwind divide-*) */
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-50 > :not([hidden]) ~ :not([hidden]) { border-color: #1d2942; }
+
+/* Text */
+.dark .text-slate-900 { color: #f1f5f9; }
+.dark .text-slate-800 { color: #e6edf7; }
+.dark .text-slate-700 { color: #cdd8e6; }
+.dark .text-slate-600 { color: #b1bed1; }
+.dark .text-slate-500 { color: #94a4ba; }
+.dark .text-slate-400 { color: #76869c; }
+.dark .text-slate-300 { color: #51607a; }
+
+/* Hover states */
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-100:hover { background-color: #1b2840; }
+.dark .hover\:bg-brand-50:hover,
+.dark .hover\:bg-brand-50\/50:hover { background-color: rgba(31, 72, 240, 0.18); }
+.dark .hover\:border-slate-300:hover { border-color: #33425f; }
+.dark .hover\:border-brand-200:hover,
+.dark .hover\:border-brand-300:hover { border-color: rgba(31, 72, 240, 0.45); }
+
+/* Accent tint backgrounds */
+.dark .bg-brand-50,
+.dark .bg-brand-50\/30, .dark .bg-brand-50\/40,
+.dark .bg-brand-50\/50, .dark .bg-brand-50\/60 { background-color: rgba(31, 72, 240, 0.16); }
+.dark .bg-rose-50, .dark .bg-rose-50\/40 { background-color: rgba(244, 63, 94, 0.15); }
+.dark .bg-amber-50, .dark .bg-amber-50\/40 { background-color: rgba(245, 158, 11, 0.15); }
+.dark .bg-emerald-50, .dark .bg-emerald-50\/40 { background-color: rgba(16, 185, 129, 0.15); }
+.dark .bg-violet-50 { background-color: rgba(139, 92, 246, 0.16); }
+.dark .bg-sky-50 { background-color: rgba(14, 165, 233, 0.15); }
+
+/* Accent borders */
+.dark .border-brand-100, .dark .border-brand-200 { border-color: rgba(31, 72, 240, 0.3); }
+.dark .border-rose-100 { border-color: rgba(244, 63, 94, 0.3); }
+.dark .border-amber-100 { border-color: rgba(245, 158, 11, 0.3); }
+.dark .border-emerald-100, .dark .border-emerald-200 { border-color: rgba(16, 185, 129, 0.3); }
+.dark .border-violet-100 { border-color: rgba(139, 92, 246, 0.3); }
+.dark .border-sky-100 { border-color: rgba(14, 165, 233, 0.3); }
+
+/* Accent text */
+.dark .text-brand-500 { color: #7aa2ff; }
+.dark .text-brand-600 { color: #84a9ff; }
+.dark .text-brand-700 { color: #97b6ff; }
+.dark .text-brand-800 { color: #bcccff; }
+.dark .text-emerald-600, .dark .text-emerald-700 { color: #34d399; }
+.dark .text-rose-600, .dark .text-rose-700 { color: #fb7185; }
+.dark .text-amber-700 { color: #fbbf24; }
+.dark .text-violet-700 { color: #c4b5fd; }
+.dark .text-sky-700 { color: #7dd3fc; }
+
+/* Avatar / chip gradients on the relationship list */
+.dark .from-slate-100 { --tw-gradient-from: #1d2a44; }
+.dark .to-slate-200 { --tw-gradient-to: #2a3a57; }

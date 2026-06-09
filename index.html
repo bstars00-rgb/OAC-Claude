@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OAC — Ohmyhotel AI CRM</title>
     <meta name="description" content="From Manual CRM to AI-Driven Account Intelligence." />
+    <script>
+      // Apply the saved (or system) theme before paint to avoid a flash.
+      try {
+        var t = localStorage.getItem('oac-theme');
+        if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+        var l = localStorage.getItem('oac-lang');
+        if (l === 'ko' || l === 'en') document.documentElement.lang = l;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

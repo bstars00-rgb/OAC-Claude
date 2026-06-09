@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { useT } from '../i18n'
 
 interface NavItem {
   to: string
-  label: string
+  tKey: string
   icon: ReactNode
 }
 
@@ -14,17 +15,18 @@ const I = (path: ReactNode) => (
 )
 
 const navItems: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: I(<><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></>) },
-  { to: '/ask', label: 'Ask OAC', icon: I(<><path d="M12 3l1.9 4.6L18.5 9 14 11l-2 5-2-5L5.5 9l4.6-1.4L12 3z" /></>) },
-  { to: '/relationship', label: 'Relationship 360', icon: I(<><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></>) },
-  { to: '/meeting', label: 'Meeting Recorder', icon: I(<><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M6 11a6 6 0 0 0 12 0M12 17v4" /></>) },
-  { to: '/email', label: 'Email Assistant', icon: I(<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></>) },
-  { to: '/report', label: 'Report Generator', icon: I(<><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></>) },
-  { to: '/data', label: 'Data Insight', icon: I(<><path d="M3 3v18h18" /><path d="M7 14l3-4 3 3 4-6" /></>) },
-  { to: '/integrations', label: 'Integrations', icon: I(<><rect x="3" y="3" width="8" height="8" rx="1.5" /><rect x="13" y="3" width="8" height="8" rx="1.5" /><rect x="3" y="13" width="8" height="8" rx="1.5" /><rect x="13" y="13" width="8" height="8" rx="1.5" /></>) },
+  { to: '/', tKey: 'nav.dashboard', icon: I(<><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></>) },
+  { to: '/ask', tKey: 'nav.ask', icon: I(<><path d="M12 3l1.9 4.6L18.5 9 14 11l-2 5-2-5L5.5 9l4.6-1.4L12 3z" /></>) },
+  { to: '/relationship', tKey: 'nav.relationship', icon: I(<><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></>) },
+  { to: '/meeting', tKey: 'nav.meeting', icon: I(<><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M6 11a6 6 0 0 0 12 0M12 17v4" /></>) },
+  { to: '/email', tKey: 'nav.email', icon: I(<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></>) },
+  { to: '/report', tKey: 'nav.report', icon: I(<><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></>) },
+  { to: '/data', tKey: 'nav.data', icon: I(<><path d="M3 3v18h18" /><path d="M7 14l3-4 3 3 4-6" /></>) },
+  { to: '/integrations', tKey: 'nav.integrations', icon: I(<><rect x="3" y="3" width="8" height="8" rx="1.5" /><rect x="13" y="3" width="8" height="8" rx="1.5" /><rect x="3" y="13" width="8" height="8" rx="1.5" /><rect x="13" y="13" width="8" height="8" rx="1.5" /></>) },
 ]
 
 export function Sidebar() {
+  const { t } = useT()
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-slate-200 bg-white">
       {/* Brand */}
@@ -54,14 +56,14 @@ export function Sidebar() {
             }
           >
             {item.icon}
-            {item.label}
+            {t(item.tKey)}
           </NavLink>
         ))}
       </nav>
 
       {/* Footer card */}
       <div className="px-3 pb-4">
-        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-brand-50 to-violet-50 p-3">
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-brand-50 to-violet-50 p-3 dark:bg-none dark:bg-brand-500/10">
           <div className="flex items-center gap-1.5">
             <span className="flex h-5 w-5 items-center justify-center rounded-md bg-brand-600 text-white">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 4.6L18.5 9 14 11l-2 5-2-5L5.5 9l4.6-1.4L12 3z" /></svg>

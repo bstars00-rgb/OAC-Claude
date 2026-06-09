@@ -8,6 +8,7 @@ import { InsightBox } from '../components/InsightBox'
 import { ContextBadge } from '../components/ContextBadge'
 import { EntitySelector } from '../components/EntitySelector'
 import { useToast } from '../components/Toast'
+import { useT } from '../i18n'
 import { entities, entityById } from '../data/entities'
 import { meetingsByEntity, type Meeting } from '../data/meetings'
 import { reportByEntityAndType } from '../data/reports'
@@ -29,6 +30,7 @@ interface GeneratedOutput {
 export function MeetingRecorder() {
   const navigate = useNavigate()
   const { demoAction, notify } = useToast()
+  const { t } = useT()
 
   const [entityId, setEntityId] = useState(entities[2].id) // Grand Hyatt Jeju
   const seedMeeting = meetingsByEntity(entityId)[0]
@@ -63,7 +65,7 @@ export function MeetingRecorder() {
 
   return (
     <div className="oac-fade-in">
-      <PageHeader title="Meeting Recorder" subtitle="Paste meeting notes or upload a recording. OAC turns it into CRM intelligence." />
+      <PageHeader title={t('page.meeting.title')} subtitle={t('page.meeting.subtitle')} />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Input */}

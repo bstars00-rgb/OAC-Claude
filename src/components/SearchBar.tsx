@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchEntities } from '../data/entities'
 import { ContextBadge } from './ContextBadge'
+import { useT } from '../i18n'
 
 // Global search — the heart of the product. "Search the name. OAC finds the context."
 export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' }) {
@@ -9,6 +10,7 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const wrapRef = useRef<HTMLDivElement>(null)
+  const { t } = useT()
 
   const results = query.trim() ? searchEntities(query).slice(0, 6) : []
 
@@ -52,7 +54,7 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
           placeholder={
             hero
               ? 'Search a name or ask OAC — “What should I do next with Klook?”'
-              : 'Search a relationship or ask OAC…'
+              : t('top.search')
           }
           className={`w-full bg-transparent text-slate-800 placeholder:text-slate-400 focus:outline-none ${
             hero ? 'text-base' : 'text-sm'

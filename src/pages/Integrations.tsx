@@ -4,6 +4,7 @@ import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { InsightBox } from '../components/InsightBox'
 import { useToast } from '../components/Toast'
+import { useT } from '../i18n'
 
 type IntegrationStatus = 'Connected Demo' | 'Prototype'
 
@@ -40,10 +41,11 @@ const phases = [
 
 export function Integrations() {
   const { demoAction } = useToast()
+  const { t } = useT()
 
   return (
     <div className="oac-fade-in">
-      <PageHeader title="Integrations" subtitle="OAC connects meetings, emails, Teams messages, Excel data, and internal booking systems into one AI relationship workspace." />
+      <PageHeader title={t('page.integrations.title')} subtitle={t('page.integrations.subtitle')} />
 
       <div className="mb-5">
         <InsightBox label="Prototype Notice" variant="ai" title="This is a concept-validation prototype">

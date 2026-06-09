@@ -7,6 +7,7 @@ import { Badge } from '../components/Badge'
 import { ContextBadge } from '../components/ContextBadge'
 import { EntitySelector } from '../components/EntitySelector'
 import { useToast } from '../components/Toast'
+import { useT } from '../i18n'
 import { entities, entityById } from '../data/entities'
 import {
   reportByEntityAndType,
@@ -29,6 +30,7 @@ const detailLevels: DetailLevel[] = ['3-line summary', 'Executive summary', 'Det
 export function ReportGenerator() {
   const [params] = useSearchParams()
   const { demoAction, notify } = useToast()
+  const { t } = useT()
   const initial = params.get('entity') && entityById(params.get('entity')!) ? params.get('entity')! : 'yeogi'
   const [entityId, setEntityId] = useState(initial)
   const [type, setType] = useState<ReportType>('CEO Briefing')
@@ -59,7 +61,7 @@ export function ReportGenerator() {
 
   return (
     <div className="oac-fade-in">
-      <PageHeader title="Report Generator" subtitle="Create CEO briefings, partner status reports, issue reports, and sales updates from OAC context." />
+      <PageHeader title={t('page.report.title')} subtitle={t('page.report.subtitle')} />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Controls */}

@@ -13,7 +13,7 @@ export function ContextBadge({
   const sm = size === 'sm'
   return (
     <div
-      className={`inline-flex items-center gap-2 rounded-xl border border-brand-100 bg-gradient-to-r from-brand-50 to-violet-50 ${
+      className={`inline-flex items-center gap-2 rounded-xl border border-brand-100 bg-gradient-to-r from-brand-50 to-violet-50 dark:bg-none dark:bg-brand-500/15 ${
         sm ? 'px-2.5 py-1' : 'px-3 py-1.5'
       }`}
     >

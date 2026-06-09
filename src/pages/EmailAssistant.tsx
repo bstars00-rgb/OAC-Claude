@@ -8,6 +8,7 @@ import { ContextBadge } from '../components/ContextBadge'
 import { InsightBox } from '../components/InsightBox'
 import { EntitySelector } from '../components/EntitySelector'
 import { useToast } from '../components/Toast'
+import { useT } from '../i18n'
 import { entities, entityById } from '../data/entities'
 import { emailsByEntity } from '../data/emails'
 import {
@@ -38,6 +39,7 @@ const defaultPurpose = (entityId: string): EmailPurpose => {
 export function EmailAssistant() {
   const [params] = useSearchParams()
   const { demoAction, notify } = useToast()
+  const { t } = useT()
   const initial = params.get('entity') && entityById(params.get('entity')!) ? params.get('entity')! : entities[1].id // iTANK
   const [entityId, setEntityId] = useState(initial)
   const [purpose, setPurpose] = useState<EmailPurpose>(defaultPurpose(initial))
@@ -90,7 +92,7 @@ export function EmailAssistant() {
 
   return (
     <div className="oac-fade-in">
-      <PageHeader title="Email Assistant" subtitle="Generate context-aware emails from meetings, previous communication, and next actions." />
+      <PageHeader title={t('page.email.title')} subtitle={t('page.email.subtitle')} />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Controls */}

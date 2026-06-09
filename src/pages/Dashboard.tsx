@@ -6,6 +6,7 @@ import { Badge, type BadgeTone } from '../components/Badge'
 import { ContextBadge } from '../components/ContextBadge'
 import { Button } from '../components/Button'
 import { useToast } from '../components/Toast'
+import { useT } from '../i18n'
 import { entities, healthBand, contextGroups, entityById } from '../data/entities'
 import { todaysBriefing, insightByEntity } from '../data/insights'
 import { openTasksSorted } from '../data/tasks'
@@ -34,6 +35,7 @@ const ATTENTION_CONTEXTS = [
 export function Dashboard() {
   const navigate = useNavigate()
   const { demoAction } = useToast()
+  const { t } = useT()
   const totals = portfolioTotals()
   const tasks = openTasksSorted()
   const meetings = latestMeetings(4)
@@ -61,17 +63,17 @@ export function Dashboard() {
   return (
     <div className="oac-fade-in space-y-5">
       <PageHeader
-        title="Today's AI Briefing"
-        subtitle="OAC reviewed your meetings, emails, Teams messages, Excel files, and internal DB. Here are the business relationships that need attention today."
+        title={t('page.dashboard.title')}
+        subtitle={t('page.dashboard.subtitle')}
         actions={
           <Button onClick={() => navigate('/ask')} variant="primary" icon={<SparkIcon />}>
-            Ask OAC
+            {t('common.askOAC')}
           </Button>
         }
       />
 
       {/* Main AI briefing card */}
-      <Card className="border-brand-100 bg-gradient-to-br from-brand-50/80 via-white to-violet-50/50">
+      <Card className="border-brand-100 bg-gradient-to-br from-brand-50/80 via-white to-violet-50/50 dark:bg-none">
         <div className="flex items-start gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-sm">
             <SparkIcon />

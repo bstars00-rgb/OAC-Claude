@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ToastProvider } from './components/Toast'
+import { ThemeProvider } from './theme'
+import { LanguageProvider } from './i18n'
 import { Dashboard } from './pages/Dashboard'
 import { AskOAC } from './pages/AskOAC'
 import { Relationship360 } from './pages/Relationship360'
@@ -12,6 +14,8 @@ import { Integrations } from './pages/Integrations'
 
 export default function App() {
   return (
+    <ThemeProvider>
+    <LanguageProvider>
     <ToastProvider>
       <Layout>
         <Routes>
@@ -28,5 +32,7 @@ export default function App() {
         </Routes>
       </Layout>
     </ToastProvider>
+    </LanguageProvider>
+    </ThemeProvider>
   )
 }
