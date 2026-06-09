@@ -14,8 +14,7 @@ const DICT: Record<string, Entry> = {
 
   // Navigation
   'nav.dashboard': { en: 'Dashboard', ko: '대시보드' },
-  'nav.capture': { en: 'AI Capture', ko: 'AI 캡처' },
-  'nav.ask': { en: 'Ask OAC', ko: 'OAC에게 묻기' },
+  'nav.assistant': { en: 'OAC Assistant', ko: 'OAC 어시스턴트' },
   'nav.relationship': { en: 'Relationship 360', ko: '관계 360' },
   'nav.meeting': { en: 'Meeting Recorder', ko: '미팅 레코더' },
   'nav.email': { en: 'Email Assistant', ko: '이메일 어시스턴트' },
@@ -202,6 +201,49 @@ const DICT: Record<string, Entry> = {
   'cap.todosShort': { en: 'to-dos', ko: 'To Do' },
   'cap.clear': { en: 'Clear workspace', ko: '워크스페이스 비우기' },
   'cap.due': { en: 'due', ko: '마감' },
+
+  // OAC Assistant (unified chat)
+  'page.assistant.title': { en: 'OAC Assistant', ko: 'OAC 어시스턴트' },
+  'page.assistant.subtitle': {
+    en: 'Ask, upload images & documents, and OAC structures your work into Account, Timeline, To Do, Risk and reports.',
+    ko: '질문하고, 이미지·문서를 올리면 OAC가 Account·Timeline·To Do·Risk·리포트로 정리합니다.',
+  },
+  'asst.placeholder': {
+    en: 'Ask OAC, paste a work note, or attach an image / document…',
+    ko: 'OAC에게 묻거나, 업무 메모를 붙여넣거나, 이미지·문서를 첨부하세요…',
+  },
+  'asst.send': { en: 'Send', ko: '전송' },
+  'asst.image': { en: 'Image', ko: '이미지' },
+  'asst.doc': { en: 'Document', ko: '문서' },
+  'asst.thinking': { en: 'OAC is thinking…', ko: 'OAC가 생각하는 중…' },
+  'asst.emptyTitle': { en: 'Ask anything — or just share what happened', ko: '무엇이든 물어보세요 — 또는 일어난 일을 입력하세요' },
+  'asst.emptyDesc': {
+    en: 'OAC answers questions, summarizes uploads, and turns your notes into CRM records. Connect the AI Engine for real AI.',
+    ko: 'OAC가 질문에 답하고, 업로드를 요약하고, 메모를 CRM 레코드로 만듭니다. AI 엔진을 연결하면 실제 AI로 동작합니다.',
+  },
+  'asst.examplesHeader': { en: 'Try', ko: '예시' },
+  'asst.engine': { en: 'AI Engine', ko: 'AI 엔진' },
+  'asst.demoMode': { en: 'Demo (mock AI)', ko: '데모 (모의 AI)' },
+  'asst.liveMode': { en: 'Live AI', ko: '실제 AI' },
+  'asst.settings': { en: 'Settings', ko: '설정' },
+  'asst.you': { en: 'You', ko: '나' },
+
+  // Settings modal
+  'set.title': { en: 'AI Engine Settings', ko: 'AI 엔진 설정' },
+  'set.mode': { en: 'Mode', ko: '모드' },
+  'set.demo': { en: 'Demo', ko: '데모' },
+  'set.live': { en: 'Live AI', ko: '실제 AI' },
+  'set.demoDesc': { en: 'Mock AI with local data. No API key needed.', ko: '로컬 데이터 기반 모의 AI. API 키 불필요.' },
+  'set.liveDesc': { en: 'Calls the real Claude API with your own key (vision + documents).', ko: '내 API 키로 실제 Claude API 호출 (비전 + 문서).' },
+  'set.apiKey': { en: 'Anthropic API key', ko: 'Anthropic API 키' },
+  'set.model': { en: 'Model', ko: '모델' },
+  'set.warn': {
+    en: 'Your key is stored only in this browser and sent directly to Anthropic. Use a personal key for this prototype — never a shared/production key.',
+    ko: '키는 이 브라우저에만 저장되어 Anthropic으로만 직접 전송됩니다. 이 프로토타입에서는 개인 키만 사용하세요 (공유/운영 키 금지).',
+  },
+  'set.getKey': { en: 'Get a key at console.anthropic.com', ko: 'console.anthropic.com에서 키 발급' },
+  'set.done': { en: 'Done', ko: '완료' },
+  'set.connected': { en: 'Connected', ko: '연결됨' },
 }
 
 interface I18nCtx {

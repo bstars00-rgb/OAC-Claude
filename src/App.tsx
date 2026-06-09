@@ -4,9 +4,9 @@ import { ToastProvider } from './components/Toast'
 import { ThemeProvider } from './theme'
 import { LanguageProvider } from './i18n'
 import { CaptureProvider } from './data/captureStore'
+import { AiSettingsProvider } from './utils/aiSettings'
 import { Dashboard } from './pages/Dashboard'
-import { AICapture } from './pages/AICapture'
-import { AskOAC } from './pages/AskOAC'
+import { OACAssistant } from './pages/OACAssistant'
 import { Relationship360 } from './pages/Relationship360'
 import { MeetingRecorder } from './pages/MeetingRecorder'
 import { EmailAssistant } from './pages/EmailAssistant'
@@ -19,12 +19,15 @@ export default function App() {
     <ThemeProvider>
     <LanguageProvider>
     <CaptureProvider>
+    <AiSettingsProvider>
     <ToastProvider>
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/capture" element={<AICapture />} />
-          <Route path="/ask" element={<AskOAC />} />
+          <Route path="/assistant" element={<OACAssistant />} />
+          {/* Legacy paths — Ask OAC + AI Capture are now unified */}
+          <Route path="/ask" element={<OACAssistant />} />
+          <Route path="/capture" element={<OACAssistant />} />
           <Route path="/relationship" element={<Relationship360 />} />
           <Route path="/relationship/:id" element={<Relationship360 />} />
           <Route path="/meeting" element={<MeetingRecorder />} />
@@ -36,6 +39,7 @@ export default function App() {
         </Routes>
       </Layout>
     </ToastProvider>
+    </AiSettingsProvider>
     </CaptureProvider>
     </LanguageProvider>
     </ThemeProvider>

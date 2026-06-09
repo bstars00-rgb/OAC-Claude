@@ -42,30 +42,39 @@ action** that shows a toast:
 
 All data lives in local TypeScript files under `src/data/`.
 
-## Chat-based AI CRM (AI Capture)
+## OAC Assistant — the chat-based AI CRM
 
-OAC works like a **chat box that organizes itself into a CRM**. On the **AI Capture** page you
-type your work notes freely — about a customer, supplier, partner, project, recruiting, legal,
-or operational issue — and OAC automatically structures them into:
+**OAC Assistant** unifies "Ask OAC" and "AI Capture" into one conversational workspace. You
+chat freely — ask a question, paste a work note, or **attach an image or document** — and OAC:
 
-- **Account** — detected (or matched to an existing relationship), with an auto-detected
-  business context and category (you never classify it)
-- **Timeline** — the note becomes a dated timeline event
-- **To Do** — action items extracted with priority and due dates (checkable)
-- **Risk** — risks/blockers surfaced automatically
-- **Report & Email** — one-click AI-generated report and email drafts
+- **Answers** questions about any relationship, grounded in the CRM data.
+- **Summarizes** uploaded images (vision) and documents (PDF / text).
+- **Structures** your notes into **Account · Timeline · To Do · Risk**, auto-saved to a
+  persistent **CRM Workspace** (localStorage) that aggregates accounts, open to-dos and risks.
+- **Generates** one-click report and email drafts from the structured record.
 
-Every capture is saved to a persistent **CRM Workspace** (localStorage) that aggregates accounts,
-open to-dos and risks. Bilingual (English / 한국어).
+It covers **every** business relationship — customer, supplier, partner, project, recruiting,
+legal, operations — with the category and context auto-detected (you never classify). Bilingual
+(English / 한국어), dark-mode aware.
+
+### Demo vs. Live AI
+
+- **Demo mode (default):** a deterministic mock engine using local data — works fully offline,
+  no API key. This is the concept-validation default.
+- **Live AI mode (optional):** in **Settings** you can enter your **own Anthropic API key** and
+  pick a model (Opus 4.8 / Sonnet 4.6 / Haiku 4.5). OAC then calls the real Claude API directly
+  from the browser — real answers, real image/PDF understanding, real structuring.
+  ⚠️ The key is stored **only in your browser** and sent directly to Anthropic
+  (`anthropic-dangerous-direct-browser-access`). Use a **personal** key for this prototype —
+  never a shared/production key. This is a no-backend convenience for the demo, not a secure
+  production pattern.
 
 ## Pages
 
 1. **Dashboard** — "Today's AI Briefing": priority relationships, open follow-ups, recent
    meetings, draft emails, contexts needing attention, AI recommended actions.
-2. **AI Capture** — chat-style free-form input → auto-structured Account / Timeline / To Do /
-   Risk / Report, saved to a live CRM workspace.
-3. **Ask OAC** — conversational CRM. Search a name or ask a question; OAC returns a full
-   briefing with a source/context panel. Try *"What should I do next with Klook?"*
+2. **OAC Assistant** — unified chat: ask, upload images/documents, and get auto-structured
+   Account / Timeline / To Do / Risk / Report. Demo or real Claude API.
 3. **Relationship 360** — one relationship brain with Overview, Timeline, Communication,
    Tasks, Data, and AI Recommendation tabs.
 4. **Meeting Recorder** — paste notes (or "upload" a recording); OAC produces a summary,
