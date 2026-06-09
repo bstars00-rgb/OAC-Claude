@@ -42,11 +42,29 @@ action** that shows a toast:
 
 All data lives in local TypeScript files under `src/data/`.
 
+## Chat-based AI CRM (AI Capture)
+
+OAC works like a **chat box that organizes itself into a CRM**. On the **AI Capture** page you
+type your work notes freely — about a customer, supplier, partner, project, recruiting, legal,
+or operational issue — and OAC automatically structures them into:
+
+- **Account** — detected (or matched to an existing relationship), with an auto-detected
+  business context and category (you never classify it)
+- **Timeline** — the note becomes a dated timeline event
+- **To Do** — action items extracted with priority and due dates (checkable)
+- **Risk** — risks/blockers surfaced automatically
+- **Report & Email** — one-click AI-generated report and email drafts
+
+Every capture is saved to a persistent **CRM Workspace** (localStorage) that aggregates accounts,
+open to-dos and risks. Bilingual (English / 한국어).
+
 ## Pages
 
 1. **Dashboard** — "Today's AI Briefing": priority relationships, open follow-ups, recent
    meetings, draft emails, contexts needing attention, AI recommended actions.
-2. **Ask OAC** — conversational CRM. Search a name or ask a question; OAC returns a full
+2. **AI Capture** — chat-style free-form input → auto-structured Account / Timeline / To Do /
+   Risk / Report, saved to a live CRM workspace.
+3. **Ask OAC** — conversational CRM. Search a name or ask a question; OAC returns a full
    briefing with a source/context panel. Try *"What should I do next with Klook?"*
 3. **Relationship 360** — one relationship brain with Overview, Timeline, Communication,
    Tasks, Data, and AI Recommendation tabs.

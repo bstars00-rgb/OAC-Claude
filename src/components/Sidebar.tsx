@@ -16,6 +16,7 @@ const I = (path: ReactNode) => (
 
 const navItems: NavItem[] = [
   { to: '/', tKey: 'nav.dashboard', icon: I(<><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></>) },
+  { to: '/capture', tKey: 'nav.capture', icon: I(<><path d="M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /><path d="M14 3v5h5M8 13h8M8 17h5" /></>) },
   { to: '/ask', tKey: 'nav.ask', icon: I(<><path d="M12 3l1.9 4.6L18.5 9 14 11l-2 5-2-5L5.5 9l4.6-1.4L12 3z" /></>) },
   { to: '/relationship', tKey: 'nav.relationship', icon: I(<><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></>) },
   { to: '/meeting', tKey: 'nav.meeting', icon: I(<><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M6 11a6 6 0 0 0 12 0M12 17v4" /></>) },

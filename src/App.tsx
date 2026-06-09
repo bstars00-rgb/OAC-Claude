@@ -3,7 +3,9 @@ import { Layout } from './components/Layout'
 import { ToastProvider } from './components/Toast'
 import { ThemeProvider } from './theme'
 import { LanguageProvider } from './i18n'
+import { CaptureProvider } from './data/captureStore'
 import { Dashboard } from './pages/Dashboard'
+import { AICapture } from './pages/AICapture'
 import { AskOAC } from './pages/AskOAC'
 import { Relationship360 } from './pages/Relationship360'
 import { MeetingRecorder } from './pages/MeetingRecorder'
@@ -16,10 +18,12 @@ export default function App() {
   return (
     <ThemeProvider>
     <LanguageProvider>
+    <CaptureProvider>
     <ToastProvider>
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/capture" element={<AICapture />} />
           <Route path="/ask" element={<AskOAC />} />
           <Route path="/relationship" element={<Relationship360 />} />
           <Route path="/relationship/:id" element={<Relationship360 />} />
@@ -32,6 +36,7 @@ export default function App() {
         </Routes>
       </Layout>
     </ToastProvider>
+    </CaptureProvider>
     </LanguageProvider>
     </ThemeProvider>
   )

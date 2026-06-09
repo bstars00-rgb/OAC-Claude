@@ -14,6 +14,7 @@ const DICT: Record<string, Entry> = {
 
   // Navigation
   'nav.dashboard': { en: 'Dashboard', ko: '대시보드' },
+  'nav.capture': { en: 'AI Capture', ko: 'AI 캡처' },
   'nav.ask': { en: 'Ask OAC', ko: 'OAC에게 묻기' },
   'nav.relationship': { en: 'Relationship 360', ko: '관계 360' },
   'nav.meeting': { en: 'Meeting Recorder', ko: '미팅 레코더' },
@@ -155,6 +156,52 @@ const DICT: Record<string, Entry> = {
   'r.tasks': { en: 'Tasks', ko: '작업' },
   'r.sales': { en: 'Sales data', ko: '세일즈 데이터' },
   'l.askAnything': { en: 'Ask OAC anything', ko: 'OAC에게 무엇이든 물어보세요' },
+
+  // AI Capture
+  'page.capture.title': { en: 'AI Capture', ko: 'AI 캡처' },
+  'page.capture.subtitle': {
+    en: 'Type your work notes freely. OAC structures them into Account, Timeline, To Do, Risk and a Report — automatically.',
+    ko: '업무 내용을 자유롭게 입력하세요. OAC가 자동으로 Account·Timeline·To Do·Risk·Report로 정리합니다.',
+  },
+  'cap.placeholder': {
+    en: 'e.g. Met Klook on the SLA today. 24/7 support not feasible, legal review needed by next week. Compensation risk is high.',
+    ko: '예: 오늘 Klook과 SLA 미팅. 24/7 지원 불가, 보상 문구 법무 검토 다음주까지 필요. 보상 리스크 큼.',
+  },
+  'cap.structure': { en: 'Structure with OAC', ko: 'OAC로 구조화' },
+  'cap.thinking': { en: 'OAC is structuring your note into CRM records…', ko: 'OAC가 입력을 CRM 레코드로 구조화하는 중…' },
+  'cap.tryExample': { en: 'Try an example', ko: '예시로 시작' },
+  'cap.emptyTitle': { en: 'Capture anything — OAC turns it into CRM', ko: '무엇이든 입력하세요 — OAC가 CRM으로 정리합니다' },
+  'cap.emptyDesc': {
+    en: 'Customers, suppliers, partners, projects, recruiting, legal, operations — every business relationship. You type, OAC structures.',
+    ko: '고객사·공급사·파트너·프로젝트·채용·법무·운영 등 모든 업무 관계. 입력하면 OAC가 정리합니다.',
+  },
+  'cap.account': { en: 'Account', ko: 'Account' },
+  'cap.timeline': { en: 'Timeline', ko: 'Timeline' },
+  'cap.todo': { en: 'To Do', ko: 'To Do' },
+  'cap.risk': { en: 'Risk', ko: 'Risk' },
+  'cap.report': { en: 'Report', ko: 'Report' },
+  'cap.email': { en: 'Email', ko: 'Email' },
+  'cap.summary': { en: 'Summary', ko: '요약' },
+  'cap.new': { en: 'New account', ko: '신규 Account' },
+  'cap.existing': { en: 'Existing relationship', ko: '기존 관계' },
+  'cap.savedToCrm': { en: 'Saved to CRM workspace', ko: 'CRM 워크스페이스에 저장됨' },
+  'cap.genReport': { en: 'Generate Report', ko: '리포트 생성' },
+  'cap.draftEmail': { en: 'Draft Email', ko: '이메일 초안' },
+  'cap.viewRel': { en: 'View Relationship 360', ko: '관계 360 보기' },
+  'cap.noRisk': { en: 'No risks detected', ko: '감지된 리스크 없음' },
+  'cap.noTodo': { en: 'No to-dos detected', ko: '감지된 To Do 없음' },
+  'cap.workspace': { en: 'CRM Workspace', ko: 'CRM 워크스페이스' },
+  'cap.liveStructured': { en: 'Live, structured from your captures', ko: '입력에서 실시간 구조화' },
+  'cap.accounts': { en: 'Accounts', ko: 'Accounts' },
+  'cap.openTodos': { en: 'Open To Dos', ko: '진행 To Do' },
+  'cap.risks': { en: 'Risks', ko: 'Risks' },
+  'cap.captures': { en: 'Captures', ko: '캡처' },
+  'cap.recentAccounts': { en: 'Captured Accounts', ko: '캡처된 Account' },
+  'cap.noAccounts': { en: 'No captured accounts yet.', ko: '아직 캡처된 Account가 없습니다.' },
+  'cap.entries': { en: 'entries', ko: '건' },
+  'cap.todosShort': { en: 'to-dos', ko: 'To Do' },
+  'cap.clear': { en: 'Clear workspace', ko: '워크스페이스 비우기' },
+  'cap.due': { en: 'due', ko: '마감' },
 }
 
 interface I18nCtx {
