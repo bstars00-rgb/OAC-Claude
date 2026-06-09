@@ -1,0 +1,11 @@
+node_modules
+dist
+dev.log
+*.local
+.DS_Store
+.vercel
+node_modules/.tmp
+
+# Claude Code local files
+.claude/
+*.tsbuildinfo
