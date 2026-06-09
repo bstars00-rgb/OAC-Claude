@@ -16,6 +16,13 @@ export interface AssistantReply {
   error?: string
 }
 
+export interface AssistantMemory {
+  accounts: { accountId: string; accountName: string; entryCount: number; openTodos: number; detectedContext: string }[]
+  totalAccounts: number
+  totalOpenTodos: number
+  totalRisks: number
+}
+
 interface RunOpts {
   isLive: boolean
   apiKey: string
@@ -24,7 +31,7 @@ interface RunOpts {
   history: ChatTurnLite[]
   userText: string
   attachments: Attachment[]
-  capturedContext: string // compact list of recently captured accounts
+  memory: AssistantMemory // workspace memory (state before this turn)
 }
 
 const CATEGORIES: Category[] = ['Customer', 'Supplier', 'Partner', 'Project', 'Recruiting', 'Legal', 'Operations', 'Finance', 'General']
@@ -137,7 +144,11 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
   // ── live: real Anthropic API ──────────────────────────────────────────────
   if (opts.isLive) {
     try {
-      const crmContext = `${buildEntityContext()}\n${opts.capturedContext}`.trim()
+      const captures = opts.memory.accounts.length
+        ? 'Recent captures (your memory):\n' +
+          opts.memory.accounts.slice(0, 10).map((a) => `- ${a.accountName} [${a.detectedContext}] ${a.entryCount} note(s), ${a.openTodos} open to-do(s)`).join('\n')
+        : ''
+      const crmContext = `${buildEntityContext()}\n${captures}`.trim()
       const raw = await callAssistant({
         apiKey: opts.apiKey,
         model: opts.model,
@@ -183,13 +194,74 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
       : ''
 
   if (ent && (looksLikeQuestion(opts.userText) || !hasCaptureCues(opts.userText))) {
-    return { text: briefing(ent.id, opts.lang) + fileNote, entityId: ent.id }
+    return { text: briefing(ent.id, opts.lang) + memoryHint(ent.id, opts.memory, opts.lang) + fileNote, entityId: ent.id }
   }
 
   const structured = structureCapture(opts.userText || (opts.attachments[0]?.name ?? ''), opts.lang)
-  const lead =
-    opts.lang === 'ko'
-      ? `입력을 **${structured.detectedContext}** 맥락으로 정리했어요. Account·Timeline·To Do·Risk로 구조화했습니다.`
-      : `I structured this as a **${structured.detectedContext}** context — Account, Timeline, To Do and Risk below.`
-  return { text: lead + fileNote, structured, entityId: structured.isExisting ? structured.accountId : undefined }
+  const text = naturalCaptureReply(structured, opts.memory, opts.lang) + fileNote
+  return { text, structured, entityId: structured.isExisting ? structured.accountId : undefined }
+}
+
+// A short note about prior memory for an existing relationship.
+const memoryHint = (accountId: string, mem: AssistantMemory, lang: Lang): string => {
+  const prior = mem.accounts.find((a) => a.accountId === accountId)
+  if (!prior || prior.entryCount === 0) return ''
+  return lang === 'ko'
+    ? `\n\n참고로 ${prior.accountName} 관련 메모가 ${prior.entryCount}건, 진행 중 할 일 ${prior.openTodos}개를 기억하고 있어요.`
+    : `\n\nFor context, I'm tracking ${prior.entryCount} note(s) and ${prior.openTodos} open to-do(s) on ${prior.accountName}.`
+}
+
+// Natural, history-aware acknowledgement — no rigid "structured into X" wording.
+const naturalCaptureReply = (s: StructuredCapture, mem: AssistantMemory, lang: Lang): string => {
+  const ko = lang === 'ko'
+  const name = s.accountName
+  const prior = mem.accounts.find((a) => a.accountId === s.accountId)
+  const topTodo = s.todos[0]
+  const topRisk = s.risks[0]
+  const newTodos = s.todos.length
+  const newRisks = s.risks.length
+
+  // after-state totals (memory is the state before this turn)
+  const totalAccounts = prior ? mem.totalAccounts : mem.totalAccounts + 1
+  const totalTodos = mem.totalOpenTodos + newTodos
+
+  const parts: string[] = []
+
+  // 1) opener — save vs. update, with memory awareness
+  if (ko) {
+    if (s.isExisting) parts.push(`${name}에 대한 새 업데이트로 기록해 뒀어요.`)
+    else if (prior) parts.push(`${name} 관련 ${prior.entryCount + 1}번째 메모네요. 이전 내용에 이어서 정리해 뒀어요.`)
+    else parts.push(`${name} 건, 정리해서 저장해 뒀어요.`)
+  } else {
+    if (s.isExisting) parts.push(`Logged this as a new update on ${name}.`)
+    else if (prior) parts.push(`That's note ${prior.entryCount + 1} on ${name} — I added it on top of what you had.`)
+    else parts.push(`Saved your note on ${name}.`)
+  }
+
+  // 2) what stood out — top to-do / risk, naturally
+  if (topTodo) {
+    const due = topTodo.due ? (ko ? ` (~${topTodo.due})` : ` (~${topTodo.due})`) : ''
+    parts.push(ko ? `가장 먼저 챙길 건 "${topTodo.text}"${due}로 잡아 뒀어요.` : `The most pressing item looks like "${topTodo.text}"${due}.`)
+  }
+  if (topRisk) {
+    parts.push(ko ? `리스크로 "${topRisk}"도 함께 표시해 뒀고요.` : `I also flagged a risk: "${topRisk}".`)
+  }
+
+  // 3) memory feedback — running totals
+  parts.push(
+    ko
+      ? `지금 워크스페이스에는 관계 ${totalAccounts}곳, 진행 중 할 일 ${totalTodos}개를 기억하고 있어요.`
+      : `Your workspace now holds ${totalAccounts} relationship(s) and ${totalTodos} open to-do(s).`,
+  )
+
+  // 4) one proactive suggestion
+  if (newRisks > 0) {
+    parts.push(ko ? `리스크가 커지기 전에 먼저 한 번 확인해 보시길 추천해요.` : `I'd look at that risk before it grows.`)
+  } else if (topTodo && topTodo.priority === 'High') {
+    parts.push(ko ? `"${topTodo.text}"부터 처리하면 좋겠어요.` : `Tackling "${topTodo.text}" first would be my move.`)
+  } else if (s.isExisting) {
+    parts.push(ko ? `${name} 관계 화면에서 전체 맥락을 이어 볼 수 있어요.` : `You can pick up the full context on the ${name} relationship view.`)
+  }
+
+  return parts.join(' ')
 }

@@ -24,6 +24,7 @@ interface ChatMsg {
   structured?: StructuredCapture
   entryId?: string
   entityId?: string
+  showDetails?: boolean
   showReport?: boolean
   showEmail?: boolean
 }
@@ -46,7 +47,9 @@ const catLabel: Record<Category, { en: string; ko: string }> = {
   Operations: { en: 'Operations', ko: '운영' }, Finance: { en: 'Finance', ko: '재무' }, General: { en: 'General', ko: '일반' },
 }
 
-let msgSeq = 0
+// Seed from the current time so a hot-reload (which resets module state) can't
+// collide new message ids with ones already in React state.
+let msgSeq = Date.now()
 
 export function OACAssistant() {
   const [params, setParams] = useSearchParams()
@@ -75,9 +78,18 @@ export function OACAssistant() {
       .slice(-8)
       .map((m) => ({ role: m.role, text: m.text }))
 
-    const capturedContext = store.accounts.length
-      ? 'Recent captures:\n' + store.accounts.slice(0, 8).map((a) => `- ${a.accountName} [${a.detectedContext}] ${a.openTodos} open to-dos`).join('\n')
-      : ''
+    const memory = {
+      accounts: store.accounts.map((a) => ({
+        accountId: a.accountId,
+        accountName: a.accountName,
+        entryCount: a.entryCount,
+        openTodos: a.openTodos,
+        detectedContext: a.detectedContext,
+      })),
+      totalAccounts: store.stats.accounts,
+      totalOpenTodos: store.stats.openTodos,
+      totalRisks: store.stats.risks,
+    }
 
     const reply = await runAssistant({
       isLive: ai.isLive,
@@ -87,7 +99,7 @@ export function OACAssistant() {
       history,
       userText: clean,
       attachments,
-      capturedContext,
+      memory,
     })
 
     let entryId: string | undefined
@@ -264,15 +276,23 @@ export function OACAssistant() {
     if (!entry) return null
     const setMsg = (patch: Partial<ChatMsg>) => setMessages((all) => all.map((x) => (x.id === msg.id ? { ...x, ...patch } : x)))
 
+    const openTodos = entry.todos.filter((x) => !x.done).length
     return (
-      <div className="mt-3 rounded-xl border border-slate-200 p-3">
+      <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/50 p-2.5">
+        {/* Compact saved line — natural, structure on demand */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('cap.account')}</span>
-          <span className="text-sm font-bold text-slate-900">{s.accountName}</span>
-          <Badge tone={s.isExisting ? 'green' : 'brand'} dot>{s.isExisting ? t('cap.existing') : t('cap.new')}</Badge>
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><CheckIcon /> {t('asst.saved')}</span>
+          <button onClick={() => s.isExisting ? navigate(`/relationship/${s.accountId}`) : undefined} className={`text-sm font-bold text-slate-900 ${s.isExisting ? 'hover:text-brand-700' : ''}`}>{s.accountName}</button>
           <Badge tone={catTone[s.category]}>{catLabel[s.category][lang]}</Badge>
+          <span className="text-[11px] text-slate-400">{openTodos} {t('cap.todosShort')}{entry.risks.length > 0 ? ` · ${entry.risks.length} ${t('cap.risk')}` : ''}</span>
+          <button onClick={() => setMsg({ showDetails: !msg.showDetails })} className="ml-auto text-[11px] font-medium text-brand-600 hover:text-brand-700">{msg.showDetails ? t('asst.hide') : t('asst.details')}</button>
+        </div>
+
+        {!msg.showDetails ? null : (
+        <>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Badge tone={s.isExisting ? 'green' : 'brand'} dot>{s.isExisting ? t('cap.existing') : t('cap.new')}</Badge>
           <ContextBadge context={s.detectedContext} confidence={s.contextConfidence} size="sm" />
-          <Badge tone="green">{t('cap.savedToCrm')}</Badge>
         </div>
 
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -328,6 +348,8 @@ export function OACAssistant() {
             <div className="mb-2 flex items-center justify-between"><span className="text-sm font-semibold text-slate-800">{s.email.subject}</span><Button size="sm" variant="demo" onClick={() => demoAction('Send via Outlook Demo')}>Send via Outlook Demo</Button></div>
             <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-slate-600">{s.email.body}</pre>
           </div>
+        )}
+        </>
         )}
       </div>
     )

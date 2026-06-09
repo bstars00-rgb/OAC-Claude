@@ -244,6 +244,10 @@ const DICT: Record<string, Entry> = {
   'set.getKey': { en: 'Get a key at console.anthropic.com', ko: 'console.anthropic.com에서 키 발급' },
   'set.done': { en: 'Done', ko: '완료' },
   'set.connected': { en: 'Connected', ko: '연결됨' },
+
+  'asst.saved': { en: 'Saved', ko: '저장됨' },
+  'asst.details': { en: 'Details', ko: '자세히' },
+  'asst.hide': { en: 'Hide', ko: '접기' },
 }
 
 interface I18nCtx {

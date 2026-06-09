@@ -163,14 +163,18 @@ const extractAccountName = (text: string, lang: Lang): { name: string; id: strin
   const projKo = text.match(/프로젝트\s*([가-힣A-Za-z0-9]+)/) || text.match(/([가-힣A-Za-z0-9]+)\s*프로젝트/)
   if (projKo) return mkNew(projKo[1])
 
-  // 3) Korean "X와/과/사/팀"
-  const ko = text.match(/([가-힣A-Za-z0-9]{2,})\s*(?:와|과|사|팀|측|님|과의|와의)/)
-  if (ko) return mkNew(ko[1])
+  // 3) English proper noun (company-like) — checked before the loose Korean
+  //    suffix heuristic, since company names are usually capitalized English.
+  const skip = new Set(['The', 'We', 'They', 'Our', 'Need', 'Today', 'Met', 'Call', 'Sent', 'Review', 'I', 'A', 'An'])
+  const enCandidates = [...text.matchAll(/\b([A-Z][A-Za-z0-9&.]+(?:\s+[A-Z][A-Za-z0-9&.]+){0,2})\b/g)]
+    .map((m) => m[1].trim())
+    .filter((n) => !skip.has(n.split(/\s+/)[0]))
+  if (enCandidates.length) return mkNew(enCandidates[0])
 
-  // 4) English capitalized proper noun (skip common starters)
-  const skip = new Set(['The', 'We', 'They', 'Our', 'Need', 'Today', 'Met', 'Call', 'Sent', 'Review', 'I'])
-  const en = text.match(/\b([A-Z][A-Za-z0-9]+(?:\s[A-Z][A-Za-z0-9]+){0,2})\b/)
-  if (en && !skip.has(en[1].split(' ')[0])) return mkNew(en[1])
+  // 4) Korean "X사/팀/와/과" relationship marker — skip common non-name words.
+  const KO_STOP = new Set(['경쟁', '협력', '고객', '파트너', '관계', '계열', '당', '본', '지', '자', '우리', '저희', '상대'])
+  const ko = text.match(/([가-힣]{2,})\s*(?:사|팀|측|님|와의|과의|와|과)/)
+  if (ko && !KO_STOP.has(ko[1]) && !KO_STOP.has(ko[1].slice(0, 2))) return mkNew(ko[1])
 
   return mkNew(lang === 'ko' ? '새 업무 항목' : 'New Item')
 
