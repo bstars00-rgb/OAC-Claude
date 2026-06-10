@@ -77,7 +77,7 @@ describe('dataImport', () => {
     const revenue = sug.metrics.find((m) => m.label === '수익(¥)')!
     expect(revenue.header).toBe('Billing Revenue  by Company Currency_JPY')
     expect(sug.extraDimensions).toContain('Seller Name')
-    expect(sug.periodColumn).toBe('Week of Booking Date')
+    expect(sug.periodColumn).toBe('Booking Date') // prefer the full date → ISO week
   })
 
   it('falls back to generic for an unknown schema', () => {
@@ -97,10 +97,12 @@ describe('dataImport', () => {
     expect(booking.periodColumn).toBe('Week of Check In Date')
   })
 
-  it('derives a monthly label for checkout, keeps the week label for booking', () => {
+  it('derives a monthly label for checkout and an ISO week for booking', () => {
     expect(derivePeriodLabel('2026-05-20', 'checkout')).toBe('2026-05')
     expect(derivePeriodLabel('2026/5/3', 'checkout')).toBe('2026-05')
-    expect(derivePeriodLabel('2026-W23', 'booking')).toBe('2026-W23')
+    expect(derivePeriodLabel('2026-W23', 'booking')).toBe('2026-W23') // already a week label
+    expect(derivePeriodLabel('2026-06-08', 'booking')).toMatch(/^2026-W\d{2}$/) // full date → ISO week
+    expect(derivePeriodLabel('23', 'booking')).toBe('W23') // bare week number
     expect(derivePeriodLabel('', 'checkout')).toBe('')
   })
 

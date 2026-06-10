@@ -103,8 +103,18 @@ export interface SuggestedMapping {
   periodColumn?: string
 }
 
+// ISO-8601 week label, e.g. 2026-06-06 → "2026-W23".
+function isoWeekLabel(y: number, m: number, d: number): string {
+  const date = new Date(Date.UTC(y, m - 1, d))
+  const dayNum = (date.getUTCDay() + 6) % 7 // Mon=0..Sun=6
+  date.setUTCDate(date.getUTCDate() - dayNum + 3) // nearest Thursday
+  const firstThu = new Date(Date.UTC(date.getUTCFullYear(), 0, 4))
+  const week = 1 + Math.round(((date.getTime() - firstThu.getTime()) / 86_400_000 - 3 + ((firstThu.getUTCDay() + 6) % 7)) / 7)
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`
+}
+
 // Derive a period label from a date-ish cell value. Check Out is monthly
-// (YYYY-MM); Booking keeps the given week/label as-is.
+// (YYYY-MM); Booking is the ISO week (YYYY-Www).
 export function derivePeriodLabel(value: unknown, profile: ImportProfile): string {
   const s = String(value ?? '').trim()
   if (!s) return ''
@@ -114,7 +124,12 @@ export function derivePeriodLabel(value: unknown, profile: ImportProfile): strin
     if (value instanceof Date) return value.toISOString().slice(0, 7)
     return s
   }
-  return s // booking — use the week label / value directly
+  // booking → ISO week from a full date, else a bare week number, else as-is
+  const dm = s.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/)
+  if (dm) return isoWeekLabel(+dm[1], +dm[2], +dm[3])
+  if (value instanceof Date) return isoWeekLabel(value.getUTCFullYear(), value.getUTCMonth() + 1, value.getUTCDate())
+  if (/^\d{1,2}$/.test(s)) return `W${s.padStart(2, '0')}`
+  return s
 }
 
 export function suggestMapping(headers: string[], profile: ImportProfile = 'booking'): SuggestedMapping {
@@ -142,7 +157,7 @@ export function suggestMapping(headers: string[], profile: ImportProfile = 'book
     const periodColumn =
       profile === 'checkout'
         ? findHeader(headers, ['Check Out Date', 'Week of Check In Date', 'Check In Date'])
-        : findHeader(headers, ['Week of Booking Date', 'Booking Date', 'Week of Check In Date'])
+        : findHeader(headers, ['Booking Date', 'Week of Booking Date', 'Check In Date']) // prefer the full date → ISO week
     return {
       preset: 'ohmyhotel',
       dimension: findHeader(headers, ['Hotel Name']) ?? headers[0],
