@@ -41,6 +41,7 @@ export interface AssistantMemory {
 
 interface RunOpts {
   isLive: boolean
+  provider?: 'anthropic' | 'openai'
   apiKey: string
   model: string
   lang: Lang
@@ -280,6 +281,7 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
       const ctx = opts.relationships.length ? buildContext(opts.relationships) : (opts.lang === 'ko' ? '(아직 등록된 관계 없음)' : '(no relationships yet)')
       const crmContext = `${ctx}\n${captures}${activity}`.trim()
       const raw = await callAssistant({
+        provider: opts.provider ?? 'anthropic',
         apiKey: opts.apiKey,
         model: opts.model,
         lang: opts.lang,

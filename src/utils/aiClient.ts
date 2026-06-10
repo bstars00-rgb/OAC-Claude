@@ -11,6 +11,9 @@ import { metricsByEntity } from '../data/salesData'
 import type { Lang } from '../i18n'
 
 const ENDPOINT = 'https://api.anthropic.com/v1/messages'
+const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions'
+
+export type AiProvider = 'anthropic' | 'openai'
 
 export interface ChatTurnLite {
   role: 'user' | 'assistant'
@@ -18,6 +21,7 @@ export interface ChatTurnLite {
 }
 
 interface CallOpts {
+  provider: AiProvider
   apiKey: string
   model: string
   lang: Lang
@@ -85,6 +89,11 @@ const buildUserContent = (userText: string, attachments: Attachment[]): ContentB
 }
 
 export async function callAssistant(opts: CallOpts): Promise<string> {
+  if (opts.provider === 'openai') return callOpenAI(opts)
+  return callAnthropic(opts)
+}
+
+async function callAnthropic(opts: CallOpts): Promise<string> {
   const messages = [
     ...opts.history.map((t) => ({ role: t.role, content: t.text })),
     { role: 'user' as const, content: buildUserContent(opts.userText, opts.attachments) },
@@ -124,4 +133,64 @@ export async function callAssistant(opts: CallOpts): Promise<string> {
     .join('\n')
     .trim()
   return text
+}
+
+// ── OpenAI (ChatGPT) ─────────────────────────────────────────────────────────
+// Browser-direct, BYO key. The OpenAI API returns CORS headers, so a fetch from
+// the browser works (the same model the official SDK enables via
+// `dangerouslyAllowBrowser`). Personal/demo use only.
+type OpenAIContent =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } }
+
+const buildOpenAIContent = (userText: string, attachments: Attachment[]): OpenAIContent[] => {
+  const blocks: OpenAIContent[] = []
+  for (const a of attachments) {
+    if (a.kind === 'image' && a.dataBase64) {
+      blocks.push({ type: 'image_url', image_url: { url: `data:${a.mediaType};base64,${a.dataBase64}` } })
+    } else if (a.kind === 'text' && a.text) {
+      blocks.push({ type: 'text', text: `Attached file "${a.name}":\n\n${a.text}` })
+    } else if (a.kind === 'pdf') {
+      blocks.push({ type: 'text', text: `Attached PDF "${a.name}" — (PDF binary not sent to ChatGPT in this prototype; paste key text if you need it analyzed).` })
+    } else {
+      blocks.push({ type: 'text', text: `Attached file "${a.name}" (${a.mediaType}) — content not extractable in this prototype.` })
+    }
+  }
+  blocks.push({ type: 'text', text: userText || 'Please review the attached file(s).' })
+  return blocks
+}
+
+async function callOpenAI(opts: CallOpts): Promise<string> {
+  const messages = [
+    { role: 'system' as const, content: systemPrompt(opts.lang, opts.crmContext) },
+    ...opts.history.map((t) => ({ role: t.role, content: t.text })),
+    { role: 'user' as const, content: buildOpenAIContent(opts.userText, opts.attachments) },
+  ]
+
+  const res = await fetch(OPENAI_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${opts.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: opts.model,
+      max_tokens: 2048,
+      messages,
+    }),
+  })
+
+  if (!res.ok) {
+    let detail = res.statusText
+    try {
+      const err = await res.json()
+      detail = err?.error?.message ?? detail
+    } catch {
+      /* ignore */
+    }
+    throw new Error(`OpenAI API ${res.status}: ${detail}`)
+  }
+
+  const data = await res.json()
+  return String(data.choices?.[0]?.message?.content ?? '').trim()
 }

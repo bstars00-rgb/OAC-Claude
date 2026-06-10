@@ -20,7 +20,7 @@ import {
 } from '../utils/graph'
 
 export function Settings() {
-  const { t } = useT()
+  const { t, lang } = useT()
   const ai = useAiSettings()
   const store = useCaptureStore()
 
@@ -50,15 +50,21 @@ export function Settings() {
         {ai.mode === 'live' && (
           <div className="mt-4 space-y-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">{t('set.apiKey')}</label>
-              <input type="password" value={ai.apiKey} onChange={(e) => ai.setApiKey(e.target.value)} placeholder="sk-ant-..." className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100" />
-              <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="mt-1 inline-block text-[11px] text-brand-600 hover:text-brand-700">{t('set.getKey')} →</a>
-            </div>
-            <div>
               <label className="mb-1 block text-xs font-medium text-slate-500">{t('set.model')}</label>
               <select value={ai.model} onChange={(e) => ai.setModel(e.target.value)} className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none">
                 {AI_MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
               </select>
+              <p className="mt-1 text-[11px] text-slate-400">{lang === 'ko' ? 'Claude와 ChatGPT 키를 모두 저장해두면, 모델만 바꿔 언제든 둘 다 사용할 수 있어요.' : 'Save both keys once — switch the model anytime to use Claude or ChatGPT.'}</p>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">Anthropic (Claude) API Key</label>
+              <input type="password" value={ai.apiKey} onChange={(e) => ai.setApiKey(e.target.value)} placeholder="sk-ant-..." className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100" />
+              <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="mt-1 inline-block text-[11px] text-brand-600 hover:text-brand-700">{t('set.getKey')} →</a>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">OpenAI (ChatGPT) API Key</label>
+              <input type="password" value={ai.openaiKey} onChange={(e) => ai.setOpenaiKey(e.target.value)} placeholder="sk-..." className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100" />
+              <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="mt-1 inline-block text-[11px] text-brand-600 hover:text-brand-700">{t('set.getKey')} →</a>
             </div>
             <div className="max-w-md rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[11px] leading-relaxed text-amber-800">⚠️ {t('set.warn')}</div>
           </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { PageHeader } from '../components/Layout'
 import { Card, CardHeader } from '../components/Card'
@@ -8,7 +8,6 @@ import { ContextBadge } from '../components/ContextBadge'
 import { InsightBox } from '../components/InsightBox'
 import { Timeline, type TimelineEntry } from '../components/Timeline'
 import { MetricCard } from '../components/MetricCard'
-import { EntitySelector } from '../components/EntitySelector'
 import { Sparkline, GaugeBar, Donut } from '../components/DemoChart'
 import { useToast } from '../components/Toast'
 import { useT } from '../i18n'
@@ -50,9 +49,28 @@ export function Relationship360() {
   const { id } = useParams()
   const navigate = useNavigate()
   const rel = useRelationships()
-  const entity = (id ? rel.byId(id) : undefined) ?? rel.list[0]
-  if (!entity) return <RelationshipEmpty />
-  return <RelationshipDetail entity={entity} options={rel.list} key={entity.id} navigateTo={navigate} />
+  const recents = useRecentSearches()
+
+  if (rel.list.length === 0) return <RelationshipEmpty />
+
+  const pick = (e: PickTarget) => {
+    recents.add(e)
+    navigate(`/relationship/${e.id}`)
+  }
+
+  const entity = id ? rel.byId(id) : undefined
+  // No company selected yet → search-first hub.
+  if (!entity) return <RelationshipHub list={rel.list} recents={recents} onPick={pick} />
+  return (
+    <RelationshipDetail
+      entity={entity}
+      list={rel.list}
+      recents={recents}
+      onPick={pick}
+      key={entity.id}
+      navigateTo={navigate}
+    />
+  )
 }
 
 function RelationshipEmpty() {
@@ -73,11 +91,18 @@ function RelationshipEmpty() {
 
 type Tab = 'overview' | 'timeline' | 'communication' | 'tasks' | 'data' | 'ai'
 
-function RelationshipDetail({ entity, options, navigateTo }: { entity: Entity; options: Entity[]; navigateTo: (to: string) => void }) {
+function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { entity: Entity; list: Entity[]; recents: RecentSearches; onPick: (e: PickTarget) => void; navigateTo: (to: string) => void }) {
   const { demoAction } = useToast()
   const { t, lang } = useT()
   const store = useCaptureStore()
   const [tab, setTab] = useState<Tab>('overview')
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
+
+  // Remember this company as a recent search whenever it's viewed.
+  useEffect(() => {
+    recents.add({ id: entity.id, name: entity.name })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entity.id])
   const band = healthBand(entity.relationshipHealthScore)
   const tasks = tasksByEntity(entity.id)
   const emails = emailsByEntity(entity.id)
@@ -107,8 +132,18 @@ function RelationshipDetail({ entity, options, navigateTo }: { entity: Entity; o
 
       {/* Header card */}
       <Card className="mb-5">
-        <div className="mb-4 max-w-xs">
-          <EntitySelector value={entity.id} options={options} onChange={(id) => navigateTo(`/relationship/${id}`)} label={t('l.switchRel')} />
+        <div className="mb-4">
+          <RelationshipSearchBar list={list} onPick={onPick} placeholder={L('다른 업체·호텔·파트너 검색…', 'Search another company, hotel, partner…')} />
+          {recents.items.filter((r) => r.id !== entity.id).length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-medium text-slate-400">{L('최근', 'Recent')}</span>
+              {recents.items.filter((r) => r.id !== entity.id).slice(0, 6).map((r) => (
+                <button key={r.id} onClick={() => onPick(r)} className="rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600 transition hover:border-brand-300 hover:text-brand-700 dark:bg-white/5">
+                  {r.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3.5">
@@ -491,3 +526,197 @@ function RelationshipDetail({ entity, options, navigateTo }: { entity: Entity; o
 }
 
 function BoltIcon() { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" /></svg> }
+function SearchIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg> }
+
+// ── search-first hub ─────────────────────────────────────────────────────────
+export interface PickTarget { id: string; name: string }
+export interface RecentSearches {
+  items: PickTarget[]
+  add: (e: PickTarget) => void
+  clear: () => void
+}
+
+const RECENT_KEY = 'oac-recent-rel-v1'
+
+function useRecentSearches(): RecentSearches {
+  const [items, setItems] = useState<PickTarget[]>(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_KEY)
+      if (raw) return JSON.parse(raw) as PickTarget[]
+    } catch {
+      /* ignore */
+    }
+    return []
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem(RECENT_KEY, JSON.stringify(items))
+    } catch {
+      /* ignore */
+    }
+  }, [items])
+  const add = useCallback((e: PickTarget) => {
+    setItems((prev) => [{ id: e.id, name: e.name }, ...prev.filter((x) => x.id !== e.id)].slice(0, 8))
+  }, [])
+  const clear = useCallback(() => setItems([]), [])
+  return { items, add, clear }
+}
+
+function matchEntity(e: Entity, q: string): boolean {
+  const s = q.trim().toLowerCase()
+  if (!s) return false
+  return [e.name, e.detectedContext, e.region, e.owner]
+    .filter(Boolean)
+    .some((v) => String(v).toLowerCase().includes(s))
+}
+
+function RelationshipSearchBar({
+  list,
+  onPick,
+  placeholder,
+  autoFocus,
+}: {
+  list: Entity[]
+  onPick: (e: PickTarget) => void
+  placeholder: string
+  autoFocus?: boolean
+}) {
+  const [q, setQ] = useState('')
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+  const boxRef = useRef<HTMLDivElement>(null)
+  const results = q.trim() ? list.filter((e) => matchEntity(e, q)).slice(0, 7) : []
+
+  useEffect(() => {
+    const onDoc = (ev: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(ev.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+
+  const pick = (e: PickTarget) => {
+    onPick(e)
+    setQ('')
+    setOpen(false)
+  }
+
+  const onKey = (ev: ReactKeyboardEvent) => {
+    if (!open || results.length === 0) return
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); setActive((a) => (a + 1) % results.length) }
+    else if (ev.key === 'ArrowUp') { ev.preventDefault(); setActive((a) => (a - 1 + results.length) % results.length) }
+    else if (ev.key === 'Enter') { ev.preventDefault(); pick(results[Math.min(active, results.length - 1)]) }
+    else if (ev.key === 'Escape') setOpen(false)
+  }
+
+  return (
+    <div ref={boxRef} className="relative">
+      <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-sm transition focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-100 dark:bg-white/5">
+        <span className="text-slate-400"><SearchIcon /></span>
+        <input
+          autoFocus={autoFocus}
+          value={q}
+          onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(0) }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKey}
+          placeholder={placeholder}
+          className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+        />
+        {q && <button onClick={() => setQ('')} className="text-slate-300 hover:text-slate-500">✕</button>}
+      </div>
+      {open && results.length > 0 && (
+        <div className="absolute z-20 mt-1.5 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:bg-slate-800">
+          {results.map((e, i) => (
+            <button
+              key={e.id}
+              onMouseEnter={() => setActive(i)}
+              onClick={() => pick(e)}
+              className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition ${i === active ? 'bg-brand-50 dark:bg-brand-500/10' : 'hover:bg-slate-50 dark:hover:bg-white/5'}`}
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-600 to-violet-600 text-xs font-bold text-white">{initials(e.name)}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-slate-800">{e.name}</span>
+                <span className="block truncate text-[11px] text-slate-400">{e.detectedContext} · {e.region}</span>
+              </span>
+              <Badge tone={bandTone[healthBand(e.relationshipHealthScore)]}>{e.relationshipHealthScore}</Badge>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RelationshipHub({ list, recents, onPick }: { list: Entity[]; recents: RecentSearches; onPick: (e: PickTarget) => void }) {
+  const { t, lang } = useT()
+  const navigate = useNavigate()
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
+  const recentEntities = recents.items.filter((r) => list.some((e) => e.id === r.id))
+
+  return (
+    <div className="oac-fade-in">
+      <PageHeader title={t('page.relationship.title')} subtitle={t('page.relationship.subtitle')} />
+      <div className="grid gap-5 lg:grid-cols-[1fr_18rem]">
+        {/* main: search + browse */}
+        <div>
+          <Card className="mb-5 bg-gradient-to-br from-brand-50/70 to-violet-50/50 dark:from-brand-500/10 dark:to-violet-500/10">
+            <h2 className="text-lg font-bold tracking-tight text-slate-900">{L('찾고 싶은 업체·호텔·파트너를 검색하세요', 'Search for any company, hotel or partner')}</h2>
+            <p className="mt-1 text-sm text-slate-500">{L('이름만 입력하세요. OAC가 컨텍스트를 찾아 상태를 정리하고 다음 액션을 준비합니다.', 'Just type a name. OAC finds the context, summarizes the status, and prepares the next action.')}</p>
+            <div className="mt-3.5">
+              <RelationshipSearchBar list={list} onPick={onPick} autoFocus placeholder={L('업체·호텔·파트너 검색…', 'Search company, hotel, partner…')} />
+            </div>
+          </Card>
+
+          <div className="mb-2.5 flex items-center gap-2">
+            <span className="text-sm font-semibold text-slate-700">{L('전체 관계', 'All relationships')}</span>
+            <Badge tone="slate">{list.length}</Badge>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {list.map((e) => (
+              <button key={e.id} onClick={() => onPick(e)} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:bg-white/5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 text-sm font-bold text-white">{initials(e.name)}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-slate-900">{e.name}</span>
+                  <span className="mt-0.5 block truncate text-[11px] text-slate-400">{e.detectedContext}</span>
+                </span>
+                <Badge tone={bandTone[healthBand(e.relationshipHealthScore)]} dot>{e.relationshipHealthScore}</Badge>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* side: recent searches */}
+        <aside className="space-y-4">
+          <Card>
+            <div className="mb-2.5 flex items-center justify-between">
+              <CardHeader title={L('최근 검색', 'Recent searches')} />
+              {recentEntities.length > 0 && (
+                <button onClick={recents.clear} className="text-[11px] font-medium text-slate-400 hover:text-slate-600">{L('지우기', 'Clear')}</button>
+              )}
+            </div>
+            {recentEntities.length === 0 ? (
+              <p className="text-xs text-slate-400">{L('검색하면 여기에 최근 본 업체가 쌓입니다.', 'Companies you open will appear here for quick access.')}</p>
+            ) : (
+              <ul className="space-y-1">
+                {recentEntities.map((r) => (
+                  <li key={r.id}>
+                    <button onClick={() => onPick(r)} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition hover:bg-slate-50 dark:hover:bg-white/5">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-500 dark:bg-white/10">{initials(r.name)}</span>
+                      <span className="truncate text-sm font-medium text-slate-700">{r.name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          <Card className="bg-gradient-to-br from-brand-600 to-violet-600 text-white">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide opacity-90"><BoltIcon /> OAC {L('어시스턴트', 'Assistant')}</div>
+            <p className="mt-1.5 text-sm leading-relaxed opacity-95">{L('못 찾으셨나요? 어시스턴트에게 자연어로 물어보세요.', "Can't find it? Ask the assistant in plain language.")}</p>
+            <Button variant="secondary" size="sm" className="mt-3 !bg-white !text-brand-700" onClick={() => navigate('/assistant')}>{L('어시스턴트 열기', 'Open assistant')} →</Button>
+          </Card>
+        </aside>
+      </div>
+    </div>
+  )
+}
