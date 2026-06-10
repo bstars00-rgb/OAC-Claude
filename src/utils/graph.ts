@@ -13,9 +13,11 @@ import type { StructuredCapture } from './captureAI'
 import { TODAY } from './format'
 import type { Lang } from '../i18n'
 
-// Delegated scopes — all user-consentable (no admin) on most tenants.
-// Mail.Send lets OAC actually send the assistant's drafted emails from your account.
-export const GRAPH_SCOPES = ['User.Read', 'Mail.Read', 'Mail.Send', 'Chat.Read']
+// Read scopes — requested at login (user-consentable on most tenants).
+export const GRAPH_SCOPES = ['User.Read', 'Mail.Read', 'Chat.Read']
+// Send is requested INCREMENTALLY — only when the user actually sends an email —
+// so the more sensitive Mail.Send permission never blocks login/read/sync.
+export const SEND_SCOPES = ['Mail.Send']
 
 export interface MsConnection {
   clientId: string
@@ -133,14 +135,14 @@ export function activeName(): string | null {
   return account?.name ?? account?.username ?? null
 }
 
-async function token(conn: MsConnection): Promise<string> {
+async function token(conn: MsConnection, scopes: string[] = GRAPH_SCOPES): Promise<string> {
   const client = await ensureClient(conn)
   if (!account) throw new Error('not-connected')
   try {
-    const r = await client.acquireTokenSilent({ scopes: GRAPH_SCOPES, account })
+    const r = await client.acquireTokenSilent({ scopes, account })
     return r.accessToken
   } catch {
-    const r = await client.acquireTokenPopup({ scopes: GRAPH_SCOPES, account })
+    const r = await client.acquireTokenPopup({ scopes, account })
     return r.accessToken
   }
 }
@@ -157,8 +159,8 @@ async function graphGet<T>(conn: MsConnection, path: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
-async function graphPost(conn: MsConnection, path: string, payload: unknown): Promise<void> {
-  const t = await token(conn)
+async function graphPost(conn: MsConnection, path: string, payload: unknown, scopes: string[] = GRAPH_SCOPES): Promise<void> {
+  const t = await token(conn, scopes)
   const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${t}`, 'content-type': 'application/json' },
@@ -182,7 +184,7 @@ export async function sendMail(conn: MsConnection, mail: { to: string; subject: 
       ...(ccRecipients.length ? { ccRecipients } : {}),
     },
     saveToSentItems: true,
-  })
+  }, SEND_SCOPES)
 }
 
 const isoDate = (s?: string) => (s ? s.slice(0, 10) : TODAY)
