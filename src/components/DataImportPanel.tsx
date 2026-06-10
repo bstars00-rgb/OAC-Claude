@@ -7,7 +7,7 @@ import { useT } from '../i18n'
 import { useDatasets } from '../data/datasetStore'
 import { useAiSettings } from '../utils/aiSettings'
 import { TODAY } from '../utils/format'
-import { listDriveSpreadsheets, downloadDriveItem, type DriveFile } from '../utils/graph'
+import { listDriveChildren, downloadDriveItem, type DriveEntry } from '../utils/graph'
 import {
   parseFile,
   parseArrayBuffer,
@@ -47,10 +47,11 @@ export function DataImportPanel() {
   const [metrics, setMetrics] = useState<MetricMap[]>([])
   const [preset, setPreset] = useState<'ohmyhotel' | 'generic'>('generic')
   const [openImport, setOpenImport] = useState(false)
-  // OneDrive / SharePoint picker
+  // OneDrive / SharePoint folder browser
   const ai = useAiSettings()
   const msReady = ai.msClientId.trim().length > 0
-  const [driveFiles, setDriveFiles] = useState<DriveFile[] | null>(null)
+  const [driveEntries, setDriveEntries] = useState<DriveEntry[] | null>(null)
+  const [driveStack, setDriveStack] = useState<{ id?: string; name: string }[]>([])
   const [driveBusy, setDriveBusy] = useState(false)
 
   const numericHeaders = useMemo(
@@ -59,7 +60,7 @@ export function DataImportPanel() {
   )
 
   const reset = () => {
-    setParsed(null); setFileName(''); setError(''); setDimension(''); setExtraDims([]); setMetrics([]); setPeriod(''); setPreset('generic'); setDriveFiles(null)
+    setParsed(null); setFileName(''); setError(''); setDimension(''); setExtraDims([]); setMetrics([]); setPeriod(''); setPreset('generic'); setDriveEntries(null); setDriveStack([])
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -99,11 +100,14 @@ export function DataImportPanel() {
     }
   }
 
-  const browseDrive = async () => {
+  const conn = { clientId: ai.msClientId, tenant: ai.msTenant }
+
+  const openFolder = async (folderId: string | undefined, stack: { id?: string; name: string }[]) => {
     setDriveBusy(true); setError('')
     try {
-      const files = await listDriveSpreadsheets({ clientId: ai.msClientId, tenant: ai.msTenant })
-      setDriveFiles(files)
+      const entries = await listDriveChildren(conn, folderId)
+      setDriveEntries(entries)
+      setDriveStack(stack)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -111,10 +115,17 @@ export function DataImportPanel() {
     }
   }
 
-  const pickDriveFile = async (f: DriveFile) => {
-    setBusy(true); setError(''); setDriveFiles(null)
+  const browseDrive = () => openFolder(undefined, [{ name: 'OneDrive' }])
+  const enterFolder = (e: DriveEntry) => openFolder(e.id, [...driveStack, { id: e.id, name: e.name }])
+  const goUp = () => {
+    const next = driveStack.slice(0, -1)
+    openFolder(next[next.length - 1]?.id, next.length ? next : [{ name: 'OneDrive' }])
+  }
+
+  const pickDriveFile = async (f: DriveEntry) => {
+    setBusy(true); setError(''); setDriveEntries(null)
     try {
-      const buf = await downloadDriveItem({ clientId: ai.msClientId, tenant: ai.msTenant }, f.id)
+      const buf = await downloadDriveItem(conn, f.id)
       applyParsed(await parseArrayBuffer(buf), f.name)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -191,26 +202,42 @@ export function DataImportPanel() {
                 <span className="text-[11px] text-slate-400">{L('파일은 브라우저에서만 처리되며 어디로도 전송되지 않습니다', 'Parsed in your browser — never uploaded anywhere')}</span>
               </button>
 
-              {/* OneDrive / SharePoint */}
+              {/* OneDrive / SharePoint folder browser */}
               {msReady && (
                 <div className="mt-2.5">
                   <Button size="sm" variant="secondary" onClick={browseDrive} disabled={driveBusy || busy}>
                     {driveBusy ? L('불러오는 중…', 'Loading…') : L('☁ OneDrive/SharePoint에서 가져오기', '☁ Import from OneDrive/SharePoint')}
                   </Button>
-                  {driveFiles && (
-                    <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-slate-200 dark:border-white/10">
-                      {driveFiles.length === 0 ? (
-                        <div className="p-3 text-[11px] text-slate-400">{L('스프레드시트(.xlsx)를 찾지 못했어요', 'No spreadsheets found')}</div>
-                      ) : (
-                        driveFiles.map((f) => (
-                          <button key={f.id} onClick={() => pickDriveFile(f)} className="flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left text-xs transition last:border-0 hover:bg-brand-50/40 dark:border-white/5">
-                            <span className="flex-1 truncate font-medium text-slate-700">{f.name}</span>
-                            <span className="shrink-0 text-[10px] text-slate-400">{f.lastModified}</span>
-                          </button>
-                        ))
-                      )}
+                  {driveEntries && (
+                    <div className="mt-2 rounded-lg border border-slate-200 dark:border-white/10">
+                      {/* breadcrumb */}
+                      <div className="flex items-center gap-1.5 border-b border-slate-100 px-3 py-1.5 text-[11px] text-slate-500 dark:border-white/5">
+                        {driveStack.length > 1 && (
+                          <button onClick={goUp} disabled={driveBusy} className="rounded px-1 font-medium text-brand-600 hover:bg-brand-50">← {L('위로', 'Up')}</button>
+                        )}
+                        <span className="truncate">{driveStack.map((s) => s.name).join(' / ')}</span>
+                      </div>
+                      <div className="max-h-60 overflow-y-auto">
+                        {driveEntries.length === 0 ? (
+                          <div className="p-3 text-[11px] text-slate-400">{L('이 폴더에 폴더·스프레드시트가 없어요', 'No folders or spreadsheets here')}</div>
+                        ) : (
+                          driveEntries.map((e) => (
+                            <button
+                              key={e.id}
+                              onClick={() => (e.isFolder ? enterFolder(e) : pickDriveFile(e))}
+                              disabled={driveBusy || busy}
+                              className="flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left text-xs transition last:border-0 hover:bg-brand-50/40 dark:border-white/5"
+                            >
+                              <span className="shrink-0">{e.isFolder ? '📁' : '📄'}</span>
+                              <span className="flex-1 truncate font-medium text-slate-700">{e.name}</span>
+                              <span className="shrink-0 text-[10px] text-slate-400">{e.isFolder ? L('폴더', 'folder') : e.lastModified}</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
                     </div>
                   )}
+                  <p className="mt-1 text-[10px] text-slate-400">{L('“REPORT” 폴더로 들어가 주간 .xlsx를 선택하세요', 'Open your “REPORT” folder and pick the weekly .xlsx')}</p>
                 </div>
               )}
 

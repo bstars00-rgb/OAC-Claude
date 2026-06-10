@@ -311,6 +311,33 @@ export async function listDriveSpreadsheets(conn: MsConnection, top = 25): Promi
     .map((f) => ({ id: f.id!, name: f.name!, lastModified: (f.lastModifiedDateTime ?? '').slice(0, 10), size: f.size ?? 0 }))
 }
 
+export interface DriveEntry {
+  id: string
+  name: string
+  isFolder: boolean
+  lastModified: string
+  size: number
+}
+
+interface DriveItem2 extends DriveItem {
+  folder?: { childCount?: number }
+}
+
+/** List folders + spreadsheets inside a drive folder (root if no id) — for browsing into e.g. REPORT. */
+export async function listDriveChildren(conn: MsConnection, folderId?: string): Promise<DriveEntry[]> {
+  const base = folderId ? `/me/drive/items/${folderId}/children` : '/me/drive/root/children'
+  const data = await graphGet<{ value: DriveItem2[] }>(
+    conn,
+    `${base}?$top=200&$select=id,name,size,lastModifiedDateTime,folder,file`,
+    FILES_SCOPES,
+  )
+  return (data.value ?? [])
+    .filter((i) => i.id && i.name)
+    .map((i) => ({ id: i.id!, name: i.name!, isFolder: !!i.folder, lastModified: (i.lastModifiedDateTime ?? '').slice(0, 10), size: i.size ?? 0 }))
+    .filter((e) => e.isFolder || /\.(xlsx|xls|csv)$/i.test(e.name))
+    .sort((a, b) => (a.isFolder === b.isFolder ? a.name.localeCompare(b.name) : a.isFolder ? -1 : 1))
+}
+
 /** Download a drive item's content as bytes (for the .xlsx parser). */
 export async function downloadDriveItem(conn: MsConnection, id: string): Promise<ArrayBuffer> {
   const t = await token(conn, FILES_SCOPES)
