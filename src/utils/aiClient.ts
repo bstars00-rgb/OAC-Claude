@@ -135,6 +135,45 @@ async function callAnthropic(opts: CallOpts): Promise<string> {
   return text
 }
 
+// ── lightweight single-turn text completion (provider-aware) ─────────────────
+export async function callText(opts: { provider: AiProvider; apiKey: string; model: string; system: string; user: string }): Promise<string> {
+  if (opts.provider === 'openai') {
+    const res = await fetch(OPENAI_ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${opts.apiKey}` },
+      body: JSON.stringify({ model: opts.model, max_tokens: 600, messages: [{ role: 'system', content: opts.system }, { role: 'user', content: opts.user }] }),
+    })
+    if (!res.ok) throw new Error(`OpenAI ${res.status}`)
+    const data = await res.json()
+    return String(data.choices?.[0]?.message?.content ?? '').trim()
+  }
+  const res = await fetch(ENDPOINT, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': opts.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: opts.model, max_tokens: 600, system: opts.system, messages: [{ role: 'user', content: opts.user }] }),
+  })
+  if (!res.ok) throw new Error(`Anthropic ${res.status}`)
+  const data = await res.json()
+  return ((data.content ?? []).filter((b: { type: string }) => b.type === 'text').map((b: { text: string }) => b.text).join('\n')).trim()
+}
+
+/** One-line, action-oriented summary of a company's recent emails. */
+export async function summarizeCompanyEmails(
+  opts: { provider: AiProvider; apiKey: string; model: string; lang: Lang },
+  company: string,
+  emails: { subject: string; body: string; date: string }[],
+): Promise<string> {
+  const langLine = opts.lang === 'ko' ? '한국어로' : 'in English'
+  const system = `You are OAC, a B2B relationship CRM. Summarize a company's recent emails into ONE concise, action-oriented line ${langLine} (status + what to do next). No preamble, no bullet points.`
+  const corpus = emails
+    .slice(0, 8)
+    .map((e) => `[${e.date}] ${e.subject}\n${e.body}`)
+    .join('\n\n---\n\n')
+    .slice(0, 6000)
+  const user = `Company: ${company}\n\nRecent emails:\n${corpus}\n\nOne-line summary + next action:`
+  return callText({ ...opts, system, user })
+}
+
 // ── OpenAI (ChatGPT) ─────────────────────────────────────────────────────────
 // Browser-direct, BYO key. The OpenAI API returns CORS headers, so a fetch from
 // the browser works (the same model the official SDK enables via

@@ -486,21 +486,53 @@ function SettingsModal({ onClose, t }: { onClose: () => void; t: (k: string) => 
 
 function EmailCard({ email }: { email: { to: string; subject: string; body: string } }) {
   const { demoAction, notify } = useToast()
+  const ai = useAiSettings()
+  const { lang } = useT()
+  const [to, setTo] = useState(email.to)
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [err, setErr] = useState('')
+  const msReady = ai.msClientId.trim().length > 0
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
+
   const copy = () => {
-    if (navigator.clipboard) navigator.clipboard.writeText(`To: ${email.to}\nSubject: ${email.subject}\n\n${email.body}`).catch(() => {})
-    notify('Copied', 'Email copied (demo).')
+    if (navigator.clipboard) navigator.clipboard.writeText(`To: ${to}\nSubject: ${email.subject}\n\n${email.body}`).catch(() => {})
+    notify(L('복사됨', 'Copied'), L('이메일을 클립보드에 복사했어요', 'Email copied to clipboard'))
   }
+  const send = async () => {
+    if (!to.includes('@')) { setErr(L('받는사람 이메일을 입력하세요', 'Enter a recipient email')); return }
+    setErr(''); setSending(true)
+    try {
+      const { sendMail } = await import('../utils/graph')
+      await sendMail({ clientId: ai.msClientId, tenant: ai.msTenant }, { to, subject: email.subject, body: email.body })
+      setSent(true)
+      notify(L('메일 전송됨', 'Email sent'), `${to} · ${email.subject}`)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSending(false)
+    }
+  }
+
   return (
     <div className="mt-3 rounded-xl border border-slate-200 p-3">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="text-sm font-semibold text-slate-800">{email.subject}</span>
-        <Button size="sm" variant="demo" onClick={() => demoAction('Send via Outlook Demo')}>Send via Outlook Demo</Button>
+        {msReady ? (
+          <Button size="sm" onClick={send} disabled={sending || sent}>{sent ? L('전송됨 ✓', 'Sent ✓') : sending ? L('전송 중…', 'Sending…') : L('Outlook으로 전송', 'Send via Outlook')}</Button>
+        ) : (
+          <Button size="sm" variant="demo" onClick={() => demoAction('Send via Outlook Demo')}>Send via Outlook Demo</Button>
+        )}
       </div>
-      <div className="text-[11px] text-slate-400">To: {email.to}</div>
+      <div className="mb-1 flex items-center gap-1.5">
+        <span className="text-[11px] text-slate-400">To:</span>
+        <input value={to} onChange={(e) => setTo(e.target.value)} className="flex-1 rounded border border-slate-200 px-1.5 py-0.5 text-[11px] focus:border-brand-400 focus:outline-none" />
+      </div>
       <pre className="mt-1 whitespace-pre-wrap font-sans text-xs leading-relaxed text-slate-600">{email.body}</pre>
+      {err && <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-700">{err}</div>}
       <div className="mt-2 flex flex-wrap gap-2">
-        <Button size="sm" variant="secondary" onClick={copy}>Copy</Button>
-        <Button size="sm" variant="secondary" onClick={() => demoAction('Save to Timeline Demo')}>Save to Timeline Demo</Button>
+        <Button size="sm" variant="secondary" onClick={copy}>{L('복사', 'Copy')}</Button>
+        {!msReady && <span className="self-center text-[10px] text-slate-400">{L('설정에서 Microsoft 365 연결 시 실제 전송', 'Connect Microsoft 365 in Settings to send for real')}</span>}
       </div>
     </div>
   )

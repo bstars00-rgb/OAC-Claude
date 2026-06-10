@@ -14,7 +14,8 @@ import { TODAY } from './format'
 import type { Lang } from '../i18n'
 
 // Delegated scopes — all user-consentable (no admin) on most tenants.
-export const GRAPH_SCOPES = ['User.Read', 'Mail.Read', 'Chat.Read']
+// Mail.Send lets OAC actually send the assistant's drafted emails from your account.
+export const GRAPH_SCOPES = ['User.Read', 'Mail.Read', 'Mail.Send', 'Chat.Read']
 
 export interface MsConnection {
   clientId: string
@@ -28,6 +29,7 @@ export interface NormalizedItem {
   company?: string // derived from the sender's email domain (업체)
   title: string
   preview: string
+  body?: string // fuller cleaned body text (for AI summary)
   date: string // ISO date (yyyy-mm-dd)
   link?: string
 }
@@ -155,6 +157,34 @@ async function graphGet<T>(conn: MsConnection, path: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
+async function graphPost(conn: MsConnection, path: string, payload: unknown): Promise<void> {
+  const t = await token(conn)
+  const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${t}`, 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok && res.status !== 202) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Graph ${res.status}: ${body.slice(0, 200)}`)
+  }
+}
+
+/** Send an email from the signed-in account (requires Mail.Send). */
+export async function sendMail(conn: MsConnection, mail: { to: string; subject: string; body: string; cc?: string }): Promise<void> {
+  const toRecipients = mail.to.split(/[,;]\s*/).filter(Boolean).map((address) => ({ emailAddress: { address: address.trim() } }))
+  const ccRecipients = (mail.cc ? mail.cc.split(/[,;]\s*/).filter(Boolean) : []).map((address) => ({ emailAddress: { address: address.trim() } }))
+  await graphPost(conn, '/me/sendMail', {
+    message: {
+      subject: mail.subject,
+      body: { contentType: 'Text', content: mail.body },
+      toRecipients,
+      ...(ccRecipients.length ? { ccRecipients } : {}),
+    },
+    saveToSentItems: true,
+  })
+}
+
 const isoDate = (s?: string) => (s ? s.slice(0, 10) : TODAY)
 const clean = (html?: string) =>
   (html ?? '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
@@ -163,6 +193,7 @@ const clean = (html?: string) =>
 interface MailMsg {
   subject?: string
   bodyPreview?: string
+  body?: { contentType?: string; content?: string }
   receivedDateTime?: string
   webLink?: string
   from?: { emailAddress?: { name?: string; address?: string } }
@@ -176,7 +207,7 @@ export async function fetchOutlook(conn: MsConnection, opts: { sinceDays?: numbe
   const filter = encodeURIComponent(`receivedDateTime ge ${sinceIso(sinceDays)}`)
   const data = await graphGet<{ value: MailMsg[] }>(
     conn,
-    `/me/messages?$top=${top}&$select=subject,from,receivedDateTime,bodyPreview,webLink&$filter=${filter}&$orderby=receivedDateTime%20desc`,
+    `/me/messages?$top=${top}&$select=subject,from,receivedDateTime,bodyPreview,body,webLink&$filter=${filter}&$orderby=receivedDateTime%20desc`,
   )
   return (data.value ?? []).map((m) => {
     const email = m.from?.emailAddress?.address
@@ -188,6 +219,7 @@ export async function fetchOutlook(conn: MsConnection, opts: { sinceDays?: numbe
       company: companyFromEmail(email, name).company,
       title: m.subject || '(no subject)',
       preview: clean(m.bodyPreview),
+      body: clean(m.body?.content).slice(0, 2000) || clean(m.bodyPreview),
       date: isoDate(m.receivedDateTime),
       link: m.webLink,
     }
@@ -264,8 +296,9 @@ export function itemToCapture(item: NormalizedItem, lang: Lang, match?: RelMatch
   const company = item.company || companyFromEmail(item.personEmail, item.personName).company
   const accountName = match?.accountName ?? company
   const accountId = match?.accountId ?? slugFor(accountName)
-  // keep the sender visible inside the company timeline
-  const detail = item.personName && item.personName !== accountName ? `${item.personName}: ${item.preview}` : item.preview
+  // keep the sender visible inside the company timeline; use the fuller body when available
+  const text = item.body || item.preview
+  const detail = item.personName && item.personName !== accountName ? `${item.personName}: ${text}` : text
   return {
     accountName,
     accountId,

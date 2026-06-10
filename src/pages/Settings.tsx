@@ -32,6 +32,7 @@ import {
   redirectUri,
   GRAPH_SCOPES,
 } from '../utils/graph'
+import { summarizeCompanyEmails } from '../utils/aiClient'
 
 export function Settings() {
   const { t, lang } = useT()
@@ -387,19 +388,53 @@ function MicrosoftCard() {
       ])
       const items = [...mail, ...teams]
       const relList = rel.list.map((e) => ({ id: e.id, name: e.name }))
-      const companies = new Set<string>()
+
+      // group by company so we can (optionally) AI-summarize each
+      const byCompany = new Map<string, { name: string; match?: { accountId: string; accountName: string }; mails: typeof items }>()
       for (const it of items) {
         const match = matchRelationship(it, relList)
         const cap = itemToCapture(it, lang, match)
         store.addEntry(cap, `${it.title}\n${it.preview}`)
-        companies.add(cap.accountName)
+        const key = cap.accountId
+        const g = byCompany.get(key) ?? { name: cap.accountName, match, mails: [] }
+        g.mails.push(it)
+        byCompany.set(key, g)
       }
+
+      // Live AI: one-line, action-oriented summary per company from the full bodies.
+      let summarized = 0
+      if (ai.isLive) {
+        for (const [accountId, g] of [...byCompany.entries()].slice(0, 12)) {
+          try {
+            const summary = await summarizeCompanyEmails(
+              { provider: ai.provider, apiKey: ai.activeKey, model: ai.model, lang },
+              g.name,
+              g.mails.map((m) => ({ subject: m.title, body: m.body || m.preview, date: m.date })),
+            )
+            if (summary) {
+              store.addEntry(
+                {
+                  accountName: g.name, accountId, isExisting: !!g.match, category: 'General',
+                  detectedContext: lang === 'ko' ? 'AI 요약 · Outlook' : 'AI summary · Outlook', contextConfidence: 0.9,
+                  summary, timeline: { date: TODAY, title: lang === 'ko' ? 'AI 메일 요약' : 'AI mail summary', detail: summary },
+                  todos: [], risks: [], report: { title: '', sections: [] }, email: { subject: '', body: '' },
+                  kind: 'update', detail: summary, nextBestAction: summary,
+                },
+                summary,
+              )
+              summarized++
+            }
+          } catch {
+            /* skip this company's summary */
+          }
+        }
+      }
+
       toast.notify(
         L('동기화 완료 · 지난 7일', 'Sync complete · last 7 days'),
-        L(
-          `메일 ${mail.length}건 · Teams ${teams.length}건 → 업체 ${companies.size}곳 업데이트`,
-          `${mail.length} mail · ${teams.length} Teams → updated ${companies.size} companies`,
-        ),
+        ai.isLive
+          ? L(`메일 ${mail.length}건 · Teams ${teams.length}건 → 업체 ${byCompany.size}곳 · AI 요약 ${summarized}곳`, `${mail.length} mail · ${teams.length} Teams → ${byCompany.size} companies · ${summarized} AI summaries`)
+          : L(`메일 ${mail.length}건 · Teams ${teams.length}건 → 업체 ${byCompany.size}곳 업데이트`, `${mail.length} mail · ${teams.length} Teams → updated ${byCompany.size} companies`),
       )
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
