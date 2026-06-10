@@ -203,16 +203,30 @@ function MicrosoftCard() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{L('계정 유형 (Tenant)', 'Account type (Tenant)')}</label>
-            <select
+            <label className="mb-1 block text-xs font-medium text-slate-500">{L('디렉터리(테넌트) ID 또는 유형', 'Directory (tenant) ID or type')}</label>
+            <input
               value={ai.msTenant}
-              onChange={(e) => ai.setMsTenant(e.target.value)}
-              className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-            >
-              <option value="common">{L('개인 + 회사/학교 계정 (common)', 'Personal + work/school (common)')}</option>
-              <option value="organizations">{L('회사/학교 계정만 (organizations)', 'Work/school only (organizations)')}</option>
-              <option value="consumers">{L('개인 계정만 (consumers)', 'Personal only (consumers)')}</option>
-            </select>
+              onChange={(e) => ai.setMsTenant(e.target.value.trim())}
+              placeholder={L('common 또는 테넌트 GUID', 'common or a tenant GUID')}
+              className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+            />
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {['common', 'organizations', 'consumers'].map((p) => (
+                <button
+                  key={p}
+                  onClick={() => ai.setMsTenant(p)}
+                  className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition ${ai.msTenant === p ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 max-w-md text-[11px] leading-relaxed text-slate-400">
+              {L(
+                '앱이 "단일 테넌트"면 common이 막힙니다 (AADSTS50194). Azure 앱 개요의 "디렉터리(테넌트) ID"(GUID)를 여기에 붙여넣으세요. 또는 Azure 인증 설정에서 앱을 멀티테넌트로 바꾸면 common이 동작합니다.',
+                'If your app is "single tenant", common is blocked (AADSTS50194). Paste the "Directory (tenant) ID" (GUID) from your Azure app Overview here — or switch the app to multi-tenant in Azure Authentication to use common.',
+              )}
+            </p>
           </div>
           <Button size="sm" onClick={doConnect} disabled={!hasClientId || busy === 'connect'}>
             {busy === 'connect' ? L('연결 중…', 'Connecting…') : L('Microsoft로 로그인', 'Sign in with Microsoft')}
