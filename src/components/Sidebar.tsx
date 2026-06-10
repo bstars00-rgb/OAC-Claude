@@ -18,11 +18,8 @@ const navItems: NavItem[] = [
   { to: '/', tKey: 'nav.dashboard', icon: I(<><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></>) },
   { to: '/assistant', tKey: 'nav.assistant', icon: I(<><path d="M12 3l1.9 4.6L18.5 9 14 11l-2 5-2-5L5.5 9l4.6-1.4L12 3z" /></>) },
   { to: '/relationship', tKey: 'nav.relationship', icon: I(<><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></>) },
-  { to: '/meeting', tKey: 'nav.meeting', icon: I(<><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M6 11a6 6 0 0 0 12 0M12 17v4" /></>) },
-  { to: '/email', tKey: 'nav.email', icon: I(<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></>) },
-  { to: '/report', tKey: 'nav.report', icon: I(<><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></>) },
   { to: '/data', tKey: 'nav.data', icon: I(<><path d="M3 3v18h18" /><path d="M7 14l3-4 3 3 4-6" /></>) },
-  { to: '/integrations', tKey: 'nav.integrations', icon: I(<><rect x="3" y="3" width="8" height="8" rx="1.5" /><rect x="13" y="3" width="8" height="8" rx="1.5" /><rect x="3" y="13" width="8" height="8" rx="1.5" /><rect x="13" y="13" width="8" height="8" rx="1.5" /></>) },
+  { to: '/settings', tKey: 'nav.settings', icon: I(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.74.66 1.65 1.65 0 0 0-1.51 1H12a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 7 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 2.6 14a1.65 1.65 0 0 0-1-1.51V12a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 7" /></>) },
 ]
 
 export function Sidebar() {

@@ -156,8 +156,8 @@ export function DataInsight() {
       )}
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={() => navigate(`/report?entity=${entityId}`)}>Generate Sales Report</Button>
-        <Button variant="secondary" onClick={() => navigate(`/report?entity=${entityId}`)}>Create CEO Briefing</Button>
+        <Button variant="secondary" onClick={() => navigate(`/assistant?q=${encodeURIComponent(`Create a report for ${entity.name}`)}`)}>Generate Sales Report</Button>
+        <Button variant="secondary" onClick={() => navigate(`/assistant?q=${encodeURIComponent(`Create a CEO report for ${entity.name}`)}`)}>Create CEO Briefing</Button>
         <Button variant="demo" onClick={() => demoAction('Export Excel Demo')}>Export Excel Demo</Button>
         <Button variant="demo" onClick={() => demoAction('Post to Teams Demo')}>Post Insight to Teams Demo</Button>
       </div>

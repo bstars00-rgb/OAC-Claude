@@ -12,6 +12,7 @@ import { EntitySelector } from '../components/EntitySelector'
 import { Sparkline, GaugeBar, Donut } from '../components/DemoChart'
 import { useToast } from '../components/Toast'
 import { useT } from '../i18n'
+import { useCaptureStore } from '../data/captureStore'
 import { entities, getEntities, entityById, healthBand, type Entity } from '../data/entities'
 import { metricsByEntity } from '../data/salesData'
 import { tasksByEntity } from '../data/tasks'
@@ -69,7 +70,8 @@ type Tab = 'overview' | 'timeline' | 'communication' | 'tasks' | 'data' | 'ai'
 
 function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo: (to: string) => void }) {
   const { demoAction } = useToast()
-  const { t } = useT()
+  const { t, lang } = useT()
+  const store = useCaptureStore()
   const [tab, setTab] = useState<Tab>('overview')
   const band = healthBand(entity.relationshipHealthScore)
   const tasks = tasksByEntity(entity.id)
@@ -78,6 +80,12 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
   const meetings = meetingsByEntity(entity.id)
   const metrics = metricsByEntity(entity.id)
   const insight = insightByEntity(entity.id)
+
+  // Overlay: live updates the OAC Assistant made to this relationship.
+  const overlay = store.entriesByEntity(entity.id) // newest first
+  const overlayNext = overlay.find((e) => e.nextBestAction)?.nextBestAction
+  const nextBestAction = overlayNext ?? entity.nextBestAction
+  const latestUpdate = overlay[0]
 
   const tabs: { id: Tab; tKey: string }[] = [
     { id: 'overview', tKey: 'tab.overview' },
@@ -124,13 +132,14 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
             <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white"><BoltIcon /></span>
             <div>
               <div className="text-[11px] font-bold uppercase tracking-wide text-brand-600">{t('l.nextBestAction')}</div>
-              <div className="text-sm font-medium text-slate-800">{entity.nextBestAction}</div>
+              <div className="text-sm font-medium text-slate-800">{nextBestAction}</div>
+              {overlayNext && <div className="mt-0.5 text-[10px] font-medium text-brand-500">{t('rel.updatedByAssistant')} · {formatDate(latestUpdate!.date)}</div>}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" onClick={() => navigateTo(`/email?entity=${entity.id}`)}>{t('b.draftEmail')}</Button>
-            <Button size="sm" variant="secondary" onClick={() => navigateTo(`/report?entity=${entity.id}`)}>{t('b.createReport')}</Button>
-            <Button size="sm" variant="demo" onClick={() => demoAction('Save to Timeline Demo')}>Save to Timeline Demo</Button>
+            <Button size="sm" variant="secondary" onClick={() => navigateTo(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${entity.name}에 보낼 메일 작성해줘` : `Draft an email to ${entity.name}`)}`)}>{t('b.draftEmail')}</Button>
+            <Button size="sm" variant="secondary" onClick={() => navigateTo(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${entity.name} 리포트 작성해줘` : `Create a report for ${entity.name}`)}`)}>{t('b.createReport')}</Button>
+            <Button size="sm" variant="demo" onClick={() => navigateTo(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${entity.name} 진행상황 어때?` : `What's the status on ${entity.name}?`)}`)}>{t('rel.askAssistant')}</Button>
           </div>
         </div>
       </Card>
@@ -140,6 +149,28 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
         {entity.summary}
         <div className="mt-2 text-xs text-slate-400">{t('l.generatedFrom')}</div>
       </InsightBox>
+
+      {/* Latest from the OAC Assistant */}
+      {overlay.length > 0 && (
+        <div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50/40 p-4 dark:bg-brand-500/10">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-brand-600 to-violet-600 text-white"><BoltIcon /></span>
+            <span className="text-xs font-bold uppercase tracking-wide text-violet-700">{t('rel.latestFromAssistant')}</span>
+          </div>
+          <ul className="space-y-2.5">
+            {overlay.slice(0, 4).map((u) => (
+              <li key={u.id} className="rounded-lg border border-slate-100 bg-white/70 p-2.5 dark:bg-white/5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-slate-800">{u.timeline.title}</span>
+                  <span className="text-[11px] text-slate-400">{formatDate(u.date)} · {daysAgo(u.date)}</span>
+                </div>
+                <p className="mt-0.5 text-xs text-slate-600">{u.summary}</p>
+                {u.detail && <p className="mt-1 line-clamp-3 whitespace-pre-line text-[11px] text-slate-500">{u.detail}</p>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="mb-5 mt-5 flex gap-1 overflow-x-auto border-b border-slate-200">
@@ -182,7 +213,7 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
             <p className="text-sm leading-relaxed text-slate-700">{entity.recommendedAction}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button size="sm" variant="demo" onClick={() => demoAction('Create Task Demo')}>Create Task Demo</Button>
-              <Button size="sm" variant="secondary" onClick={() => navigateTo(`/email?entity=${entity.id}`)}>{t('l.draftTheEmail')}</Button>
+              <Button size="sm" variant="secondary" onClick={() => navigateTo(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${entity.name}에 보낼 메일 작성해줘` : `Draft an email to ${entity.name}`)}`)}>{t('l.draftTheEmail')}</Button>
             </div>
           </Card>
         </div>
@@ -220,6 +251,7 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
     for (const e of emailsByEntity(entity.id)) entries.push({ date: e.date, source: 'Outlook', title: e.subject, detail: e.summary })
     for (const t of teamsByEntity(entity.id)) entries.push({ date: t.date, source: 'Teams', title: `${t.channel} · ${t.sender}`, detail: t.messageSummary })
     for (const t of tasksByEntity(entity.id)) entries.push({ date: t.dueDate, source: 'Internal DB', title: `Task: ${t.title}`, detail: t.aiReason })
+    for (const u of overlay) entries.push({ date: u.date, source: 'OAC Assistant', title: u.timeline.title, detail: u.detail ? `${u.summary}\n${u.detail.split('\n')[0]}` : u.summary })
     entries.sort((a, b) => b.date.localeCompare(a.date))
     return (
       <Card>
@@ -286,6 +318,27 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
             </Card>
           ))}
         </div>
+
+        {/* To-dos created by the OAC Assistant */}
+        {overlay.some((u) => u.todos.length) && (
+          <div className="mt-4">
+            <div className="mb-2 text-xs font-bold uppercase tracking-wide text-violet-700">{t('rel.fromAssistant')}</div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {overlay.flatMap((u) => u.todos.map((td) => ({ ...td, entryId: u.id, date: u.date }))).map((td) => (
+                <Card key={td.id}>
+                  <button onClick={() => store.toggleTodo(td.entryId, td.id)} className="flex w-full items-start gap-2 text-left">
+                    <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${td.done ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300'}`}>{td.done && <span className="text-[9px] text-white">✓</span>}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className={`text-sm font-medium ${td.done ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{td.text}</span>
+                      <span className="mt-1 flex items-center gap-2 text-[11px] text-slate-400"><Badge tone={td.priority === 'High' ? 'red' : td.priority === 'Medium' ? 'amber' : 'slate'}>{td.priority}</Badge> due {formatDate(td.due)}</span>
+                    </span>
+                  </button>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
         <Button variant="demo" size="sm" className="mt-4" onClick={() => demoAction('Create Task Demo')}>Create Task Demo</Button>
       </div>
     )
@@ -408,13 +461,13 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
             <CardHeader title="Suggested Email" />
             <p className="text-sm font-medium text-slate-800">{seed ? seed.subject : `Email for ${entity.name}`}</p>
             <p className="mt-0.5 text-[11px] text-slate-400">{seed?.to ?? 'partner contact'}</p>
-            <Button size="sm" variant="secondary" className="mt-2 w-full" onClick={() => navigateTo(`/email?entity=${entity.id}`)}>Open in Email Assistant</Button>
+            <Button size="sm" variant="secondary" className="mt-2 w-full" onClick={() => navigateTo(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${entity.name}에 보낼 메일 작성해줘` : `Draft an email to ${entity.name}`)}`)}>{t('cap.draftEmail')}</Button>
           </Card>
           <Card>
             <CardHeader title="Suggested Report" />
             <p className="text-sm font-medium text-slate-800">{ceo ? ceo.title : `${entity.name} — Status Report`}</p>
             <p className="mt-1 line-clamp-2 text-[11px] text-slate-500">{ceo?.sections[0]?.body}</p>
-            <Button size="sm" variant="secondary" className="mt-2 w-full" onClick={() => navigateTo(`/report?entity=${entity.id}`)}>Open in Report Generator</Button>
+            <Button size="sm" variant="secondary" className="mt-2 w-full" onClick={() => navigateTo(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${entity.name} 리포트 작성해줘` : `Create a report for ${entity.name}`)}`)}>{t('cap.genReport')}</Button>
           </Card>
           <Button variant="demo" className="w-full" onClick={() => demoAction('Post to Teams Demo')}>Post Recommendation to Teams Demo</Button>
         </div>

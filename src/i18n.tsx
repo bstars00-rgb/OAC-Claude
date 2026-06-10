@@ -248,6 +248,21 @@ const DICT: Record<string, Entry> = {
   'asst.saved': { en: 'Saved', ko: '저장됨' },
   'asst.details': { en: 'Details', ko: '자세히' },
   'asst.hide': { en: 'Hide', ko: '접기' },
+
+  // Relationship 360 — assistant overlay
+  'rel.updatedByAssistant': { en: 'Updated by OAC Assistant', ko: 'OAC 어시스턴트가 업데이트함' },
+  'rel.askAssistant': { en: 'Ask Assistant', ko: '어시스턴트에게 묻기' },
+  'rel.latestFromAssistant': { en: 'Latest from OAC Assistant', ko: 'OAC 어시스턴트 최근 활동' },
+  'rel.fromAssistant': { en: 'From the OAC Assistant', ko: 'OAC 어시스턴트가 만든 항목' },
+
+  // Settings page
+  'page.settings.title': { en: 'Settings', ko: '설정' },
+  'page.settings.subtitle': { en: 'AI engine, integrations, and workspace preferences.', ko: 'AI 엔진, 연동, 워크스페이스 설정.' },
+  'nav.settings': { en: 'Settings', ko: '설정' },
+  'set.aiEngine': { en: 'AI Engine', ko: 'AI 엔진' },
+  'set.aiEngineSub': { en: 'Demo (mock) or your own Claude API key', ko: '데모(모의) 또는 본인 Claude API 키' },
+  'set.workspace': { en: 'Workspace', ko: '워크스페이스' },
+  'set.clearWorkspace': { en: 'Clear captured workspace data', ko: '캡처된 워크스페이스 데이터 비우기' },
 }
 
 interface I18nCtx {

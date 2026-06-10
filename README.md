@@ -42,20 +42,28 @@ action** that shows a toast:
 
 All data lives in local TypeScript files under `src/data/`.
 
-## OAC Assistant — the chat-based AI CRM
+## OAC Assistant — the brain that controls everything
 
-**OAC Assistant** unifies "Ask OAC" and "AI Capture" into one conversational workspace. You
-chat freely — ask a question, paste a work note, or **attach an image or document** — and OAC:
+**OAC Assistant** is the control center. You don't open separate tools — you just talk to it.
+It answers, acts, and keeps every relationship in sync:
 
-- **Answers** questions about any relationship, grounded in the CRM data.
+- **Answers** questions about any relationship, grounded in the CRM data and its own memory.
+- **Acts** on existing relationships: *"Review the toxic clauses in the SLA Klook sent"* →
+  it reviews and gives feedback; *"Draft an email to iTANK"* → an email inline;
+  *"Create a CEO report for Hotelbeds"* → a report inline; *"Met Klook today, agreed to amend
+  the clause"* → logs the meeting.
+- **Updates Relationship 360 automatically.** Every action flows into the relationship's
+  **Next Best Action, Latest activity, Timeline, and To Dos** — and the assistant **remembers**:
+  ask *"What's the status on Klook?"* tomorrow and it recalls *"I reviewed the SLA, here's what
+  I found…"*.
+- **Captures** new contacts: free notes become **Account · Timeline · To Do · Risk**, saved to a
+  persistent **CRM Workspace** (localStorage).
 - **Summarizes** uploaded images (vision) and documents (PDF / text).
-- **Structures** your notes into **Account · Timeline · To Do · Risk**, auto-saved to a
-  persistent **CRM Workspace** (localStorage) that aggregates accounts, open to-dos and risks.
-- **Generates** one-click report and email drafts from the structured record.
 
+No separate Meeting Recorder, Email Assistant, or Report Generator — you write the date, company
+and attendees in plain text (or paste an AI-summarized meeting), and the assistant does the rest.
 It covers **every** business relationship — customer, supplier, partner, project, recruiting,
-legal, operations — with the category and context auto-detected (you never classify). Bilingual
-(English / 한국어), dark-mode aware.
+legal, operations. Bilingual (English / 한국어), dark-mode aware.
 
 ### Demo vs. Live AI
 
@@ -69,21 +77,20 @@ legal, operations — with the category and context auto-detected (you never cla
   never a shared/production key. This is a no-backend convenience for the demo, not a secure
   production pattern.
 
-## Pages
+## Pages (5)
 
 1. **Dashboard** — "Today's AI Briefing": priority relationships, open follow-ups, recent
    meetings, draft emails, contexts needing attention, AI recommended actions.
-2. **OAC Assistant** — unified chat: ask, upload images/documents, and get auto-structured
-   Account / Timeline / To Do / Risk / Report. Demo or real Claude API.
-3. **Relationship 360** — one relationship brain with Overview, Timeline, Communication,
-   Tasks, Data, and AI Recommendation tabs.
-4. **Meeting Recorder** — paste notes (or "upload" a recording); OAC produces a summary,
-   key points, decisions, issues, risks, follow-up tasks, an email draft and a CEO briefing.
-5. **Email Assistant** — context-aware email drafting with purpose, tone and language controls.
-6. **Report Generator** — CEO briefings, status reports, issue reports and more, with audience,
-   language and detail-level controls (incl. a Korean Yeogi/iTANK CEO briefing example).
-7. **Data Insight** — interprets booking/operational data into AI-powered strategy.
-8. **Integrations** — demo connection status and the future integration roadmap.
+2. **OAC Assistant** — the brain. Chat to ask, act (review / email / report / meeting), upload
+   images/documents, and auto-update relationships. Demo or real Claude API.
+3. **Relationship 360** — one relationship brain (Overview, Timeline, Communication, Tasks,
+   Data, AI Recommendation) that reflects everything the assistant does.
+4. **Data Insight** — interprets booking/operational data into AI-powered strategy.
+5. **Settings** — AI engine (Demo vs. Live API key + model), workspace, and the demo
+   integration status & roadmap.
+
+> Meeting Recorder, Email Assistant and Report Generator are intentionally **not** separate
+> pages — those capabilities live inside the OAC Assistant.
 
 ## Tech stack
 

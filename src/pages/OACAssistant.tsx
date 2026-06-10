@@ -22,6 +22,8 @@ interface ChatMsg {
   attachments?: { name: string; kind: string }[]
   thinking?: boolean
   structured?: StructuredCapture
+  email?: { to: string; subject: string; body: string }
+  report?: { title: string; sections: { heading: string; body: string }[] }
   entryId?: string
   entityId?: string
   showDetails?: boolean
@@ -30,10 +32,10 @@ interface ChatMsg {
 }
 
 const EXAMPLES: { en: string; ko: string }[] = [
-  { en: 'What should I do next with Klook?', ko: 'Klook 다음 액션은 뭐야?' },
-  { en: 'Met Acme today — send the proposal next week, legal to review the contract. Risk: competitor is undercutting our price.', ko: '오늘 Acme 미팅 — 다음주 제안서 발송, 법무 계약 검토 필요. 리스크: 경쟁사가 가격 후려치는 중.' },
-  { en: 'Interviewed a backend candidate, strong on APIs, send the offer by Friday.', ko: '백엔드 지원자 면접함, API 강점, 금요일까지 오퍼 보내야 함.' },
-  { en: 'Summarize this and pull out the action items (attach a PDF / image).', ko: '이거 요약하고 할 일 정리해줘 (PDF·이미지 첨부).' },
+  { en: 'Review the toxic clauses in the SLA Klook sent today', ko: '오늘 KLOOK에서 보내온 SLA의 독소조항을 검수해줘' },
+  { en: "What's the status on Klook?", ko: 'Klook 진행상황 어때?' },
+  { en: 'Draft an email to iTANK', ko: 'iTANK에 보낼 메일 작성해줘' },
+  { en: 'Met Acme today — send the proposal next week, legal to review the NDA. Risk: competitor undercutting our price.', ko: '오늘 Acme 미팅 — 다음주 제안서 발송, 법무 NDA 검토. 리스크: 경쟁사 가격 후려침.' },
 ]
 
 const catTone: Record<Category, BadgeTone> = {
@@ -86,6 +88,14 @@ export function OACAssistant() {
         openTodos: a.openTodos,
         detectedContext: a.detectedContext,
       })),
+      updates: store.entries.slice(0, 12).map((e) => ({
+        accountId: e.accountId,
+        date: e.date,
+        kind: e.kind,
+        summary: e.summary,
+        detail: e.detail,
+        nextBestAction: e.nextBestAction,
+      })),
       totalAccounts: store.stats.accounts,
       totalOpenTodos: store.stats.openTodos,
       totalRisks: store.stats.risks,
@@ -102,16 +112,15 @@ export function OACAssistant() {
       memory,
     })
 
+    const raw = clean || attachments.map((a) => a.name).join(', ')
     let entryId: string | undefined
-    if (reply.structured) {
-      const entry = store.addEntry(reply.structured, clean || attachments.map((a) => a.name).join(', '))
-      entryId = entry.id
-    }
+    if (reply.structured) entryId = store.addEntry(reply.structured, raw).id
+    if (reply.log) store.addEntry(reply.log, raw) // silent timeline log (email/report)
 
     setMessages((m) =>
       m.map((x) =>
         x.id === botId
-          ? { ...x, thinking: false, text: reply.text, structured: reply.structured, entryId, entityId: reply.entityId }
+          ? { ...x, thinking: false, text: reply.text, structured: reply.structured, email: reply.email, report: reply.report, entryId, entityId: reply.entityId }
           : x,
       ),
     )
@@ -259,6 +268,8 @@ export function OACAssistant() {
               <>
                 <Markdown text={msg.text} />
                 {msg.structured && msg.entryId && <StructuredCard msg={msg} />}
+                {msg.email && <EmailCard email={msg.email} />}
+                {msg.report && <ReportCard report={msg.report} />}
                 {msg.entityId && !msg.structured && (
                   <Button size="sm" variant="secondary" className="mt-3" onClick={() => navigate(`/relationship/${msg.entityId}`)}>{t('cap.viewRel')}</Button>
                 )}
@@ -454,6 +465,44 @@ function SettingsModal({ onClose, t }: { onClose: () => void; t: (k: string) => 
 
         <Button className="mt-4 w-full" onClick={onClose}>{t('set.done')}</Button>
       </div>
+    </div>
+  )
+}
+
+function EmailCard({ email }: { email: { to: string; subject: string; body: string } }) {
+  const { demoAction, notify } = useToast()
+  const copy = () => {
+    if (navigator.clipboard) navigator.clipboard.writeText(`To: ${email.to}\nSubject: ${email.subject}\n\n${email.body}`).catch(() => {})
+    notify('Copied', 'Email copied (demo).')
+  }
+  return (
+    <div className="mt-3 rounded-xl border border-slate-200 p-3">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-sm font-semibold text-slate-800">{email.subject}</span>
+        <Button size="sm" variant="demo" onClick={() => demoAction('Send via Outlook Demo')}>Send via Outlook Demo</Button>
+      </div>
+      <div className="text-[11px] text-slate-400">To: {email.to}</div>
+      <pre className="mt-1 whitespace-pre-wrap font-sans text-xs leading-relaxed text-slate-600">{email.body}</pre>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Button size="sm" variant="secondary" onClick={copy}>Copy</Button>
+        <Button size="sm" variant="secondary" onClick={() => demoAction('Save to Timeline Demo')}>Save to Timeline Demo</Button>
+      </div>
+    </div>
+  )
+}
+
+function ReportCard({ report }: { report: { title: string; sections: { heading: string; body: string }[] } }) {
+  const { demoAction } = useToast()
+  return (
+    <div className="mt-3 rounded-xl border border-brand-100 bg-brand-50/40 p-3 dark:bg-brand-500/10">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h4 className="text-sm font-bold text-slate-900">{report.title}</h4>
+        <Button size="sm" variant="demo" onClick={() => demoAction('Export to Word Demo')}>Export to Word Demo</Button>
+      </div>
+      {report.sections.map((s, i) => (
+        <div key={i} className="mb-2"><div className="text-[11px] font-bold uppercase tracking-wide text-brand-600">{s.heading}</div><p className="whitespace-pre-line text-xs leading-relaxed text-slate-600">{s.body}</p></div>
+      ))}
+      <div className="mt-1"><Button size="sm" variant="secondary" onClick={() => demoAction('Post to Teams Demo')}>Post to Teams Demo</Button></div>
     </div>
   )
 }

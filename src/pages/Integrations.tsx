@@ -1,10 +1,8 @@
-import { PageHeader } from '../components/Layout'
 import { Card } from '../components/Card'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { InsightBox } from '../components/InsightBox'
 import { useToast } from '../components/Toast'
-import { useT } from '../i18n'
 
 type IntegrationStatus = 'Connected Demo' | 'Prototype'
 
@@ -21,8 +19,7 @@ const integrations: Integration[] = [
   { name: 'Microsoft Teams', status: 'Connected Demo', tone: 'violet', icon: 'teams', description: 'Summarizes relationship-related Teams messages and posts AI-generated updates to selected channels.' },
   { name: 'Excel / SharePoint', status: 'Connected Demo', tone: 'emerald', icon: 'excel', description: 'Uses sales files, booking reports, and operational spreadsheets for relationship-level data analysis.' },
   { name: 'Ohmyhotel Internal DB', status: 'Connected Demo', tone: 'slate', icon: 'db', description: 'Uses internal booking, inventory, mapping, rate, and partner data to generate relationship intelligence.' },
-  { name: 'Meeting Recorder', status: 'Prototype', tone: 'brand', icon: 'mic', description: 'Turns meeting notes or recordings into structured CRM records, tasks, email drafts, and reports.' },
-  { name: 'AI Engine', status: 'Prototype', tone: 'brand', icon: 'ai', description: 'Generates summaries, recommendations, emails, reports, and data insights from connected context.' },
+  { name: 'AI Engine', status: 'Prototype', tone: 'brand', icon: 'ai', description: 'Generates summaries, recommendations, emails, reports, and data insights — and powers the OAC Assistant.' },
 ]
 
 const toneMap: Record<string, string> = {
@@ -39,14 +36,11 @@ const phases = [
   { name: 'Phase 3 — Real Enterprise Integration', tone: 'slate' as const, items: ['Microsoft Graph API', 'Outlook email read / send', 'Teams channel posting', 'SharePoint / Excel sync', 'Internal DB connection', 'Role-based access control'] },
 ]
 
-export function Integrations() {
+export function IntegrationsContent() {
   const { demoAction } = useToast()
-  const { t } = useT()
 
   return (
-    <div className="oac-fade-in">
-      <PageHeader title={t('page.integrations.title')} subtitle={t('page.integrations.subtitle')} />
-
+    <div>
       <div className="mb-5">
         <InsightBox label="Prototype Notice" variant="ai" title="This is a concept-validation prototype">
           All connections below are <strong>demo / prototype connections</strong>. No real Microsoft Graph, Outlook, Teams, Excel, audio transcription, or database integration is performed. Real integration will be added in the development phase.

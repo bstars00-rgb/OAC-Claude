@@ -17,6 +17,8 @@ export interface SavedTodo {
   done: boolean
 }
 
+export type EntryKind = 'note' | 'review' | 'meeting' | 'email' | 'report' | 'update'
+
 export interface CaptureEntry {
   id: string
   accountId: string
@@ -30,6 +32,9 @@ export interface CaptureEntry {
   timeline: { date: string; title: string; detail: string }
   todos: SavedTodo[]
   risks: string[]
+  kind?: EntryKind
+  detail?: string // longer result (e.g. review findings, email/report body)
+  nextBestAction?: string // assistant's updated recommendation for the relationship
 }
 
 export interface CaptureAccount {
@@ -50,6 +55,7 @@ interface StoreValue {
   toggleTodo: (entryId: string, todoId: string) => void
   clearAll: () => void
   accounts: CaptureAccount[]
+  entriesByEntity: (accountId: string) => CaptureEntry[]
   stats: { accounts: number; openTodos: number; risks: number; entries: number }
 }
 
@@ -144,6 +150,9 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
       timeline: s.timeline,
       todos: s.todos.map((t) => ({ id: newId('t'), text: t.text, due: t.due, priority: t.priority, done: false })),
       risks: s.risks,
+      kind: s.kind,
+      detail: s.detail,
+      nextBestAction: s.nextBestAction,
     }
     setEntries((prev) => [entry, ...prev])
     return entry
@@ -196,8 +205,13 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
     [entries, accounts],
   )
 
+  const entriesByEntity = useCallback(
+    (accountId: string) => entries.filter((e) => e.accountId === accountId),
+    [entries],
+  )
+
   return (
-    <Ctx.Provider value={{ entries, addEntry, toggleTodo, clearAll, accounts, stats }}>
+    <Ctx.Provider value={{ entries, addEntry, toggleTodo, clearAll, accounts, entriesByEntity, stats }}>
       {children}
     </Ctx.Provider>
   )

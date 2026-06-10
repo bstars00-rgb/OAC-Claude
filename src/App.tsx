@@ -8,11 +8,8 @@ import { AiSettingsProvider } from './utils/aiSettings'
 import { Dashboard } from './pages/Dashboard'
 import { OACAssistant } from './pages/OACAssistant'
 import { Relationship360 } from './pages/Relationship360'
-import { MeetingRecorder } from './pages/MeetingRecorder'
-import { EmailAssistant } from './pages/EmailAssistant'
-import { ReportGenerator } from './pages/ReportGenerator'
 import { DataInsight } from './pages/DataInsight'
-import { Integrations } from './pages/Integrations'
+import { Settings } from './pages/Settings'
 
 export default function App() {
   return (
@@ -25,16 +22,18 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/assistant" element={<OACAssistant />} />
-          {/* Legacy paths — Ask OAC + AI Capture are now unified */}
-          <Route path="/ask" element={<OACAssistant />} />
-          <Route path="/capture" element={<OACAssistant />} />
           <Route path="/relationship" element={<Relationship360 />} />
           <Route path="/relationship/:id" element={<Relationship360 />} />
-          <Route path="/meeting" element={<MeetingRecorder />} />
-          <Route path="/email" element={<EmailAssistant />} />
-          <Route path="/report" element={<ReportGenerator />} />
           <Route path="/data" element={<DataInsight />} />
-          <Route path="/integrations" element={<Integrations />} />
+          <Route path="/settings" element={<Settings />} />
+          {/* Legacy paths — Ask OAC, AI Capture, Email, Report, Meeting are now
+              all handled inside the OAC Assistant; Integrations live in Settings. */}
+          <Route path="/ask" element={<OACAssistant />} />
+          <Route path="/capture" element={<OACAssistant />} />
+          <Route path="/email" element={<OACAssistant />} />
+          <Route path="/report" element={<OACAssistant />} />
+          <Route path="/meeting" element={<OACAssistant />} />
+          <Route path="/integrations" element={<Settings />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </Layout>

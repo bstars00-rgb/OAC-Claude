@@ -35,7 +35,7 @@ const ATTENTION_CONTEXTS = [
 export function Dashboard() {
   const navigate = useNavigate()
   const { demoAction } = useToast()
-  const { t } = useT()
+  const { t, lang } = useT()
   const totals = portfolioTotals()
   const tasks = openTasksSorted()
   const meetings = latestMeetings(4)
@@ -151,7 +151,7 @@ export function Dashboard() {
                 )
               })}
             </div>
-            <button onClick={() => navigate('/meeting')} className="block w-full border-t border-slate-100 px-5 py-2.5 text-xs font-medium text-brand-600 hover:bg-slate-50">{t('l.openMeetingRecorder')} →</button>
+            <button onClick={() => navigate('/assistant')} className="block w-full border-t border-slate-100 px-5 py-2.5 text-xs font-medium text-brand-600 hover:bg-slate-50">{t('nav.assistant')} →</button>
           </Card>
 
           {/* Contexts Needing Attention */}
@@ -211,7 +211,7 @@ export function Dashboard() {
                     <div className="text-xs font-semibold text-slate-500">{ent?.name}</div>
                     <div className="mt-0.5 text-sm font-medium text-slate-800">{d.subject}</div>
                     <div className="mt-0.5 line-clamp-1 text-[11px] text-slate-400">{d.aiIntent}</div>
-                    <Button size="sm" variant="secondary" className="mt-2 w-full" onClick={() => navigate(`/email?entity=${d.entityId}`)}>{t('l.openInEmail')}</Button>
+                    <Button size="sm" variant="secondary" className="mt-2 w-full" onClick={() => navigate(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${ent?.name}에 보낼 메일 작성해줘` : `Draft an email to ${ent?.name}`)}`)}>{t('l.openInEmail')}</Button>
                   </li>
                 )
               })}

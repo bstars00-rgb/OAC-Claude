@@ -53,6 +53,12 @@ export interface StructuredCapture {
   risks: string[]
   report: { title: string; sections: ReportSection[] }
   email: { subject: string; body: string }
+  // Optional — set when the assistant performs an action on an existing
+  // relationship (review / meeting / email / report) so Relationship 360 and
+  // future answers reflect it.
+  kind?: 'note' | 'review' | 'meeting' | 'email' | 'report' | 'update'
+  detail?: string
+  nextBestAction?: string
 }
 
 // ── category detection ───────────────────────────────────────────────────────

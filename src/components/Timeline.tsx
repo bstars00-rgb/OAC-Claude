@@ -15,6 +15,7 @@ const sourceTone: Record<string, string> = {
   'Internal DB': 'bg-slate-500',
   'Meeting Recorder': 'bg-brand-500',
   'Contract Notes': 'bg-amber-500',
+  'OAC Assistant': 'bg-violet-500',
 }
 
 export function Timeline({ entries }: { entries: TimelineEntry[] }) {
