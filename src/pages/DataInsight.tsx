@@ -7,7 +7,6 @@ import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { InsightBox } from '../components/InsightBox'
 import { EntitySelector } from '../components/EntitySelector'
-import { DataImportPanel } from '../components/DataImportPanel'
 import { DatasetInsights } from '../components/DatasetInsights'
 import { BarChart, Sparkline, Donut, GaugeBar } from '../components/DemoChart'
 import { useToast } from '../components/Toast'
@@ -35,7 +34,6 @@ export function DataInsight() {
     return (
       <div className="oac-fade-in">
         <PageHeader title={t('page.data.title')} subtitle={t('page.data.subtitle')} />
-        <DataImportPanel />
         <DatasetInsights />
         <Card className="flex flex-col items-center py-12 text-center">
           <h2 className="text-lg font-bold text-slate-900">{t('data.emptyTitle')}</h2>
@@ -52,7 +50,6 @@ export function DataInsight() {
     <div className="oac-fade-in">
       <PageHeader title={t('page.data.title')} subtitle={t('page.data.subtitle')} />
 
-      <DataImportPanel />
       <DatasetInsights />
 
       {/* Top controls */}

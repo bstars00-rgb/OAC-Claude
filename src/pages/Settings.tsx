@@ -21,6 +21,7 @@ import {
   pullState as sbPull,
 } from '../utils/supabaseClient'
 import { IntegrationsContent } from './Integrations'
+import { DataImportPanel } from '../components/DataImportPanel'
 import {
   connect as msConnect,
   disconnect as msDisconnect,
@@ -123,6 +124,9 @@ export function Settings() {
 
       {/* Microsoft 365 — Outlook + Teams (real Graph connection) */}
       <MicrosoftCard />
+
+      {/* Data import (RawData .xlsx → datasets) */}
+      <DataImportPanel />
 
       {/* Integrations */}
       <IntegrationsContent />
@@ -418,10 +422,23 @@ function MicrosoftCard() {
     setError('')
     setBusy('sync')
     try {
-      const [mail, teams] = await Promise.all([
-        fetchOutlook(conn, { sinceDays: 7 }).catch(() => []),
-        fetchTeams(conn, { sinceDays: 7 }).catch(() => []),
+      // Fetch both, but SURFACE failures (don't silently show 0) so permission/auth
+      // problems are visible instead of looking like "no change".
+      const [mr, tr] = await Promise.allSettled([
+        fetchOutlook(conn, { sinceDays: 7 }),
+        fetchTeams(conn, { sinceDays: 7 }),
       ])
+      const mail = mr.status === 'fulfilled' ? mr.value : []
+      const teams = tr.status === 'fulfilled' ? tr.value : []
+      const fetchErr = mr.status === 'rejected' ? String(mr.reason?.message ?? mr.reason) : tr.status === 'rejected' ? String(tr.reason?.message ?? tr.reason) : ''
+      if (fetchErr && mail.length === 0 && teams.length === 0) {
+        setError(L(`동기화 실패: ${fetchErr}\n→ 메일 읽기 권한(Mail.Read) 관리자 동의가 필요할 수 있어요. 또는 설정에서 연결 해제 후 다시 로그인해 보세요.`, `Sync failed: ${fetchErr}\n→ Mail.Read admin consent may be required, or disconnect & sign in again.`))
+        return
+      }
+      if (mail.length === 0 && teams.length === 0) {
+        toast.notify(L('동기화 완료 · 변화 없음', 'Sync complete · no changes'), L('최근 7일 새 메일/메시지가 없거나, 권한을 확인하세요', 'No mail/messages in the last 7 days, or check permissions'))
+        return
+      }
       const items = [...mail, ...teams]
       const relList = rel.list.map((e) => ({ id: e.id, name: e.name }))
 
