@@ -334,11 +334,21 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
       return { text: text || (opts.lang === 'ko' ? '응답을 받았습니다.' : 'Done.'), structured, email, entityId }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
+      const ko = opts.lang === 'ko'
+      let hint = ko
+        ? '\n\n설정에서 API 키와 모델을 확인하세요. (데모 모드로 전환하면 키 없이 동작합니다.)'
+        : '\n\nCheck your API key and model in Settings. (Switch to Demo mode to run without a key.)'
+      if (/429|quota|insufficient_quota|billing/i.test(msg)) {
+        hint = ko
+          ? '\n\n→ API 계정에 사용 가능한 크레딧이 없습니다. ChatGPT Plus 구독과 API 크레딧은 별개예요. OpenAI는 platform.openai.com/settings/organization/billing 에서 결제수단 추가·크레딧 충전이 필요합니다. (또는 설정에서 모델을 Claude로 바꾸거나 데모 모드로 전환하세요.)'
+          : '\n\n→ Your API account has no available credit. ChatGPT Plus ≠ API credit — add a payment method / credits at platform.openai.com billing. (Or switch the model to Claude in Settings, or use Demo mode.)'
+      } else if (/401|invalid|authentication|x-api-key/i.test(msg)) {
+        hint = ko
+          ? '\n\n→ API 키가 올바르지 않습니다. 설정에서 키를 다시 확인하세요(OpenAI는 sk-..., Anthropic은 sk-ant-...).'
+          : '\n\n→ The API key looks invalid. Re-check it in Settings (OpenAI sk-…, Anthropic sk-ant-…).'
+      }
       return {
-        text:
-          opts.lang === 'ko'
-            ? `실제 AI 호출에 실패했습니다: ${msg}\n\n설정에서 API 키와 모델을 확인하세요. (데모 모드로 전환하면 키 없이 동작합니다.)`
-            : `Live AI call failed: ${msg}\n\nCheck your API key and model in Settings. (Switch to Demo mode to run without a key.)`,
+        text: (ko ? `실제 AI 호출에 실패했습니다: ${msg}` : `Live AI call failed: ${msg}`) + hint,
         error: msg,
       }
     }
