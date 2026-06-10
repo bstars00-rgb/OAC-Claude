@@ -74,6 +74,69 @@ export function toNum(v: unknown): number {
   return isFinite(n) ? n : 0
 }
 
+// ── schema presets ───────────────────────────────────────────────────────────
+// Recognize the Ohmyhotel RawData export and pre-fill a sensible mapping so the
+// user doesn't remap 70 columns every week. Amounts default to JPY (¥).
+const normH = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim()
+
+function findHeader(headers: string[], candidates: string[]): string | undefined {
+  const set = headers.map((h) => ({ h, n: normH(h) }))
+  for (const c of candidates) {
+    const cn = normH(c)
+    const exact = set.find((x) => x.n === cn)
+    if (exact) return exact.h
+  }
+  for (const c of candidates) {
+    const cn = normH(c)
+    const partial = set.find((x) => x.n.includes(cn))
+    if (partial) return partial.h
+  }
+  return undefined
+}
+
+export interface SuggestedMapping {
+  preset: 'ohmyhotel' | 'generic'
+  dimension: string
+  extraDimensions: string[]
+  metrics: MetricMap[]
+  periodColumn?: string
+}
+
+export function suggestMapping(headers: string[]): SuggestedMapping {
+  const has = (c: string[]) => findHeader(headers, c)
+  const isOhm =
+    !!has(['Hotel Name']) &&
+    !!has(['Booking Date']) &&
+    !!has(['Billing Sum by Company Currency_JPY', 'Billing Sum by Company Currency JPY'])
+
+  if (isOhm) {
+    const metricDefs: { label: string; cands: string[] }[] = [
+      { label: '판매액(¥)', cands: ['Billing Sum by Company Currency_JPY'] },
+      { label: '수익(¥)', cands: ['Billing Revenue by Company Currency_JPY', 'Billing Revenue  by Company Currency_JPY'] },
+      { label: '매입(¥)', cands: ['Vendor Sum by Company Currency_JPY'] },
+      { label: '룸나잇', cands: ['Total Room Nights', 'Number Room Night(s)'] },
+    ]
+    const metrics: MetricMap[] = []
+    for (const m of metricDefs) {
+      const header = findHeader(headers, m.cands)
+      if (header) metrics.push({ header, label: m.label })
+    }
+    const extras = ['Seller Name', 'Vendor Name', 'Hotel Country', 'Hotel Region', 'Chain Brand']
+      .map((c) => findHeader(headers, [c]))
+      .filter((x): x is string => !!x)
+    return {
+      preset: 'ohmyhotel',
+      dimension: findHeader(headers, ['Hotel Name']) ?? headers[0],
+      extraDimensions: extras,
+      metrics,
+      periodColumn: findHeader(headers, ['Week of Booking Date', 'Week of Check In Date', 'Booking Date']),
+    }
+  }
+
+  // generic fallback: first text column + up to 4 inferred numeric columns
+  return { preset: 'generic', dimension: '', extraDimensions: [], metrics: [] }
+}
+
 // Columns that look numeric across the sample → suggested metric candidates.
 export function inferNumericHeaders(rows: Record<string, unknown>[], headers: string[]): string[] {
   const sample = rows.slice(0, 25)

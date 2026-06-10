@@ -9,6 +9,7 @@ import { TODAY } from '../utils/format'
 import {
   parseFile,
   inferNumericHeaders,
+  suggestMapping,
   buildSnapshot,
   type ImportProfile,
   type ParsedSheet,
@@ -40,6 +41,7 @@ export function DataImportPanel() {
   const [dimension, setDimension] = useState('')
   const [extraDims, setExtraDims] = useState<string[]>([])
   const [metrics, setMetrics] = useState<MetricMap[]>([])
+  const [preset, setPreset] = useState<'ohmyhotel' | 'generic'>('generic')
   const [openImport, setOpenImport] = useState(false)
 
   const numericHeaders = useMemo(
@@ -48,7 +50,7 @@ export function DataImportPanel() {
   )
 
   const reset = () => {
-    setParsed(null); setFileName(''); setError(''); setDimension(''); setExtraDims([]); setMetrics([]); setPeriod('')
+    setParsed(null); setFileName(''); setError(''); setDimension(''); setExtraDims([]); setMetrics([]); setPeriod(''); setPreset('generic')
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -60,12 +62,22 @@ export function DataImportPanel() {
       if (!p.rows.length) throw new Error(L('빈 시트입니다. 데이터가 있는 파일을 선택하세요.', 'The sheet is empty.'))
       setParsed(p)
       setFileName(file.name)
-      // smart defaults
-      const textCols = p.headers.filter((h) => !inferNumericHeaders(p.rows, [h]).length)
-      setDimension(textCols[0] ?? p.headers[0] ?? '')
-      const nums = inferNumericHeaders(p.rows, p.headers)
-      setMetrics(nums.slice(0, 4).map((h) => ({ header: h, label: h })))
-      setPeriod(profile === 'checkout' ? TODAY.slice(0, 7) : TODAY)
+      // smart defaults — recognize the Ohmyhotel RawData schema first
+      const sug = suggestMapping(p.headers)
+      setPreset(sug.preset)
+      if (sug.preset === 'ohmyhotel' && sug.metrics.length) {
+        setDimension(sug.dimension)
+        setExtraDims(sug.extraDimensions)
+        setMetrics(sug.metrics)
+        const pv = sug.periodColumn ? String(p.rows.find((r) => r[sug.periodColumn!])?.[sug.periodColumn!] ?? '').trim() : ''
+        setPeriod(pv || (profile === 'checkout' ? TODAY.slice(0, 7) : TODAY))
+      } else {
+        const textCols = p.headers.filter((h) => !inferNumericHeaders(p.rows, [h]).length)
+        setDimension(textCols[0] ?? p.headers[0] ?? '')
+        const nums = inferNumericHeaders(p.rows, p.headers)
+        setMetrics(nums.slice(0, 4).map((h) => ({ header: h, label: h })))
+        setPeriod(profile === 'checkout' ? TODAY.slice(0, 7) : TODAY)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       reset()
@@ -146,11 +158,31 @@ export function DataImportPanel() {
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-xs text-slate-600">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
                 <Badge tone="green" dot>{fileName}</Badge>
                 <span className="text-slate-400">{parsed.rows.length} {L('행', 'rows')} · {parsed.headers.length} {L('열', 'cols')}</span>
+                {preset === 'ohmyhotel' && <Badge tone="brand" dot>{L('Ohmyhotel 형식 자동 인식 · 금액 ¥ 기준', 'Ohmyhotel format detected · amounts in ¥')}</Badge>}
                 <button onClick={reset} className="ml-auto text-[11px] text-slate-400 hover:text-rose-500">{L('다른 파일', 'Change file')}</button>
               </div>
+
+              {preset === 'ohmyhotel' && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-medium text-slate-400">{L('이 기준으로 묶기:', 'Group by:')}</span>
+                  {[
+                    { label: L('호텔', 'Hotel'), cands: ['Hotel Name'] },
+                    { label: L('판매처(Seller)', 'Seller'), cands: ['Seller Name'] },
+                    { label: L('공급사(Vendor)', 'Vendor'), cands: ['Vendor Name'] },
+                    { label: L('국가', 'Country'), cands: ['Hotel Country'] },
+                    { label: L('체인', 'Chain'), cands: ['Chain Brand'] },
+                  ].map((opt) => {
+                    const h = parsed.headers.find((x) => x.toLowerCase().replace(/\s+/g, ' ').trim() === opt.cands[0].toLowerCase())
+                    if (!h) return null
+                    return (
+                      <button key={opt.label} onClick={() => setDimension(h)} className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition ${dimension === h ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>{opt.label}</button>
+                    )
+                  })}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
@@ -219,6 +251,7 @@ export function DataImportPanel() {
                   <thead>
                     <tr className="text-slate-400">
                       <th className="py-1 pr-3 font-medium">{s.mapping.dimension}</th>
+                      <th className="py-1 pr-3 text-right font-medium">{L('건수', 'Count')}</th>
                       {s.mapping.metrics.map((m) => <th key={m.label} className="py-1 pr-3 text-right font-medium">{m.label}</th>)}
                     </tr>
                   </thead>
@@ -226,6 +259,7 @@ export function DataImportPanel() {
                     {s.groups.slice(0, 8).map((g) => (
                       <tr key={g.key} className="border-t border-slate-100 dark:border-white/5">
                         <td className="py-1 pr-3 font-medium text-slate-700">{g.key}</td>
+                        <td className="py-1 pr-3 text-right text-slate-500">{g.rows.toLocaleString()}</td>
                         {s.mapping.metrics.map((m) => <td key={m.label} className="py-1 pr-3 text-right text-slate-600">{fmt(g.metrics[m.label] ?? 0)}</td>)}
                       </tr>
                     ))}

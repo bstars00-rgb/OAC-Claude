@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as XLSX from 'xlsx'
-import { parseArrayBuffer, aggregate, toNum, inferNumericHeaders, buildSnapshot } from './dataImport'
+import { parseArrayBuffer, aggregate, toNum, inferNumericHeaders, buildSnapshot, suggestMapping } from './dataImport'
 
 // Build a small RawData-like workbook in memory (no file system).
 function makeBook(): ArrayBuffer {
@@ -55,6 +55,33 @@ describe('dataImport', () => {
     expect(hyatt.metrics['매출']).toBe(57000000) // 45M + 12M
     expect(hyatt.dims['국가']).toBe('KR')
     expect(hyatt.rows).toBe(2)
+  })
+
+  it('auto-maps the Ohmyhotel RawData schema to JPY metrics (incl. double-space header)', () => {
+    const headers = [
+      'Booking Date', 'Hotel Code', 'Hotel Country', 'Hotel Region', 'Hotel Name', 'Chain Brand',
+      'Vendor Name', 'Seller Name', 'Week of Booking Date', 'Total Room Nights',
+      'Billing Sum by Company Currency_JPY', 'Vendor Sum by Company Currency_JPY',
+      'Billing Revenue  by Company Currency_JPY', // note the DOUBLE space, as in the real file
+      'Billing Sum by Company Currency_USD',
+    ]
+    const sug = suggestMapping(headers)
+    expect(sug.preset).toBe('ohmyhotel')
+    expect(sug.dimension).toBe('Hotel Name')
+    const labels = sug.metrics.map((m) => m.label)
+    expect(labels).toContain('판매액(¥)')
+    expect(labels).toContain('수익(¥)')
+    expect(labels).toContain('매입(¥)')
+    expect(labels).toContain('룸나잇')
+    // the 수익 metric resolves the double-space JPY header, not the USD one
+    const revenue = sug.metrics.find((m) => m.label === '수익(¥)')!
+    expect(revenue.header).toBe('Billing Revenue  by Company Currency_JPY')
+    expect(sug.extraDimensions).toContain('Seller Name')
+    expect(sug.periodColumn).toBe('Week of Booking Date')
+  })
+
+  it('falls back to generic for an unknown schema', () => {
+    expect(suggestMapping(['name', 'count', 'value']).preset).toBe('generic')
   })
 
   it('buildSnapshot computes totals and a stable id', async () => {
