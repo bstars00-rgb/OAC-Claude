@@ -165,11 +165,17 @@ const extractAccountName = (text: string, lang: Lang): { name: string; id: strin
 
   // 3) English proper noun (company-like) — checked before the loose Korean
   //    suffix heuristic, since company names are usually capitalized English.
-  const skip = new Set(['The', 'We', 'They', 'Our', 'Need', 'Today', 'Met', 'Call', 'Sent', 'Review', 'I', 'A', 'An'])
-  const enCandidates = [...text.matchAll(/\b([A-Z][A-Za-z0-9&.]+(?:\s+[A-Z][A-Za-z0-9&.]+){0,2})\b/g)]
-    .map((m) => m[1].trim())
-    .filter((n) => !skip.has(n.split(/\s+/)[0]))
-  if (enCandidates.length) return mkNew(enCandidates[0])
+  //    Strip leading sentence-start / label words rather than discarding the
+  //    whole candidate (e.g. "Met Acme Corp" → "Acme Corp", "Risk" → skipped).
+  const skip = new Set([
+    'The', 'We', 'They', 'Our', 'Need', 'Today', 'Met', 'Call', 'Sent', 'Review', 'I', 'A', 'An',
+    'Risk', 'Send', 'Draft', 'Create', 'Note', 'Update', 'Status', 'Next', 'Action', 'Summary',
+  ])
+  for (const m of text.matchAll(/\b([A-Z][A-Za-z0-9&.]+(?:\s+[A-Z][A-Za-z0-9&.]+){0,2})\b/g)) {
+    const words = m[1].trim().split(/\s+/)
+    while (words.length && skip.has(words[0])) words.shift()
+    if (words.length) return mkNew(words.join(' '))
+  }
 
   // 4) Korean "X사/팀/와/과" relationship marker — skip common non-name words.
   const KO_STOP = new Set(['경쟁', '협력', '고객', '파트너', '관계', '계열', '당', '본', '지', '자', '우리', '저희', '상대'])

@@ -100,6 +100,15 @@ npm install
 npm run dev      # http://localhost:5173
 ```
 
+## How to test
+
+```bash
+npm test         # Vitest unit tests for the core logic (capture structuring,
+                 # context detection, mock-AI router, formatting, demo engine)
+```
+
+The CI workflow runs `npm test` before building, so a failing test blocks deploy.
+
 ## How to build
 
 ```bash
