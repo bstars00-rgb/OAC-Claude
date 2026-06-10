@@ -27,6 +27,7 @@ import {
   disconnect as msDisconnect,
   restore as msRestore,
   fetchOutlook,
+  fetchSent,
   fetchTeams,
   itemToCapture,
   matchRelationship,
@@ -408,11 +409,14 @@ function MicrosoftCard() {
     try {
       // Fetch both, but SURFACE failures (don't silently show 0) so permission/auth
       // problems are visible instead of looking like "no change".
-      const [mr, tr] = await Promise.allSettled([
+      const [mr, sr, tr] = await Promise.allSettled([
         fetchOutlook(conn, { sinceDays: 7 }),
+        fetchSent(conn, { sinceDays: 7 }),
         fetchTeams(conn, { sinceDays: 7 }),
       ])
-      const mail = mr.status === 'fulfilled' ? mr.value : []
+      const inbox = mr.status === 'fulfilled' ? mr.value : []
+      const sent = sr.status === 'fulfilled' ? sr.value : []
+      const mail = [...inbox, ...sent]
       const teams = tr.status === 'fulfilled' ? tr.value : []
       const fetchErr = mr.status === 'rejected' ? String(mr.reason?.message ?? mr.reason) : tr.status === 'rejected' ? String(tr.reason?.message ?? tr.reason) : ''
       if (fetchErr && mail.length === 0 && teams.length === 0) {
@@ -470,8 +474,8 @@ function MicrosoftCard() {
       toast.notify(
         L('동기화 완료 · 지난 7일', 'Sync complete · last 7 days'),
         ai.isLive
-          ? L(`메일 ${mail.length}건 · Teams ${teams.length}건 → 업체 ${byCompany.size}곳 · AI 요약 ${summarized}곳`, `${mail.length} mail · ${teams.length} Teams → ${byCompany.size} companies · ${summarized} AI summaries`)
-          : L(`메일 ${mail.length}건 · Teams ${teams.length}건 → 업체 ${byCompany.size}곳 업데이트`, `${mail.length} mail · ${teams.length} Teams → updated ${byCompany.size} companies`),
+          ? L(`받은 ${inbox.length} · 보낸 ${sent.length} · Teams ${teams.length} → 업체 ${byCompany.size}곳 · AI 요약 ${summarized}`, `${inbox.length} in · ${sent.length} sent · ${teams.length} Teams → ${byCompany.size} companies · ${summarized} AI summaries`)
+          : L(`받은 ${inbox.length} · 보낸 ${sent.length} · Teams ${teams.length} → 업체 ${byCompany.size}곳 업데이트`, `${inbox.length} in · ${sent.length} sent · ${teams.length} Teams → updated ${byCompany.size} companies`),
       )
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))

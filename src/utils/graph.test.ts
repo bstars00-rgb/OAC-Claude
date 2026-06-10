@@ -47,6 +47,15 @@ describe('graph — import mapping', () => {
     expect(c.isExisting).toBe(true)
   })
 
+  it('captures a SENT mail under the recipient company, marked as 발신', () => {
+    const item: NormalizedItem = { source: 'outlook', direction: 'out', personName: 'Momo Team', personEmail: 'partner@momo.vn', title: 'Re: API connectivity', preview: '수수료율 인하 요청드립니다', date: '2026-06-10' }
+    const c = itemToCapture(item, 'ko')
+    expect(c.accountName).toBe('Momo') // grouped by recipient domain
+    expect(c.summary).toMatch(/\[발신\]/)
+    expect(c.detectedContext).toMatch(/보낸 메일/)
+    expect(c.detail).toMatch(/발신/)
+  })
+
   it('maps a Teams chat to a meeting-kind capture', () => {
     const c = itemToCapture(
       { source: 'teams', personName: 'Partner Sync', title: 'Teams · Partner Sync', preview: 'See you at 3pm', date: '2026-06-09' },

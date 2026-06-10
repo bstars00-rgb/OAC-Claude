@@ -58,9 +58,11 @@ export function synthDatasetRelationship(ref: DatasetGroupRef, lang: Lang): Enti
     .map((m) => `${m.label} ${m.label.includes('¥') ? yen(g.metrics[m.label] ?? 0) : Math.round(g.metrics[m.label] ?? 0).toLocaleString()}`)
     .join(' · ')
   const profileName = s.profile === 'booking' ? (ko ? '부킹' : 'Booking') : (ko ? '체크아웃' : 'Check Out')
+  // Lead with profile + period so a bare label like "22" reads as a booking period, not a stray number.
+  const periodTag = /^\d{1,2}$/.test(s.periodLabel) ? (ko ? `${profileName} ${s.periodLabel}주차` : `${profileName} wk ${s.periodLabel}`) : `${profileName} ${s.periodLabel}`
   const summary = ko
-    ? `${s.periodLabel} ${profileName} 데이터 기준 ${metricLine} (${g.rows.toLocaleString()}건). 마진 ${(margin * 100).toFixed(1)}%.`
-    : `${s.periodLabel} ${profileName} data: ${metricLine} (${g.rows.toLocaleString()} rows). Margin ${(margin * 100).toFixed(1)}%.`
+    ? `${periodTag} 기준 ${metricLine} (${g.rows.toLocaleString()}건, 마진 ${(margin * 100).toFixed(1)}%).`
+    : `${periodTag}: ${metricLine} (${g.rows.toLocaleString()} rows, margin ${(margin * 100).toFixed(1)}%).`
 
   return {
     id: slug(g.key),

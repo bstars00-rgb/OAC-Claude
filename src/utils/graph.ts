@@ -28,9 +28,10 @@ export interface MsConnection {
 
 export interface NormalizedItem {
   source: 'outlook' | 'teams'
+  direction?: 'in' | 'out' // received vs sent (회신)
   personName: string
   personEmail?: string
-  company?: string // derived from the sender's email domain (업체)
+  company?: string // derived from the email domain of the counterpart (업체)
   title: string
   preview: string
   body?: string // fuller cleaned body text (for AI summary)
@@ -199,8 +200,10 @@ interface MailMsg {
   bodyPreview?: string
   body?: { contentType?: string; content?: string }
   receivedDateTime?: string
+  sentDateTime?: string
   webLink?: string
   from?: { emailAddress?: { name?: string; address?: string } }
+  toRecipients?: { emailAddress?: { name?: string; address?: string } }[]
 }
 
 const sinceIso = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString()
@@ -225,6 +228,35 @@ export async function fetchOutlook(conn: MsConnection, opts: { sinceDays?: numbe
       preview: clean(m.bodyPreview),
       body: clean(m.body?.content).slice(0, 2000) || clean(m.bodyPreview),
       date: isoDate(m.receivedDateTime),
+      link: m.webLink,
+      direction: 'in' as const,
+    }
+  })
+}
+
+/** Sent mail (Sent Items) — so replies YOU sent are captured. Grouped by recipient company. */
+export async function fetchSent(conn: MsConnection, opts: { sinceDays?: number; top?: number } = {}): Promise<NormalizedItem[]> {
+  const sinceDays = opts.sinceDays ?? 7
+  const top = opts.top ?? 100
+  const filter = encodeURIComponent(`sentDateTime ge ${sinceIso(sinceDays)}`)
+  const data = await graphGet<{ value: MailMsg[] }>(
+    conn,
+    `/me/mailFolders/sentitems/messages?$top=${top}&$select=subject,toRecipients,sentDateTime,bodyPreview,body,webLink&$filter=${filter}&$orderby=sentDateTime%20desc`,
+  )
+  return (data.value ?? []).map((m) => {
+    const to = m.toRecipients?.[0]?.emailAddress
+    const email = to?.address
+    const name = to?.name || email || 'Recipient'
+    return {
+      source: 'outlook' as const,
+      direction: 'out' as const,
+      personName: name,
+      personEmail: email,
+      company: companyFromEmail(email, name).company,
+      title: m.subject || '(no subject)',
+      preview: clean(m.bodyPreview),
+      body: clean(m.body?.content).slice(0, 2000) || clean(m.bodyPreview),
+      date: isoDate(m.sentDateTime),
       link: m.webLink,
     }
   })
@@ -392,14 +424,22 @@ export interface RelMatch {
 
 export function itemToCapture(item: NormalizedItem, lang: Lang, match?: RelMatch): StructuredCapture {
   const ko = lang === 'ko'
-  const ctx = item.source === 'outlook' ? (ko ? '이메일 · Outlook' : 'Email · Outlook') : (ko ? '메시지 · Teams' : 'Message · Teams')
+  const sent = item.direction === 'out'
+  const ctx =
+    item.source === 'teams'
+      ? (ko ? '메시지 · Teams' : 'Message · Teams')
+      : sent
+        ? (ko ? '보낸 메일 · Outlook' : 'Sent mail · Outlook')
+        : (ko ? '받은 메일 · Outlook' : 'Email · Outlook')
   // Group by company (업체): an explicit relationship match wins, else the email-domain company.
   const company = item.company || companyFromEmail(item.personEmail, item.personName).company
   const accountName = match?.accountName ?? company
   const accountId = match?.accountId ?? slugFor(accountName)
-  // keep the sender visible inside the company timeline; use the fuller body when available
+  // keep the counterpart visible inside the company timeline; use the fuller body when available
   const text = item.body || item.preview
-  const detail = item.personName && item.personName !== accountName ? `${item.personName}: ${text}` : text
+  const who = sent ? (ko ? `→ ${item.personName} (발신)` : `→ ${item.personName} (sent)`) : item.personName
+  const detail = item.personName && item.personName !== accountName ? `${who}: ${text}` : text
+  const title = sent ? (ko ? `[발신] ${item.title}` : `[Sent] ${item.title}`) : item.title
   return {
     accountName,
     accountId,
@@ -407,8 +447,8 @@ export function itemToCapture(item: NormalizedItem, lang: Lang, match?: RelMatch
     category: 'General',
     detectedContext: ctx,
     contextConfidence: 0.9,
-    summary: item.title,
-    timeline: { date: item.date, title: item.title, detail },
+    summary: title,
+    timeline: { date: item.date, title, detail },
     todos: [],
     risks: [],
     report: { title: '', sections: [] },
