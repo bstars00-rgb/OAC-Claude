@@ -7,7 +7,7 @@ import { useT } from '../i18n'
 import { useDatasets } from '../data/datasetStore'
 import { useAiSettings } from '../utils/aiSettings'
 import { TODAY } from '../utils/format'
-import { listDriveChildren, downloadDriveItem, type DriveEntry } from '../utils/graph'
+import { listDriveChildren, downloadDriveItem, findRawDataFiles, type DriveEntry, type DriveFile } from '../utils/graph'
 import {
   parseFile,
   parseArrayBuffer,
@@ -135,6 +135,39 @@ export function DataImportPanel() {
     }
   }
 
+  // Auto: find the REPORT/RawData latest files and import them straight away
+  // (no manual mapping) using the Ohmyhotel preset.
+  const autoOne = async (f: DriveFile, prof: ImportProfile): Promise<string | null> => {
+    const buf = await downloadDriveItem(conn, f.id)
+    const p = await parseArrayBuffer(buf)
+    const sug = suggestMapping(p.headers, prof)
+    if (sug.preset !== 'ohmyhotel' || !sug.metrics.length) return null // can't auto-map → needs manual
+    const rawPv = sug.periodColumn ? p.rows.find((r) => r[sug.periodColumn!])?.[sug.periodColumn!] : ''
+    const periodLabel = derivePeriodLabel(rawPv, prof) || (prof === 'checkout' ? TODAY.slice(0, 7) : TODAY)
+    ds.addSnapshot(buildSnapshot({ profile: prof, periodLabel, fileName: f.name, importedAt: TODAY, rows: p.rows, mapping: { dimension: sug.dimension, extraDimensions: sug.extraDimensions, metrics: sug.metrics } }))
+    return periodLabel
+  }
+
+  const autoImport = async () => {
+    setDriveBusy(true); setError('')
+    try {
+      const found = await findRawDataFiles(conn)
+      if (!found.booking && !found.checkout) {
+        setError(L('REPORT/RawData 폴더에서 파일을 못 찾았어요. 아래에서 직접 탐색해 보세요.', "Couldn't find RawData files — browse manually below."))
+        return
+      }
+      const out: string[] = []
+      if (found.booking) { const r = await autoOne(found.booking, 'booking'); out.push(r ? `${L('부킹', 'Booking')} ${r}` : `${L('부킹: 수동 매핑 필요', 'Booking: manual map')}`) }
+      if (found.checkout) { const r = await autoOne(found.checkout, 'checkout'); out.push(r ? `${L('체크아웃', 'Check Out')} ${r}` : `${L('체크아웃: 수동 매핑 필요', 'Check Out: manual map')}`) }
+      toast.notify(L('자동 가져오기 완료', 'Auto-import complete'), out.join(' · '))
+      setOpenImport(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDriveBusy(false)
+    }
+  }
+
   const toggleExtra = (h: string) =>
     setExtraDims((prev) => (prev.includes(h) ? prev.filter((x) => x !== h) : [...prev, h]))
   const toggleMetric = (h: string) =>
@@ -179,6 +212,15 @@ export function DataImportPanel() {
 
       {openImport && (
         <div className="mt-3 rounded-xl border border-slate-200 p-3.5 dark:border-white/10">
+          {/* auto import from the REPORT folder */}
+          {msReady && !parsed && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-brand-200 bg-brand-50/50 p-2.5 dark:bg-brand-500/10">
+              <span className="text-lg">⚡</span>
+              <span className="flex-1 text-xs text-slate-600">{L('REPORT 폴더의 최신 부킹·체크아웃 파일을 자동으로 찾아 가져옵니다', 'Auto-find & import the latest Booking / Check Out files from your REPORT folder')}</span>
+              <Button size="sm" onClick={autoImport} disabled={driveBusy || busy}>{driveBusy ? L('가져오는 중…', 'Importing…') : L('자동 가져오기', 'Auto-import')}</Button>
+            </div>
+          )}
+
           {/* profile */}
           <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {PROFILES.map((p) => (

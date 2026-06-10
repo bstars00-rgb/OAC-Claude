@@ -323,6 +323,33 @@ interface DriveItem2 extends DriveItem {
   folder?: { childCount?: number }
 }
 
+interface DriveItemP extends DriveItem2 {
+  parentReference?: { path?: string }
+}
+
+/** Auto-locate the latest weekly/monthly RawData spreadsheets (By Booking Date / By Check Out). */
+export async function findRawDataFiles(conn: MsConnection): Promise<{ booking?: DriveFile; checkout?: DriveFile }> {
+  const data = await graphGet<{ value: DriveItemP[] }>(
+    conn,
+    `/me/drive/root/search(q='.xlsx')?$top=200&$select=id,name,size,lastModifiedDateTime,file,parentReference`,
+    FILES_SCOPES,
+  )
+  const files = (data.value ?? [])
+    .filter((i) => i.id && i.name && /\.(xlsx|xls|csv)$/i.test(i.name))
+    .map((i) => ({
+      id: i.id!,
+      name: i.name!,
+      lastModified: (i.lastModifiedDateTime ?? '').slice(0, 10),
+      size: i.size ?? 0,
+      path: i.parentReference?.path ?? '',
+    }))
+  const latest = (re: RegExp): DriveFile | undefined => {
+    const m = files.filter((f) => re.test(f.path) || re.test(f.name)).sort((a, b) => b.lastModified.localeCompare(a.lastModified))[0]
+    return m ? { id: m.id, name: m.name, lastModified: m.lastModified, size: m.size } : undefined
+  }
+  return { booking: latest(/booking/i), checkout: latest(/check\s*-?\s*out|checkout/i) }
+}
+
 /** List folders + spreadsheets inside a drive folder (root if no id) — for browsing into e.g. REPORT. */
 export async function listDriveChildren(conn: MsConnection, folderId?: string): Promise<DriveEntry[]> {
   const base = folderId ? `/me/drive/items/${folderId}/children` : '/me/drive/root/children'
