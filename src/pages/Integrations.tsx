@@ -4,7 +4,7 @@ import { Button } from '../components/Button'
 import { InsightBox } from '../components/InsightBox'
 import { useToast } from '../components/Toast'
 
-type IntegrationStatus = 'Connected Demo' | 'Prototype'
+type IntegrationStatus = 'Connected Demo' | 'Prototype' | 'Live (BYO)'
 
 interface Integration {
   name: string
@@ -15,8 +15,8 @@ interface Integration {
 }
 
 const integrations: Integration[] = [
-  { name: 'Outlook', status: 'Connected Demo', tone: 'sky', icon: 'mail', description: 'Reads relationship-related email threads and helps generate context-aware email drafts.' },
-  { name: 'Microsoft Teams', status: 'Connected Demo', tone: 'violet', icon: 'teams', description: 'Summarizes relationship-related Teams messages and posts AI-generated updates to selected channels.' },
+  { name: 'Outlook', status: 'Live (BYO)', tone: 'sky', icon: 'mail', description: 'Real Microsoft Graph connection — sign in with your Microsoft account in the Microsoft 365 card above to import your actual email into relationships.' },
+  { name: 'Microsoft Teams', status: 'Live (BYO)', tone: 'violet', icon: 'teams', description: 'Real Microsoft Graph connection — imports your recent Teams chats into the relationship timeline. Configure it in the Microsoft 365 card above.' },
   { name: 'Excel / SharePoint', status: 'Connected Demo', tone: 'emerald', icon: 'excel', description: 'Uses sales files, booking reports, and operational spreadsheets for relationship-level data analysis.' },
   { name: 'Ohmyhotel Internal DB', status: 'Connected Demo', tone: 'slate', icon: 'db', description: 'Uses internal booking, inventory, mapping, rate, and partner data to generate relationship intelligence.' },
   { name: 'AI Engine', status: 'Prototype', tone: 'brand', icon: 'ai', description: 'Generates summaries, recommendations, emails, reports, and data insights — and powers the OAC Assistant.' },
@@ -42,8 +42,8 @@ export function IntegrationsContent() {
   return (
     <div>
       <div className="mb-5">
-        <InsightBox label="Prototype Notice" variant="ai" title="This is a concept-validation prototype">
-          All connections below are <strong>demo / prototype connections</strong>. No real Microsoft Graph, Outlook, Teams, Excel, audio transcription, or database integration is performed. Real integration will be added in the development phase.
+        <InsightBox label="Integration Notice" variant="ai" title="Outlook & Teams now connect for real">
+          <strong>Outlook</strong> and <strong>Microsoft Teams</strong> use a real Microsoft Graph connection — set them up in the <strong>Microsoft 365</strong> card above with your own Microsoft account (runs entirely in your browser). Excel / SharePoint and the internal DB remain <strong>demo connections</strong> for now and will be added in the development phase.
         </InsightBox>
       </div>
 
@@ -52,12 +52,16 @@ export function IntegrationsContent() {
           <Card key={it.name} className="flex flex-col">
             <div className="flex items-start justify-between">
               <span className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${toneMap[it.tone]} text-white`}><IntegrationIcon icon={it.icon} /></span>
-              <Badge tone={it.status === 'Connected Demo' ? 'green' : 'violet'} dot>{it.status}</Badge>
+              <Badge tone={it.status === 'Live (BYO)' ? 'sky' : it.status === 'Connected Demo' ? 'green' : 'violet'} dot>{it.status}</Badge>
             </div>
             <h3 className="mt-3 text-sm font-semibold text-slate-900">{it.name}</h3>
             <p className="mt-1 flex-1 text-xs leading-relaxed text-slate-500">{it.description}</p>
             <div className="mt-3 flex justify-end border-t border-slate-100 pt-3">
-              <Button size="sm" variant="secondary" onClick={() => demoAction(`${it.name} ${it.status}`)}>{it.status === 'Connected Demo' ? 'Sync Demo' : 'Open Demo'}</Button>
+              {it.status === 'Live (BYO)' ? (
+                <Badge tone="sky">Set up in Microsoft 365 card ↑</Badge>
+              ) : (
+                <Button size="sm" variant="secondary" onClick={() => demoAction(`${it.name} ${it.status}`)}>{it.status === 'Connected Demo' ? 'Sync Demo' : 'Open Demo'}</Button>
+              )}
             </div>
           </Card>
         ))}

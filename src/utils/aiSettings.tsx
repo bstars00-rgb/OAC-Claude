@@ -27,6 +27,9 @@ interface AiSettings {
   // When false, the seeded Ohmyhotel demo relationships & mock data are hidden,
   // and the app runs on the user's own captured data only.
   demoData: boolean
+  // Microsoft 365 (Outlook / Teams) — the user's own Azure SPA app registration.
+  msClientId: string
+  msTenant: string // 'common' | 'organizations' | a tenant id
 }
 
 interface AiSettingsCtx extends AiSettings {
@@ -34,6 +37,8 @@ interface AiSettingsCtx extends AiSettings {
   setApiKey: (k: string) => void
   setModel: (m: string) => void
   setDemoData: (v: boolean) => void
+  setMsClientId: (v: string) => void
+  setMsTenant: (v: string) => void
   isLive: boolean
 }
 
@@ -49,13 +54,15 @@ const read = (): AiSettings => {
         apiKey: typeof p.apiKey === 'string' ? p.apiKey : '',
         model: typeof p.model === 'string' ? p.model : AI_MODELS[0].id,
         demoData: typeof p.demoData === 'boolean' ? p.demoData : false,
+        msClientId: typeof p.msClientId === 'string' ? p.msClientId : '',
+        msTenant: typeof p.msTenant === 'string' && p.msTenant ? p.msTenant : 'common',
       }
     }
   } catch {
     /* ignore */
   }
   // Default to REAL mode (no demo data) — the user is starting to use OAC for real.
-  return { mode: 'demo', apiKey: '', model: AI_MODELS[0].id, demoData: false }
+  return { mode: 'demo', apiKey: '', model: AI_MODELS[0].id, demoData: false, msClientId: '', msTenant: 'common' }
 }
 
 const Ctx = createContext<AiSettingsCtx | null>(null)
@@ -75,11 +82,13 @@ export function AiSettingsProvider({ children }: { children: ReactNode }) {
   const setApiKey = (apiKey: string) => setSettings((s) => ({ ...s, apiKey }))
   const setModel = (model: string) => setSettings((s) => ({ ...s, model }))
   const setDemoData = (demoData: boolean) => setSettings((s) => ({ ...s, demoData }))
+  const setMsClientId = (msClientId: string) => setSettings((s) => ({ ...s, msClientId }))
+  const setMsTenant = (msTenant: string) => setSettings((s) => ({ ...s, msTenant }))
 
   const isLive = settings.mode === 'live' && settings.apiKey.trim().length > 0
 
   return (
-    <Ctx.Provider value={{ ...settings, setMode, setApiKey, setModel, setDemoData, isLive }}>
+    <Ctx.Provider value={{ ...settings, setMode, setApiKey, setModel, setDemoData, setMsClientId, setMsTenant, isLive }}>
       {children}
     </Ctx.Provider>
   )

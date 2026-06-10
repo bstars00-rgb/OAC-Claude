@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { PageHeader } from '../components/Layout'
 import { Card, CardHeader } from '../components/Card'
 import { Badge } from '../components/Badge'
@@ -5,7 +6,18 @@ import { Button } from '../components/Button'
 import { useT } from '../i18n'
 import { useAiSettings, AI_MODELS } from '../utils/aiSettings'
 import { useCaptureStore } from '../data/captureStore'
+import { useToast } from '../components/Toast'
 import { IntegrationsContent } from './Integrations'
+import {
+  connect as msConnect,
+  disconnect as msDisconnect,
+  restore as msRestore,
+  fetchOutlook,
+  fetchTeams,
+  itemToCapture,
+  redirectUri,
+  GRAPH_SCOPES,
+} from '../utils/graph'
 
 export function Settings() {
   const { t } = useT()
@@ -79,9 +91,171 @@ export function Settings() {
         <Button variant="secondary" size="sm" onClick={store.clearAll}>{t('set.clearWorkspace')}</Button>
       </Card>
 
+      {/* Microsoft 365 — Outlook + Teams (real Graph connection) */}
+      <MicrosoftCard />
+
       {/* Integrations */}
       <IntegrationsContent />
     </div>
+  )
+}
+
+function MicrosoftCard() {
+  const { lang } = useT()
+  const ai = useAiSettings()
+  const store = useCaptureStore()
+  const toast = useToast()
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
+
+  const [connectedName, setConnectedName] = useState<string | null>(null)
+  const [busy, setBusy] = useState<'connect' | 'sync' | null>(null)
+  const [error, setError] = useState('')
+  const [showHelp, setShowHelp] = useState(false)
+
+  const conn = { clientId: ai.msClientId, tenant: ai.msTenant }
+  const hasClientId = ai.msClientId.trim().length > 0
+
+  // Re-attach to a cached session on mount.
+  useEffect(() => {
+    let alive = true
+    if (hasClientId) {
+      msRestore(conn).then((name) => {
+        if (alive && name) setConnectedName(name)
+      })
+    }
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ai.msClientId, ai.msTenant])
+
+  const doConnect = async () => {
+    setError('')
+    setBusy('connect')
+    try {
+      const name = await msConnect(conn)
+      setConnectedName(name)
+      toast.notify(L('Microsoft 365 연결됨', 'Microsoft 365 connected'), name)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const doDisconnect = async () => {
+    await msDisconnect(conn)
+    setConnectedName(null)
+  }
+
+  const doSync = async () => {
+    setError('')
+    setBusy('sync')
+    try {
+      const [mail, teams] = await Promise.all([
+        fetchOutlook(conn).catch(() => []),
+        fetchTeams(conn).catch(() => []),
+      ])
+      const items = [...mail, ...teams]
+      for (const it of items) store.addEntry(itemToCapture(it, lang), `${it.title}\n${it.preview}`)
+      toast.notify(
+        L('동기화 완료', 'Sync complete'),
+        L(
+          `Outlook ${mail.length}건 · Teams ${teams.length}건을 관계로 가져왔어요`,
+          `Imported ${mail.length} Outlook · ${teams.length} Teams items into relationships`,
+        ),
+      )
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between">
+        <CardHeader
+          title={L('Microsoft 365 (Outlook · Teams)', 'Microsoft 365 (Outlook · Teams)')}
+          subtitle={L('내 Microsoft 계정의 실제 메일·Teams 메시지를 OAC 관계로 가져옵니다', 'Bring your real Outlook mail & Teams messages into OAC relationships')}
+          icon={<MsIcon />}
+        />
+        <Badge tone={connectedName ? 'green' : 'slate'} dot>
+          {connectedName ? L('연결됨', 'Connected') : L('연결 안 됨', 'Not connected')}
+        </Badge>
+      </div>
+
+      {!connectedName ? (
+        <div className="mt-1 space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">{L('Azure 앱 클라이언트 ID', 'Azure app Client ID')}</label>
+            <input
+              value={ai.msClientId}
+              onChange={(e) => ai.setMsClientId(e.target.value)}
+              placeholder="00000000-0000-0000-0000-000000000000"
+              className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">{L('계정 유형 (Tenant)', 'Account type (Tenant)')}</label>
+            <select
+              value={ai.msTenant}
+              onChange={(e) => ai.setMsTenant(e.target.value)}
+              className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+            >
+              <option value="common">{L('개인 + 회사/학교 계정 (common)', 'Personal + work/school (common)')}</option>
+              <option value="organizations">{L('회사/학교 계정만 (organizations)', 'Work/school only (organizations)')}</option>
+              <option value="consumers">{L('개인 계정만 (consumers)', 'Personal only (consumers)')}</option>
+            </select>
+          </div>
+          <Button size="sm" onClick={doConnect} disabled={!hasClientId || busy === 'connect'}>
+            {busy === 'connect' ? L('연결 중…', 'Connecting…') : L('Microsoft로 로그인', 'Sign in with Microsoft')}
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-1 space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-700">
+            <span className="font-medium">{connectedName}</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-xs text-slate-500">{GRAPH_SCOPES.join(', ')}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={doSync} disabled={busy === 'sync'}>
+              {busy === 'sync' ? L('가져오는 중…', 'Importing…') : L('지금 동기화 (메일·Teams)', 'Sync now (Mail · Teams)')}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={doDisconnect}>{L('연결 해제', 'Disconnect')}</Button>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-3 max-w-md rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-[11px] leading-relaxed text-rose-700">
+          {error}
+        </div>
+      )}
+
+      <button onClick={() => setShowHelp((v) => !v)} className="mt-3 text-[11px] font-medium text-brand-600 hover:text-brand-700">
+        {showHelp ? L('설정 방법 닫기', 'Hide setup steps') : L('처음이신가요? 설정 방법 보기', 'First time? Show setup steps')} {showHelp ? '▲' : '▼'}
+      </button>
+      {showHelp && (
+        <div className="mt-2 max-w-xl space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-600">
+          <p>1. <a href="https://entra.microsoft.com" target="_blank" rel="noreferrer" className="text-brand-600 underline">Microsoft Entra (Azure AD)</a> → {L('앱 등록 → 새 등록', 'App registrations → New registration')}</p>
+          <p>2. {L('플랫폼:', 'Platform:')} <b>Single-page application (SPA)</b>, {L('리디렉션 URI:', 'Redirect URI:')} <code className="rounded bg-white px-1 font-mono text-[10px]">{redirectUri()}</code></p>
+          <p>3. {L('API 권한 → Microsoft Graph → 위임됨:', 'API permissions → Microsoft Graph → Delegated:')} <code className="font-mono text-[10px]">{GRAPH_SCOPES.join(', ')}</code></p>
+          <p>4. {L('개요의 애플리케이션(클라이언트) ID를 위에 붙여넣고 로그인하세요.', 'Copy the Application (client) ID from Overview, paste it above, and sign in.')}</p>
+          <p className="mt-1.5 text-amber-700">⚠️ {L('OAC는 내 브라우저에서만 동작하며 토큰은 브라우저에만 저장됩니다. 데이터는 Microsoft 외 어디로도 전송되지 않습니다.', 'OAC runs entirely in your browser; the token is stored only in your browser. No data is sent anywhere except Microsoft.')}</p>
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function MsIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="8" height="8" rx="1" /><rect x="13" y="3" width="8" height="8" rx="1" />
+      <rect x="3" y="13" width="8" height="8" rx="1" /><rect x="13" y="13" width="8" height="8" rx="1" />
+    </svg>
   )
 }
 
