@@ -25,10 +25,33 @@ export interface NormalizedItem {
   source: 'outlook' | 'teams'
   personName: string
   personEmail?: string
+  company?: string // derived from the sender's email domain (업체)
   title: string
   preview: string
   date: string // ISO date (yyyy-mm-dd)
   link?: string
+}
+
+// Free/public mail providers — for these we can't infer a company from the domain.
+const PUBLIC_DOMAINS = new Set([
+  'gmail.com', 'googlemail.com', 'outlook.com', 'hotmail.com', 'live.com', 'msn.com',
+  'yahoo.com', 'icloud.com', 'me.com', 'proton.me', 'protonmail.com', 'gmx.com',
+  'naver.com', 'daum.net', 'hanmail.net', 'nate.com', 'kakao.com',
+  'qq.com', '163.com', '126.com',
+])
+const CC_SLDS = new Set(['co.kr', 'co.jp', 'com.cn', 'com.vn', 'co.uk', 'com.tw', 'com.hk', 'or.kr', 'ne.jp'])
+
+/** Infer a company name (업체) from an email domain, falling back to the display name. */
+export function companyFromEmail(email?: string, fallback?: string): { company: string; domain?: string } {
+  if (!email || !email.includes('@')) return { company: (fallback || 'Unknown').trim() }
+  const domain = email.split('@')[1]?.toLowerCase().trim()
+  if (!domain) return { company: (fallback || 'Unknown').trim() }
+  if (PUBLIC_DOMAINS.has(domain)) return { company: (fallback || domain).trim(), domain }
+  const labels = domain.split('.')
+  const tld2 = labels.slice(-2).join('.')
+  const orgLabel = CC_SLDS.has(tld2) ? labels[labels.length - 3] : labels[labels.length - 2]
+  const company = orgLabel ? orgLabel.charAt(0).toUpperCase() + orgLabel.slice(1) : domain
+  return { company, domain }
 }
 
 // The Azure SPA redirect URI the user must register (shown in Settings).
@@ -145,20 +168,30 @@ interface MailMsg {
   from?: { emailAddress?: { name?: string; address?: string } }
 }
 
-export async function fetchOutlook(conn: MsConnection, top = 15): Promise<NormalizedItem[]> {
+const sinceIso = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString()
+
+export async function fetchOutlook(conn: MsConnection, opts: { sinceDays?: number; top?: number } = {}): Promise<NormalizedItem[]> {
+  const sinceDays = opts.sinceDays ?? 7
+  const top = opts.top ?? 100
+  const filter = encodeURIComponent(`receivedDateTime ge ${sinceIso(sinceDays)}`)
   const data = await graphGet<{ value: MailMsg[] }>(
     conn,
-    `/me/messages?$top=${top}&$select=subject,from,receivedDateTime,bodyPreview,webLink&$orderby=receivedDateTime desc`,
+    `/me/messages?$top=${top}&$select=subject,from,receivedDateTime,bodyPreview,webLink&$filter=${filter}&$orderby=receivedDateTime%20desc`,
   )
-  return (data.value ?? []).map((m) => ({
-    source: 'outlook' as const,
-    personName: m.from?.emailAddress?.name || m.from?.emailAddress?.address || 'Unknown sender',
-    personEmail: m.from?.emailAddress?.address,
-    title: m.subject || '(no subject)',
-    preview: clean(m.bodyPreview),
-    date: isoDate(m.receivedDateTime),
-    link: m.webLink,
-  }))
+  return (data.value ?? []).map((m) => {
+    const email = m.from?.emailAddress?.address
+    const name = m.from?.emailAddress?.name || email || 'Unknown sender'
+    return {
+      source: 'outlook' as const,
+      personName: name,
+      personEmail: email,
+      company: companyFromEmail(email, name).company,
+      title: m.subject || '(no subject)',
+      preview: clean(m.bodyPreview),
+      date: isoDate(m.receivedDateTime),
+      link: m.webLink,
+    }
+  })
 }
 
 // ── Teams ────────────────────────────────────────────────────────────────────
@@ -180,7 +213,10 @@ interface Chat {
   webUrl?: string
 }
 
-export async function fetchTeams(conn: MsConnection, top = 15): Promise<NormalizedItem[]> {
+export async function fetchTeams(conn: MsConnection, opts: { sinceDays?: number; top?: number } = {}): Promise<NormalizedItem[]> {
+  const sinceDays = opts.sinceDays ?? 7
+  const top = opts.top ?? 50
+  const cutoff = sinceIso(sinceDays)
   const data = await graphGet<{ value: Chat[] }>(
     conn,
     `/me/chats?$top=${top}&$expand=members,lastMessagePreview`,
@@ -189,6 +225,7 @@ export async function fetchTeams(conn: MsConnection, top = 15): Promise<Normaliz
   for (const c of data.value ?? []) {
     const preview = c.lastMessagePreview
     if (!preview) continue
+    if (preview.createdDateTime && preview.createdDateTime < cutoff) continue // last 7 days only
     const others = (c.members ?? []).filter((m) => m.displayName)
     const counterpart =
       c.topic ||
@@ -200,6 +237,7 @@ export async function fetchTeams(conn: MsConnection, top = 15): Promise<Normaliz
       source: 'teams',
       personName: counterpart,
       personEmail: email,
+      company: companyFromEmail(email, counterpart).company,
       title: c.topic ? `Teams · ${c.topic}` : 'Teams chat',
       preview: clean(preview.body?.content),
       date: isoDate(preview.createdDateTime),
@@ -213,24 +251,52 @@ export async function fetchTeams(conn: MsConnection, top = 15): Promise<Normaliz
 const slugFor = (name: string) =>
   'ms-' + name.toLowerCase().replace(/[^a-z0-9가-힣]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)
 
-export function itemToCapture(item: NormalizedItem, lang: Lang): StructuredCapture {
+/** Optional match to an existing relationship so the email updates that company. */
+export interface RelMatch {
+  accountId: string
+  accountName: string
+}
+
+export function itemToCapture(item: NormalizedItem, lang: Lang, match?: RelMatch): StructuredCapture {
   const ko = lang === 'ko'
   const ctx = item.source === 'outlook' ? (ko ? '이메일 · Outlook' : 'Email · Outlook') : (ko ? '메시지 · Teams' : 'Message · Teams')
+  // Group by company (업체): an explicit relationship match wins, else the email-domain company.
+  const company = item.company || companyFromEmail(item.personEmail, item.personName).company
+  const accountName = match?.accountName ?? company
+  const accountId = match?.accountId ?? slugFor(accountName)
+  // keep the sender visible inside the company timeline
+  const detail = item.personName && item.personName !== accountName ? `${item.personName}: ${item.preview}` : item.preview
   return {
-    accountName: item.personName,
-    accountId: slugFor(item.personName),
-    isExisting: false,
+    accountName,
+    accountId,
+    isExisting: !!match,
     category: 'General',
     detectedContext: ctx,
     contextConfidence: 0.9,
     summary: item.title,
-    timeline: { date: item.date, title: item.title, detail: item.preview },
+    timeline: { date: item.date, title: item.title, detail },
     todos: [],
     risks: [],
     report: { title: '', sections: [] },
     email: { subject: '', body: '' },
     kind: item.source === 'outlook' ? 'email' : 'meeting',
-    detail: item.preview,
+    detail,
     nextBestAction: ko ? '내용 검토 후 다음 액션 결정' : 'Review and decide the next action',
   }
+}
+
+/** Find an existing relationship for an item by company/name overlap (≥3 chars). */
+export function matchRelationship(
+  item: NormalizedItem,
+  relationships: { id: string; name: string }[],
+): RelMatch | undefined {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9가-힣]/g, '')
+  const company = item.company || companyFromEmail(item.personEmail, item.personName).company
+  const cands = [company, item.personName].filter(Boolean).map(norm).filter((c) => c.length >= 3)
+  for (const e of relationships) {
+    const en = norm(e.name)
+    if (en.length < 3) continue
+    if (cands.some((c) => en.includes(c) || c.includes(en))) return { accountId: e.id, accountName: e.name }
+  }
+  return undefined
 }

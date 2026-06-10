@@ -7,6 +7,7 @@ import { useT } from '../i18n'
 import { useAiSettings, AI_MODELS } from '../utils/aiSettings'
 import { useCaptureStore } from '../data/captureStore'
 import { useDatasets } from '../data/datasetStore'
+import { useRelationships } from '../data/useRelationships'
 import { useToast } from '../components/Toast'
 import { TODAY } from '../utils/format'
 import { exportBackup, importBackup } from '../utils/backup'
@@ -18,6 +19,7 @@ import {
   fetchOutlook,
   fetchTeams,
   itemToCapture,
+  matchRelationship,
   redirectUri,
   GRAPH_SCOPES,
 } from '../utils/graph'
@@ -190,6 +192,7 @@ function MicrosoftCard() {
   const { lang } = useT()
   const ai = useAiSettings()
   const store = useCaptureStore()
+  const rel = useRelationships()
   const toast = useToast()
   const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
 
@@ -239,16 +242,23 @@ function MicrosoftCard() {
     setBusy('sync')
     try {
       const [mail, teams] = await Promise.all([
-        fetchOutlook(conn).catch(() => []),
-        fetchTeams(conn).catch(() => []),
+        fetchOutlook(conn, { sinceDays: 7 }).catch(() => []),
+        fetchTeams(conn, { sinceDays: 7 }).catch(() => []),
       ])
       const items = [...mail, ...teams]
-      for (const it of items) store.addEntry(itemToCapture(it, lang), `${it.title}\n${it.preview}`)
+      const relList = rel.list.map((e) => ({ id: e.id, name: e.name }))
+      const companies = new Set<string>()
+      for (const it of items) {
+        const match = matchRelationship(it, relList)
+        const cap = itemToCapture(it, lang, match)
+        store.addEntry(cap, `${it.title}\n${it.preview}`)
+        companies.add(cap.accountName)
+      }
       toast.notify(
-        L('동기화 완료', 'Sync complete'),
+        L('동기화 완료 · 지난 7일', 'Sync complete · last 7 days'),
         L(
-          `Outlook ${mail.length}건 · Teams ${teams.length}건을 관계로 가져왔어요`,
-          `Imported ${mail.length} Outlook · ${teams.length} Teams items into relationships`,
+          `메일 ${mail.length}건 · Teams ${teams.length}건 → 업체 ${companies.size}곳 업데이트`,
+          `${mail.length} mail · ${teams.length} Teams → updated ${companies.size} companies`,
         ),
       )
     } catch (e) {
@@ -321,7 +331,7 @@ function MicrosoftCard() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={doSync} disabled={busy === 'sync'}>
-              {busy === 'sync' ? L('가져오는 중…', 'Importing…') : L('지금 동기화 (메일·Teams)', 'Sync now (Mail · Teams)')}
+              {busy === 'sync' ? L('가져오는 중…', 'Importing…') : L('지난 7일 동기화 (업체별 업데이트)', 'Sync last 7 days (update by company)')}
             </Button>
             <Button variant="secondary" size="sm" onClick={doDisconnect}>{L('연결 해제', 'Disconnect')}</Button>
           </div>
