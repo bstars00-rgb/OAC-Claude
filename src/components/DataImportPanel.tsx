@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardHeader } from './Card'
 import { Badge } from './Badge'
 import { Button } from './Button'
@@ -8,6 +8,7 @@ import { useDatasets } from '../data/datasetStore'
 import { useAiSettings } from '../utils/aiSettings'
 import { TODAY } from '../utils/format'
 import { listDriveChildren, downloadDriveItem, findRawDataFiles, type DriveEntry, type DriveFile } from '../utils/graph'
+import { supportsLocalFolder, pickFolder, connectedFolderName, disconnectFolder, findRawDataFiles as findLocalRawData } from '../utils/localFolder'
 import {
   parseFile,
   parseArrayBuffer,
@@ -135,17 +136,46 @@ export function DataImportPanel() {
     }
   }
 
-  // Auto: find the REPORT/RawData latest files and import them straight away
-  // (no manual mapping) using the Ohmyhotel preset.
-  const autoOne = async (f: DriveFile, prof: ImportProfile): Promise<string | null> => {
-    const buf = await downloadDriveItem(conn, f.id)
-    const p = await parseArrayBuffer(buf)
+  // Auto: build + save a snapshot from a parsed sheet using the Ohmyhotel preset.
+  const autoSaveParsed = (p: ParsedSheet, name: string, prof: ImportProfile): string | null => {
     const sug = suggestMapping(p.headers, prof)
     if (sug.preset !== 'ohmyhotel' || !sug.metrics.length) return null // can't auto-map → needs manual
     const rawPv = sug.periodColumn ? p.rows.find((r) => r[sug.periodColumn!])?.[sug.periodColumn!] : ''
     const periodLabel = derivePeriodLabel(rawPv, prof) || (prof === 'checkout' ? TODAY.slice(0, 7) : TODAY)
-    ds.addSnapshot(buildSnapshot({ profile: prof, periodLabel, fileName: f.name, importedAt: TODAY, rows: p.rows, mapping: { dimension: sug.dimension, extraDimensions: sug.extraDimensions, metrics: sug.metrics } }))
+    ds.addSnapshot(buildSnapshot({ profile: prof, periodLabel, fileName: name, importedAt: TODAY, rows: p.rows, mapping: { dimension: sug.dimension, extraDimensions: sug.extraDimensions, metrics: sug.metrics } }))
     return periodLabel
+  }
+  const autoOne = async (f: DriveFile, prof: ImportProfile): Promise<string | null> =>
+    autoSaveParsed(await parseArrayBuffer(await downloadDriveItem(conn, f.id)), f.name, prof)
+
+  // ── local folder (File System Access API, Chrome/Edge — no Microsoft permission) ──
+  const [localFolder, setLocalFolder] = useState<string | null>(null)
+  useEffect(() => { if (supportsLocalFolder) connectedFolderName().then(setLocalFolder).catch(() => {}) }, [])
+
+  const connectLocal = async () => {
+    setError('')
+    try { setLocalFolder(await pickFolder()) } catch { /* user cancelled the picker */ }
+  }
+  const disconnectLocal = async () => { await disconnectFolder(); setLocalFolder(null) }
+
+  const localAuto = async () => {
+    setDriveBusy(true); setError('')
+    try {
+      const { booking, checkout } = await findLocalRawData()
+      if (!booking && !checkout) {
+        setError(L('연결한 폴더에서 부킹/체크아웃 .xlsx를 못 찾았어요.', "Couldn't find Booking / Check Out .xlsx in the connected folder."))
+        return
+      }
+      const out: string[] = []
+      if (booking) { const r = autoSaveParsed(await parseFile(booking), booking.name, 'booking'); out.push(r ? `${L('부킹', 'Booking')} ${r}` : `${L('부킹: 수동 매핑 필요', 'Booking: manual')}`) }
+      if (checkout) { const r = autoSaveParsed(await parseFile(checkout), checkout.name, 'checkout'); out.push(r ? `${L('체크아웃', 'Check Out')} ${r}` : `${L('체크아웃: 수동 매핑 필요', 'Check Out: manual')}`) }
+      toast.notify(L('로컬 폴더 가져오기 완료', 'Local folder import complete'), out.join(' · '))
+      setOpenImport(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDriveBusy(false)
+    }
   }
 
   const autoImport = async () => {
@@ -212,12 +242,34 @@ export function DataImportPanel() {
 
       {openImport && (
         <div className="mt-3 rounded-xl border border-slate-200 p-3.5 dark:border-white/10">
-          {/* auto import from the REPORT folder */}
+          {/* LOCAL folder (no Microsoft permission) — preferred for a laptop folder */}
+          {supportsLocalFolder && !parsed && (
+            <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-2.5 dark:bg-emerald-500/10">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-lg">💻</span>
+                <span className="flex-1 text-xs text-slate-600">
+                  {localFolder
+                    ? L(`로컬 폴더 연결됨: ${localFolder} · 권한 없이 자동`, `Local folder: ${localFolder} · no permission`)
+                    : L('내 노트북의 REPORT 폴더를 한 번 연결하면, 권한 없이 최신 파일을 자동으로 가져옵니다', 'Connect your laptop REPORT folder once — auto-import the latest files, no permission')}
+                </span>
+                {localFolder ? (
+                  <>
+                    <Button size="sm" onClick={localAuto} disabled={driveBusy || busy}>{driveBusy ? L('가져오는 중…', 'Importing…') : L('자동 가져오기', 'Auto-import')}</Button>
+                    <button onClick={disconnectLocal} className="text-[11px] text-slate-400 hover:text-rose-500">{L('해제', 'Disconnect')}</button>
+                  </>
+                ) : (
+                  <Button size="sm" onClick={connectLocal}>{L('로컬 폴더 연결', 'Connect local folder')}</Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* auto import from the OneDrive REPORT folder (needs Files permission) */}
           {msReady && !parsed && (
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-brand-200 bg-brand-50/50 p-2.5 dark:bg-brand-500/10">
               <span className="text-lg">⚡</span>
-              <span className="flex-1 text-xs text-slate-600">{L('REPORT 폴더의 최신 부킹·체크아웃 파일을 자동으로 찾아 가져옵니다', 'Auto-find & import the latest Booking / Check Out files from your REPORT folder')}</span>
-              <Button size="sm" onClick={autoImport} disabled={driveBusy || busy}>{driveBusy ? L('가져오는 중…', 'Importing…') : L('자동 가져오기', 'Auto-import')}</Button>
+              <span className="flex-1 text-xs text-slate-600">{L('OneDrive REPORT 폴더의 최신 파일 자동 가져오기 (Files 권한 필요)', 'Auto-import latest from your OneDrive REPORT folder (needs Files permission)')}</span>
+              <Button size="sm" variant="secondary" onClick={autoImport} disabled={driveBusy || busy}>{driveBusy ? L('가져오는 중…', 'Importing…') : L('OneDrive 자동', 'OneDrive auto')}</Button>
             </div>
           )}
 
