@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { runAssistant, type AssistantMemory } from './assistantEngine'
+import { runAssistant, extractEmailBlock, type AssistantMemory } from './assistantEngine'
 import { getEntities } from '../data/entities'
 
 const emptyMemory: AssistantMemory = { accounts: [], updates: [], totalAccounts: 0, totalOpenTodos: 0, totalRisks: 0 }
@@ -64,6 +64,19 @@ describe('runAssistant (demo) — control center', () => {
     const r = await runAssistant({ ...base, lang: 'ko', userText: 'Klook 진행상황 어때?', memory })
     expect(r.text).toContain('검수')
     expect(r.text).toContain('24/7')
+  })
+
+  it('extractEmailBlock pulls an inline email draft (live mode) out of the reply', () => {
+    const raw = '초안입니다:\n```oac-email\n{ "to": "ops@klook.com", "subject": "연동 일정", "body": "안녕하세요,\\n다음 주 일정 공유드립니다." }\n```'
+    const r = extractEmailBlock(raw)
+    expect(r.email?.subject).toBe('연동 일정')
+    expect(r.email?.to).toBe('ops@klook.com')
+    expect(r.email?.body).toContain('다음 주')
+    expect(r.text).toBe('초안입니다:') // block stripped from prose
+  })
+
+  it('extractEmailBlock leaves a normal reply untouched', () => {
+    expect(extractEmailBlock('Klook is healthy this week.').email).toBeUndefined()
   })
 
   it('saves a free-form note on a NEW account naturally', async () => {

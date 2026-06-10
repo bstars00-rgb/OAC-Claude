@@ -173,7 +173,22 @@ const parseStructured = (raw: unknown, lang: Lang, rels: Entity[]): StructuredCa
   }
 }
 
-const OAC_BLOCK = /```oac\s*([\s\S]*?)```/i
+const OAC_BLOCK = /```oac(?!-)\s*([\s\S]*?)```/i
+const OAC_EMAIL_BLOCK = /```oac-email\s*([\s\S]*?)```/i
+
+/** Pull an inline email draft (```oac-email block) out of a model reply. */
+export function extractEmailBlock(raw: string): { text: string; email?: { to: string; subject: string; body: string } } {
+  const em = raw.match(OAC_EMAIL_BLOCK)
+  if (!em) return { text: raw }
+  const text = raw.replace(em[0], '').trim()
+  try {
+    const e = JSON.parse(em[1].trim()) as { to?: string; subject?: string; body?: string }
+    if (e.subject || e.body) return { text, email: { to: e.to ?? '', subject: e.subject ?? '', body: e.body ?? '' } }
+  } catch {
+    /* ignore */
+  }
+  return { text }
+}
 
 // ── demo handlers for actions on an existing relationship ────────────────────
 
@@ -294,11 +309,15 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
         attachments: opts.attachments,
         crmContext,
       })
-      const m = raw.match(OAC_BLOCK)
+      // Inline email draft → render an EmailCard with a real "Send via Outlook" button.
+      const extracted = extractEmailBlock(raw)
+      let text = extracted.text
+      const email = extracted.email
+
+      const m = text.match(OAC_BLOCK)
       let structured: StructuredCapture | undefined
-      let text = raw
       if (m) {
-        text = raw.replace(m[0], '').trim()
+        text = text.replace(m[0], '').trim()
         try {
           structured = parseStructured(JSON.parse(m[1].trim()), opts.lang, opts.relationships)
         } catch {
@@ -307,7 +326,7 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
       }
       const ent = matchEntity(opts.userText, opts.relationships)
       const entityId = structured?.isExisting ? structured.accountId : ent?.id
-      return { text: text || (opts.lang === 'ko' ? '응답을 받았습니다.' : 'Done.'), structured, entityId }
+      return { text: text || (opts.lang === 'ko' ? '응답을 받았습니다.' : 'Done.'), structured, email, entityId }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       return {

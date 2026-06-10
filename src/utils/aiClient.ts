@@ -49,6 +49,12 @@ When the user's message (or an attached document/image) contains trackable work 
 \`\`\`
 For an existing relationship set "isExisting": true and the matching "account" name, and fill "kind" + "nextBestAction" so Relationship 360 stays in sync. If the message is only a question or chit-chat with nothing to track, do NOT append the block. Never wrap the block in extra commentary.
 
+When the user asks you to draft, write, or send an EMAIL, ALSO append EXACTLY ONE additional fenced block so the app can render a Send button:
+\`\`\`oac-email
+{ "to": "recipient@example.com or empty if unknown", "subject": "string", "body": "the full email body as plain text" }
+\`\`\`
+Put the complete email in the "body" field (plain text, with greeting and sign-off). Leave "to" empty if you don't know the address — the user can fill it in. Keep your prose to a short intro line (e.g. "초안입니다:") and put the email itself ONLY inside the oac-email block, not also in the prose, to avoid duplication.
+
 Known CRM relationships and recent captures (use to ground your answers; do not invent data):
 ${crmContext}`
 }
