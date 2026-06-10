@@ -10,6 +10,7 @@ import { useToast } from '../components/Toast'
 import { useT } from '../i18n'
 import { useAiSettings, AI_MODELS } from '../utils/aiSettings'
 import { useCaptureStore } from '../data/captureStore'
+import { useDatasets } from '../data/datasetStore'
 import { useRelationships } from '../data/useRelationships'
 import { runAssistant } from '../utils/assistantEngine'
 import { readAttachment, formatBytes, type Attachment } from '../utils/files'
@@ -61,6 +62,7 @@ export function OACAssistant() {
   const { t, lang } = useT()
   const ai = useAiSettings()
   const store = useCaptureStore()
+  const datasets = useDatasets()
   const rel = useRelationships()
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -114,6 +116,7 @@ export function OACAssistant() {
       attachments,
       memory,
       relationships: rel.list,
+      datasets: datasets.snapshots,
     })
 
     const raw = clean || attachments.map((a) => a.name).join(', ')

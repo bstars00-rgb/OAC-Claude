@@ -4,6 +4,8 @@
 
 import { callAssistant, type ChatTurnLite } from './aiClient'
 import { structureCapture, type StructuredCapture, type Category, type Priority } from './captureAI'
+import { answerDataQuery, looksLikeDataQuery, buildDatasetContext } from './datasetQuery'
+import type { DatasetSnapshot } from './dataImport'
 import { type Entity } from './../data/entities'
 import { draftSeedForEntity } from '../data/emails'
 import { reportByEntityAndType } from '../data/reports'
@@ -50,6 +52,7 @@ interface RunOpts {
   attachments: Attachment[]
   memory: AssistantMemory // workspace memory (state before this turn)
   relationships: Entity[] // the active relationships (seeded demo OR the user's own)
+  datasets?: DatasetSnapshot[] // imported RawData snapshots (for data questions)
 }
 
 const CATEGORIES: Category[] = ['Customer', 'Supplier', 'Partner', 'Project', 'Recruiting', 'Legal', 'Operations', 'Finance', 'General']
@@ -279,7 +282,8 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
           opts.memory.updates.slice(0, 10).map((u) => `- ${u.accountId} (${u.date}) ${u.kind ?? 'note'}: ${u.summary}${u.nextBestAction ? ` → next: ${u.nextBestAction}` : ''}`).join('\n')
         : ''
       const ctx = opts.relationships.length ? buildContext(opts.relationships) : (opts.lang === 'ko' ? '(아직 등록된 관계 없음)' : '(no relationships yet)')
-      const crmContext = `${ctx}\n${captures}${activity}`.trim()
+      const dataCtx = opts.datasets?.length ? '\n' + buildDatasetContext(opts.datasets) : ''
+      const crmContext = `${ctx}\n${captures}${activity}${dataCtx}`.trim()
       const raw = await callAssistant({
         provider: opts.provider ?? 'anthropic',
         apiKey: opts.apiKey,
@@ -318,6 +322,15 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
 
   // ── demo: mock engine ─────────────────────────────────────────────────────
   const ent = matchEntity(opts.userText, opts.relationships)
+
+  // Data question about imported RawData (rankings / metric totals). Triggered when
+  // there's no specific relationship in focus, or the user explicitly asks to rank.
+  const ranking = /top\s*\d|상위|순위|랭킹|랭크|best|가장\s*(많|높|적|낮)/i.test(opts.userText)
+  if (opts.datasets?.length && looksLikeDataQuery(opts.userText) && (!ent || ranking)) {
+    const ans = answerDataQuery(opts.userText, opts.datasets, opts.lang)
+    if (ans) return { text: ans }
+  }
+
   const fileNote =
     opts.attachments.length > 0
       ? opts.lang === 'ko'
