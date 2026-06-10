@@ -57,6 +57,26 @@ const catLabel: Record<Category, { en: string; ko: string }> = {
 // collide new message ids with ones already in React state.
 let msgSeq = Date.now()
 
+// ── conversation persistence (전체 자동 기록) ────────────────────────────────
+const CHAT_KEY = 'oac-chat-v1'
+function loadChat(): ChatMsg[] {
+  try {
+    const raw = localStorage.getItem(CHAT_KEY)
+    if (raw) return (JSON.parse(raw) as ChatMsg[]).filter((m) => !m.thinking)
+  } catch {
+    /* ignore */
+  }
+  return []
+}
+function saveChat(messages: ChatMsg[]): void {
+  try {
+    // keep the last 120 turns, drop in-flight "thinking" placeholders
+    localStorage.setItem(CHAT_KEY, JSON.stringify(messages.filter((m) => !m.thinking).slice(-120)))
+  } catch {
+    /* quota — ignore */
+  }
+}
+
 export function OACAssistant() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
@@ -66,9 +86,12 @@ export function OACAssistant() {
   const store = useCaptureStore()
   const datasets = useDatasets()
   const rel = useRelationships()
-  const [messages, setMessages] = useState<ChatMsg[]>([])
+  // Conversation is persisted (전체 자동 기록) — survives reloads and syncs via backup/cloud.
+  const [messages, setMessages] = useState<ChatMsg[]>(loadChat)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { saveChat(messages) }, [messages])
 
   const submit = async (text: string, attachments: Attachment[]) => {
     const clean = text.trim()
@@ -120,6 +143,7 @@ export function OACAssistant() {
       relationships: rel.list,
       datasets: datasets.snapshots,
       signature: ai.userSignature,
+      assistantMode: ai.assistantMode,
     })
 
     const raw = clean || attachments.map((a) => a.name).join(', ')
@@ -157,11 +181,26 @@ export function OACAssistant() {
         title={t('page.assistant.title')}
         subtitle={t('page.assistant.subtitle')}
         actions={
-          <button onClick={() => setSettingsOpen(true)} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${ai.isLive ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${ai.isLive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-            {ai.isLive ? `${t('asst.liveMode')} · ${ai.model.replace('claude-', '')}` : t('asst.demoMode')}
-            <GearIcon />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* persona toggle: OAC (CRM) ↔ ChatGPT (general) */}
+            <div className="inline-flex overflow-hidden rounded-lg border border-slate-200 text-xs font-semibold">
+              {(['oac', 'chatgpt'] as const).map((m) => (
+                <button key={m} onClick={() => ai.setAssistantMode(m)} className={`px-2.5 py-1.5 transition ${ai.assistantMode === m ? 'bg-brand-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}>
+                  {m === 'oac' ? 'OAC' : 'ChatGPT'}
+                </button>
+              ))}
+            </div>
+            {messages.length > 0 && (
+              <button onClick={() => { if (window.confirm(lang === 'ko' ? '대화를 비우시겠어요? (백업/클라우드에 저장된 기록은 유지)' : 'Clear this conversation?')) setMessages([]) }} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-50">
+                {lang === 'ko' ? '새 대화' : 'New chat'}
+              </button>
+            )}
+            <button onClick={() => setSettingsOpen(true)} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${ai.isLive ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${ai.isLive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+              {ai.isLive ? `${t('asst.liveMode')} · ${ai.model.replace('claude-', '')}` : t('asst.demoMode')}
+              <GearIcon />
+            </button>
+          </div>
         }
       />
 

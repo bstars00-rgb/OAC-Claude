@@ -30,10 +30,11 @@ interface CallOpts {
   attachments: Attachment[]
   crmContext: string
   signature?: string // the user's email signature (name/title/contacts)
+  assistantMode?: 'oac' | 'chatgpt'
 }
 
 // Build the OAC system prompt, grounded with a compact CRM snapshot.
-const systemPrompt = (lang: Lang, crmContext: string, signature?: string): string => {
+const systemPrompt = (lang: Lang, crmContext: string, signature?: string, assistantMode: 'oac' | 'chatgpt' = 'oac'): string => {
   const sigLine = signature?.trim()
     ? `\n\nWhen you draft an email, end it with EXACTLY this signature (verbatim, do NOT invent placeholders like [your name] / [직책] / [연락처]):\n${signature.trim()}`
     : ''
@@ -41,9 +42,14 @@ const systemPrompt = (lang: Lang, crmContext: string, signature?: string): strin
     lang === 'ko'
       ? 'Always answer in Korean (한국어).'
       : "Answer in the user's language (Korean if they write Korean, otherwise English)."
-  return `You are OAC (Ohmyhotel AI CRM), a context-based AI sales & relationship CRM assistant.
+  const persona =
+    assistantMode === 'chatgpt'
+      ? `You are a brilliant, general-purpose AI assistant (ChatGPT-style) embedded in OAC. Answer ANYTHING the user asks — general knowledge, analysis, writing, coding, brainstorming, document & image understanding — thoroughly, helpfully, and naturally, exactly like ChatGPT would. Do not restrict yourself to CRM topics. You ALSO have the user's CRM context and tools below; weave them in when relevant.`
+      : `You are OAC (Ohmyhotel AI CRM), a context-based AI sales & relationship CRM assistant.
 You help with EVERY business relationship: customers, suppliers, partners, projects, recruiting, legal, and operations.
-Behave like an AI workspace: answer questions, summarize uploaded images and documents, and when the user shares work notes or updates worth tracking, save them as CRM records. Be concise, practical, and specific. ${langLine}
+Behave like an AI workspace: answer questions, summarize uploaded images and documents, and when the user shares work notes or updates worth tracking, save them as CRM records.`
+  return `${persona}
+Be concise, practical, and specific. ${langLine}
 
 Reply naturally and conversationally, like a sharp colleague — do NOT announce that you are "structuring this into Account / Timeline / To Do / Risk". When you save a note, reference relevant prior context from the snapshot below (e.g. "this updates X", "that's your 2nd note on X", running to-do counts), and end with one short, proactive suggestion or follow-up.
 
@@ -120,7 +126,7 @@ async function callAnthropic(opts: CallOpts): Promise<string> {
     body: JSON.stringify({
       model: opts.model,
       max_tokens: 2048,
-      system: systemPrompt(opts.lang, opts.crmContext, opts.signature),
+      system: systemPrompt(opts.lang, opts.crmContext, opts.signature, opts.assistantMode),
       messages,
     }),
   })
@@ -211,7 +217,7 @@ const buildOpenAIContent = (userText: string, attachments: Attachment[]): OpenAI
 
 async function callOpenAI(opts: CallOpts): Promise<string> {
   const messages = [
-    { role: 'system' as const, content: systemPrompt(opts.lang, opts.crmContext, opts.signature) },
+    { role: 'system' as const, content: systemPrompt(opts.lang, opts.crmContext, opts.signature, opts.assistantMode) },
     ...opts.history.map((t) => ({ role: t.role, content: t.text })),
     { role: 'user' as const, content: buildOpenAIContent(opts.userText, opts.attachments) },
   ]

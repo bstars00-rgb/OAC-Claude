@@ -8,6 +8,7 @@ import {
 
 export type AiMode = 'demo' | 'live'
 export type AiProvider = 'anthropic' | 'openai'
+export type AssistantMode = 'oac' | 'chatgpt' // CRM-focused vs general ChatGPT-style
 
 export interface AiModelOption {
   id: string
@@ -44,6 +45,8 @@ interface AiSettings {
   supabaseAnonKey: string
   // Email signature (name / title / contacts) — auto-added to drafted emails, editable before sending.
   userSignature: string
+  // Assistant persona: 'oac' (CRM-focused) or 'chatgpt' (general, ChatGPT-style).
+  assistantMode: AssistantMode
 }
 
 interface AiSettingsCtx extends AiSettings {
@@ -57,6 +60,7 @@ interface AiSettingsCtx extends AiSettings {
   setSupabaseUrl: (v: string) => void
   setSupabaseAnonKey: (v: string) => void
   setUserSignature: (v: string) => void
+  setAssistantMode: (v: AssistantMode) => void
   provider: AiProvider // derived from the selected model
   activeKey: string // the key for the active provider
   isLive: boolean
@@ -80,13 +84,14 @@ const read = (): AiSettings => {
         supabaseUrl: typeof p.supabaseUrl === 'string' ? p.supabaseUrl : '',
         supabaseAnonKey: typeof p.supabaseAnonKey === 'string' ? p.supabaseAnonKey : '',
         userSignature: typeof p.userSignature === 'string' ? p.userSignature : '',
+        assistantMode: p.assistantMode === 'chatgpt' ? 'chatgpt' : 'oac',
       }
     }
   } catch {
     /* ignore */
   }
   // Default to REAL mode (no demo data) — the user is starting to use OAC for real.
-  return { mode: 'demo', apiKey: '', openaiKey: '', model: AI_MODELS[0].id, demoData: false, msClientId: '', msTenant: 'common', supabaseUrl: '', supabaseAnonKey: '', userSignature: '' }
+  return { mode: 'demo', apiKey: '', openaiKey: '', model: AI_MODELS[0].id, demoData: false, msClientId: '', msTenant: 'common', supabaseUrl: '', supabaseAnonKey: '', userSignature: '', assistantMode: 'oac' }
 }
 
 const Ctx = createContext<AiSettingsCtx | null>(null)
@@ -112,13 +117,14 @@ export function AiSettingsProvider({ children }: { children: ReactNode }) {
   const setSupabaseUrl = (supabaseUrl: string) => setSettings((s) => ({ ...s, supabaseUrl }))
   const setSupabaseAnonKey = (supabaseAnonKey: string) => setSettings((s) => ({ ...s, supabaseAnonKey }))
   const setUserSignature = (userSignature: string) => setSettings((s) => ({ ...s, userSignature }))
+  const setAssistantMode = (assistantMode: AssistantMode) => setSettings((s) => ({ ...s, assistantMode }))
 
   const provider = providerForModel(settings.model)
   const activeKey = provider === 'openai' ? settings.openaiKey : settings.apiKey
   const isLive = settings.mode === 'live' && activeKey.trim().length > 0
 
   return (
-    <Ctx.Provider value={{ ...settings, setMode, setApiKey, setOpenaiKey, setModel, setDemoData, setMsClientId, setMsTenant, setSupabaseUrl, setSupabaseAnonKey, setUserSignature, provider, activeKey, isLive }}>
+    <Ctx.Provider value={{ ...settings, setMode, setApiKey, setOpenaiKey, setModel, setDemoData, setMsClientId, setMsTenant, setSupabaseUrl, setSupabaseAnonKey, setUserSignature, setAssistantMode, provider, activeKey, isLive }}>
       {children}
     </Ctx.Provider>
   )
