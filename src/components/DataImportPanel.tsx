@@ -10,6 +10,7 @@ import {
   parseFile,
   inferNumericHeaders,
   suggestMapping,
+  derivePeriodLabel,
   buildSnapshot,
   type ImportProfile,
   type ParsedSheet,
@@ -62,14 +63,15 @@ export function DataImportPanel() {
       if (!p.rows.length) throw new Error(L('빈 시트입니다. 데이터가 있는 파일을 선택하세요.', 'The sheet is empty.'))
       setParsed(p)
       setFileName(file.name)
-      // smart defaults — recognize the Ohmyhotel RawData schema first
-      const sug = suggestMapping(p.headers)
+      // smart defaults — recognize the Ohmyhotel RawData schema first (profile-aware)
+      const sug = suggestMapping(p.headers, profile)
       setPreset(sug.preset)
       if (sug.preset === 'ohmyhotel' && sug.metrics.length) {
         setDimension(sug.dimension)
         setExtraDims(sug.extraDimensions)
         setMetrics(sug.metrics)
-        const pv = sug.periodColumn ? String(p.rows.find((r) => r[sug.periodColumn!])?.[sug.periodColumn!] ?? '').trim() : ''
+        const rawPv = sug.periodColumn ? p.rows.find((r) => r[sug.periodColumn!])?.[sug.periodColumn!] : ''
+        const pv = derivePeriodLabel(rawPv, profile)
         setPeriod(pv || (profile === 'checkout' ? TODAY.slice(0, 7) : TODAY))
       } else {
         const textCols = p.headers.filter((h) => !inferNumericHeaders(p.rows, [h]).length)
@@ -161,7 +163,7 @@ export function DataImportPanel() {
               <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
                 <Badge tone="green" dot>{fileName}</Badge>
                 <span className="text-slate-400">{parsed.rows.length} {L('행', 'rows')} · {parsed.headers.length} {L('열', 'cols')}</span>
-                {preset === 'ohmyhotel' && <Badge tone="brand" dot>{L('Ohmyhotel 형식 자동 인식 · 금액 ¥ 기준', 'Ohmyhotel format detected · amounts in ¥')}</Badge>}
+                {preset === 'ohmyhotel' && <Badge tone="brand" dot>{L(`Ohmyhotel 형식 자동 인식 · ¥ · ${profile === 'checkout' ? '월 단위' : '주 단위'}`, `Ohmyhotel format detected · ¥ · ${profile === 'checkout' ? 'monthly' : 'weekly'}`)}</Badge>}
                 <button onClick={reset} className="ml-auto text-[11px] text-slate-400 hover:text-rose-500">{L('다른 파일', 'Change file')}</button>
               </div>
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as XLSX from 'xlsx'
-import { parseArrayBuffer, aggregate, toNum, inferNumericHeaders, buildSnapshot, suggestMapping } from './dataImport'
+import { parseArrayBuffer, aggregate, toNum, inferNumericHeaders, buildSnapshot, suggestMapping, derivePeriodLabel } from './dataImport'
 
 // Build a small RawData-like workbook in memory (no file system).
 function makeBook(): ArrayBuffer {
@@ -82,6 +82,26 @@ describe('dataImport', () => {
 
   it('falls back to generic for an unknown schema', () => {
     expect(suggestMapping(['name', 'count', 'value']).preset).toBe('generic')
+  })
+
+  it('uses a Check Out period column for the checkout profile', () => {
+    const headers = [
+      'Check Out Date', 'Week of Check In Date', 'Hotel Name', 'Hotel Country', 'Total Room Nights',
+      'Billing Sum by Company Currency_JPY', 'Vendor Sum by Company Currency_JPY', 'Billing Revenue by Company Currency_JPY',
+    ]
+    const booking = suggestMapping(headers, 'booking')
+    const checkout = suggestMapping(headers, 'checkout')
+    expect(checkout.preset).toBe('ohmyhotel')
+    expect(checkout.periodColumn).toBe('Check Out Date')
+    // booking has no Booking Date column here, so it falls back to a check-in week
+    expect(booking.periodColumn).toBe('Week of Check In Date')
+  })
+
+  it('derives a monthly label for checkout, keeps the week label for booking', () => {
+    expect(derivePeriodLabel('2026-05-20', 'checkout')).toBe('2026-05')
+    expect(derivePeriodLabel('2026/5/3', 'checkout')).toBe('2026-05')
+    expect(derivePeriodLabel('2026-W23', 'booking')).toBe('2026-W23')
+    expect(derivePeriodLabel('', 'checkout')).toBe('')
   })
 
   it('buildSnapshot computes totals and a stable id', async () => {

@@ -102,11 +102,25 @@ export interface SuggestedMapping {
   periodColumn?: string
 }
 
-export function suggestMapping(headers: string[]): SuggestedMapping {
+// Derive a period label from a date-ish cell value. Check Out is monthly
+// (YYYY-MM); Booking keeps the given week/label as-is.
+export function derivePeriodLabel(value: unknown, profile: ImportProfile): string {
+  const s = String(value ?? '').trim()
+  if (!s) return ''
+  if (profile === 'checkout') {
+    const m = s.match(/(\d{4})[-/.](\d{1,2})/)
+    if (m) return `${m[1]}-${m[2].padStart(2, '0')}`
+    if (value instanceof Date) return value.toISOString().slice(0, 7)
+    return s
+  }
+  return s // booking — use the week label / value directly
+}
+
+export function suggestMapping(headers: string[], profile: ImportProfile = 'booking'): SuggestedMapping {
   const has = (c: string[]) => findHeader(headers, c)
   const isOhm =
     !!has(['Hotel Name']) &&
-    !!has(['Booking Date']) &&
+    (!!has(['Booking Date']) || !!has(['Check Out Date'])) &&
     !!has(['Billing Sum by Company Currency_JPY', 'Billing Sum by Company Currency JPY'])
 
   if (isOhm) {
@@ -124,12 +138,16 @@ export function suggestMapping(headers: string[]): SuggestedMapping {
     const extras = ['Seller Name', 'Vendor Name', 'Hotel Country', 'Hotel Region', 'Chain Brand']
       .map((c) => findHeader(headers, [c]))
       .filter((x): x is string => !!x)
+    const periodColumn =
+      profile === 'checkout'
+        ? findHeader(headers, ['Check Out Date', 'Week of Check In Date', 'Check In Date'])
+        : findHeader(headers, ['Week of Booking Date', 'Booking Date', 'Week of Check In Date'])
     return {
       preset: 'ohmyhotel',
       dimension: findHeader(headers, ['Hotel Name']) ?? headers[0],
       extraDimensions: extras,
       metrics,
-      periodColumn: findHeader(headers, ['Week of Booking Date', 'Week of Check In Date', 'Booking Date']),
+      periodColumn,
     }
   }
 
