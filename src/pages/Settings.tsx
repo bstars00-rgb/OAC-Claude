@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PageHeader } from '../components/Layout'
 import { Card, CardHeader } from '../components/Card'
 import { Badge } from '../components/Badge'
@@ -6,7 +6,10 @@ import { Button } from '../components/Button'
 import { useT } from '../i18n'
 import { useAiSettings, AI_MODELS } from '../utils/aiSettings'
 import { useCaptureStore } from '../data/captureStore'
+import { useDatasets } from '../data/datasetStore'
 import { useToast } from '../components/Toast'
+import { TODAY } from '../utils/format'
+import { exportBackup, importBackup } from '../utils/backup'
 import { IntegrationsContent } from './Integrations'
 import {
   connect as msConnect,
@@ -91,6 +94,9 @@ export function Settings() {
         </div>
       </Card>
 
+      {/* Backup & Restore */}
+      <BackupCard />
+
       {/* Workspace */}
       <Card>
         <CardHeader title={t('set.workspace')} subtitle={`${store.stats.accounts} accounts · ${store.stats.entries} captures · ${store.stats.openTodos} open to-dos`} icon={<DbIcon />} />
@@ -104,6 +110,80 @@ export function Settings() {
       <IntegrationsContent />
     </div>
   )
+}
+
+function BackupCard() {
+  const { lang } = useT()
+  const store = useCaptureStore()
+  const datasets = useDatasets()
+  const toast = useToast()
+  const fileRef = useRef<HTMLInputElement>(null)
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
+  const [error, setError] = useState('')
+
+  const doExport = () => {
+    try {
+      const json = exportBackup(TODAY)
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `oac-backup-${TODAY}.json`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      toast.notify(L('백업 내보냄', 'Backup exported'), `oac-backup-${TODAY}.json`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const doImport = async (file: File | undefined) => {
+    if (!file) return
+    setError('')
+    try {
+      const text = await file.text()
+      const { restored } = importBackup(text)
+      toast.notify(L('복원 완료', 'Restore complete'), L(`${restored}개 항목 복원 · 새로고침합니다`, `Restored ${restored} items · reloading`))
+      setTimeout(() => window.location.reload(), 700)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader
+        title={L('백업 & 복원', 'Backup & Restore')}
+        subtitle={L('내 데이터를 파일로 보관하고, 다른 기기나 데이터가 지워졌을 때 복원하세요', 'Save your data to a file — restore it on another device or after storage is cleared')}
+        icon={<SaveIcon />}
+      />
+      <div className="mb-2 flex flex-wrap gap-2 text-[11px]">
+        <Badge tone="slate">{store.stats.accounts} {L('관계', 'relationships')}</Badge>
+        <Badge tone="slate">{store.stats.entries} {L('캡처', 'captures')}</Badge>
+        <Badge tone="slate">{datasets.snapshots.length} {L('데이터 스냅샷', 'data snapshots')}</Badge>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" onClick={doExport}>{L('백업 내보내기 (.json)', 'Export backup (.json)')}</Button>
+        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => doImport(e.target.files?.[0])} />
+        <Button size="sm" variant="secondary" onClick={() => fileRef.current?.click()}>{L('백업에서 복원', 'Restore from backup')}</Button>
+      </div>
+      {error && <div className="mt-2 max-w-md rounded-lg border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-700">{error}</div>}
+      <p className="mt-2 max-w-xl text-[11px] leading-relaxed text-slate-400">
+        {L(
+          'OAC는 데이터를 이 브라우저에 저장합니다(같은 브라우저면 종료 후 다시 열어도 유지). 다른 기기로 옮기거나 만일에 대비해 정기적으로 백업하세요. 보안을 위해 API 키는 백업에 포함되지 않습니다(복원 후 다시 입력).',
+          'OAC stores data in this browser (it persists across restarts on the same browser). Back up regularly to move to another device or guard against loss. API keys are excluded from backups for security — re-enter them after restoring.',
+        )}
+      </p>
+    </Card>
+  )
+}
+
+function SaveIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8M7 3v5h8" /></svg>
 }
 
 function MicrosoftCard() {
