@@ -53,6 +53,7 @@ interface RunOpts {
   memory: AssistantMemory // workspace memory (state before this turn)
   relationships: Entity[] // the active relationships (seeded demo OR the user's own)
   datasets?: DatasetSnapshot[] // imported RawData snapshots (for data questions)
+  signature?: string // the user's email signature
 }
 
 const CATEGORIES: Category[] = ['Customer', 'Supplier', 'Partner', 'Project', 'Recruiting', 'Legal', 'Operations', 'Finance', 'General']
@@ -308,6 +309,7 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
         userText: opts.userText,
         attachments: opts.attachments,
         crmContext,
+        signature: opts.signature,
       })
       // Inline email draft → render an EmailCard with a real "Send via Outlook" button.
       const extracted = extractEmailBlock(raw)

@@ -42,6 +42,8 @@ interface AiSettings {
   // Supabase cloud sync — the user's own project (URL + anon key are public-safe; RLS protects data).
   supabaseUrl: string
   supabaseAnonKey: string
+  // Email signature (name / title / contacts) — auto-added to drafted emails, editable before sending.
+  userSignature: string
 }
 
 interface AiSettingsCtx extends AiSettings {
@@ -54,6 +56,7 @@ interface AiSettingsCtx extends AiSettings {
   setMsTenant: (v: string) => void
   setSupabaseUrl: (v: string) => void
   setSupabaseAnonKey: (v: string) => void
+  setUserSignature: (v: string) => void
   provider: AiProvider // derived from the selected model
   activeKey: string // the key for the active provider
   isLive: boolean
@@ -76,13 +79,14 @@ const read = (): AiSettings => {
         msTenant: typeof p.msTenant === 'string' && p.msTenant ? p.msTenant : 'common',
         supabaseUrl: typeof p.supabaseUrl === 'string' ? p.supabaseUrl : '',
         supabaseAnonKey: typeof p.supabaseAnonKey === 'string' ? p.supabaseAnonKey : '',
+        userSignature: typeof p.userSignature === 'string' ? p.userSignature : '',
       }
     }
   } catch {
     /* ignore */
   }
   // Default to REAL mode (no demo data) — the user is starting to use OAC for real.
-  return { mode: 'demo', apiKey: '', openaiKey: '', model: AI_MODELS[0].id, demoData: false, msClientId: '', msTenant: 'common', supabaseUrl: '', supabaseAnonKey: '' }
+  return { mode: 'demo', apiKey: '', openaiKey: '', model: AI_MODELS[0].id, demoData: false, msClientId: '', msTenant: 'common', supabaseUrl: '', supabaseAnonKey: '', userSignature: '' }
 }
 
 const Ctx = createContext<AiSettingsCtx | null>(null)
@@ -107,13 +111,14 @@ export function AiSettingsProvider({ children }: { children: ReactNode }) {
   const setMsTenant = (msTenant: string) => setSettings((s) => ({ ...s, msTenant }))
   const setSupabaseUrl = (supabaseUrl: string) => setSettings((s) => ({ ...s, supabaseUrl }))
   const setSupabaseAnonKey = (supabaseAnonKey: string) => setSettings((s) => ({ ...s, supabaseAnonKey }))
+  const setUserSignature = (userSignature: string) => setSettings((s) => ({ ...s, userSignature }))
 
   const provider = providerForModel(settings.model)
   const activeKey = provider === 'openai' ? settings.openaiKey : settings.apiKey
   const isLive = settings.mode === 'live' && activeKey.trim().length > 0
 
   return (
-    <Ctx.Provider value={{ ...settings, setMode, setApiKey, setOpenaiKey, setModel, setDemoData, setMsClientId, setMsTenant, setSupabaseUrl, setSupabaseAnonKey, provider, activeKey, isLive }}>
+    <Ctx.Provider value={{ ...settings, setMode, setApiKey, setOpenaiKey, setModel, setDemoData, setMsClientId, setMsTenant, setSupabaseUrl, setSupabaseAnonKey, setUserSignature, provider, activeKey, isLive }}>
       {children}
     </Ctx.Provider>
   )

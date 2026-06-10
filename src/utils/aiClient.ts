@@ -29,10 +29,14 @@ interface CallOpts {
   userText: string
   attachments: Attachment[]
   crmContext: string
+  signature?: string // the user's email signature (name/title/contacts)
 }
 
 // Build the OAC system prompt, grounded with a compact CRM snapshot.
-const systemPrompt = (lang: Lang, crmContext: string): string => {
+const systemPrompt = (lang: Lang, crmContext: string, signature?: string): string => {
+  const sigLine = signature?.trim()
+    ? `\n\nWhen you draft an email, end it with EXACTLY this signature (verbatim, do NOT invent placeholders like [your name] / [직책] / [연락처]):\n${signature.trim()}`
+    : ''
   const langLine =
     lang === 'ko'
       ? 'Always answer in Korean (한국어).'
@@ -56,7 +60,7 @@ When the user asks you to draft, write, or send an EMAIL, ALSO append EXACTLY ON
 Put the complete email in the "body" field (plain text, with greeting and sign-off). Leave "to" empty if you don't know the address — the user can fill it in. Keep your prose to a short intro line (e.g. "초안입니다:") and put the email itself ONLY inside the oac-email block, not also in the prose, to avoid duplication.
 
 Known CRM relationships and recent captures (use to ground your answers; do not invent data):
-${crmContext}`
+${crmContext}${sigLine}`
 }
 
 // Compact CRM context from the seeded relationships (English source for grounding).
@@ -116,7 +120,7 @@ async function callAnthropic(opts: CallOpts): Promise<string> {
     body: JSON.stringify({
       model: opts.model,
       max_tokens: 2048,
-      system: systemPrompt(opts.lang, opts.crmContext),
+      system: systemPrompt(opts.lang, opts.crmContext, opts.signature),
       messages,
     }),
   })
@@ -207,7 +211,7 @@ const buildOpenAIContent = (userText: string, attachments: Attachment[]): OpenAI
 
 async function callOpenAI(opts: CallOpts): Promise<string> {
   const messages = [
-    { role: 'system' as const, content: systemPrompt(opts.lang, opts.crmContext) },
+    { role: 'system' as const, content: systemPrompt(opts.lang, opts.crmContext, opts.signature) },
     ...opts.history.map((t) => ({ role: t.role, content: t.text })),
     { role: 'user' as const, content: buildOpenAIContent(opts.userText, opts.attachments) },
   ]

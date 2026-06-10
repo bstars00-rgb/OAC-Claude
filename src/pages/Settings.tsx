@@ -118,6 +118,9 @@ export function Settings() {
         <Button variant="secondary" size="sm" onClick={store.clearAll}>{t('set.clearWorkspace')}</Button>
       </Card>
 
+      {/* Email signature */}
+      <SignatureCard />
+
       {/* Microsoft 365 — Outlook + Teams (real Graph connection) */}
       <MicrosoftCard />
 
@@ -125,6 +128,39 @@ export function Settings() {
       <IntegrationsContent />
     </div>
   )
+}
+
+function SignatureCard() {
+  const { lang } = useT()
+  const ai = useAiSettings()
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
+  const placeholder = `Changbae Park (Aiden) / Asia Head of Sales & Marketing
+Ohmyhotel Co., Ltd.
+Mobile: +84-938-098216  Email: cb.park@ohmyhotel.com`
+  return (
+    <Card>
+      <CardHeader
+        title={L('이메일 서명 (내 프로필)', 'Email signature (your profile)')}
+        subtitle={L('이름·직책·연락처를 한 번 등록하면 메일 작성 시 자동으로 들어갑니다 (보낼 때 수정 가능)', 'Set your name/title/contacts once — auto-added to drafted emails, editable before sending')}
+        icon={<SignIcon />}
+      />
+      <textarea
+        value={ai.userSignature}
+        onChange={(e) => ai.setUserSignature(e.target.value)}
+        rows={7}
+        placeholder={placeholder}
+        className="w-full max-w-xl resize-y rounded-lg border border-slate-200 px-3 py-2 font-sans text-xs leading-relaxed text-slate-700 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+      />
+      <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-emerald-600">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+        {L('자동 저장됨 · 백업/클라우드에 함께 동기화', 'Auto-saved · syncs with backup/cloud')}
+      </div>
+    </Card>
+  )
+}
+
+function SignIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17c3-1 4-9 7-9 2 0 1 5 3 5s3-3 5-3" /><path d="M3 21h18" /></svg>
 }
 
 function CloudSyncCard() {

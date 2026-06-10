@@ -117,6 +117,7 @@ export function OACAssistant() {
       memory,
       relationships: rel.list,
       datasets: datasets.snapshots,
+      signature: ai.userSignature,
     })
 
     const raw = clean || attachments.map((a) => a.name).join(', ')
@@ -495,8 +496,28 @@ function EmailCard({ email }: { email: { to: string; subject: string; body: stri
   const msReady = ai.msClientId.trim().length > 0
   const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
 
+  // Inject the saved signature: drop placeholder-only lines ([이름]/[직책]/…) and
+  // append the user's real signature unless it's already there. Stays editable.
+  const sig = ai.userSignature.trim()
+  const composeBody = () => {
+    let b = email.body
+    if (sig) {
+      const firstLine = sig.split('\n').map((s) => s.trim()).find(Boolean) || ''
+      if (firstLine && !b.includes(firstLine)) {
+        b = b
+          .split('\n')
+          .filter((line) => !/^\s*\[[^\]]*\]\s*$/.test(line))
+          .join('\n')
+          .replace(/\n{3,}/g, '\n\n')
+          .trimEnd() + '\n\n' + sig
+      }
+    }
+    return b
+  }
+  const [bodyText, setBodyText] = useState(composeBody)
+
   const copy = () => {
-    if (navigator.clipboard) navigator.clipboard.writeText(`To: ${to}\nSubject: ${email.subject}\n\n${email.body}`).catch(() => {})
+    if (navigator.clipboard) navigator.clipboard.writeText(`To: ${to}\nSubject: ${email.subject}\n\n${bodyText}`).catch(() => {})
     notify(L('복사됨', 'Copied'), L('이메일을 클립보드에 복사했어요', 'Email copied to clipboard'))
   }
   const send = async () => {
@@ -504,7 +525,7 @@ function EmailCard({ email }: { email: { to: string; subject: string; body: stri
     setErr(''); setSending(true)
     try {
       const { sendMail } = await import('../utils/graph')
-      await sendMail({ clientId: ai.msClientId, tenant: ai.msTenant }, { to, subject: email.subject, body: email.body })
+      await sendMail({ clientId: ai.msClientId, tenant: ai.msTenant }, { to, subject: email.subject, body: bodyText })
       setSent(true)
       notify(L('메일 전송됨', 'Email sent'), `${to} · ${email.subject}`)
     } catch (e) {
@@ -528,11 +549,17 @@ function EmailCard({ email }: { email: { to: string; subject: string; body: stri
         <span className="text-[11px] text-slate-400">To:</span>
         <input value={to} onChange={(e) => setTo(e.target.value)} className="flex-1 rounded border border-slate-200 px-1.5 py-0.5 text-[11px] focus:border-brand-400 focus:outline-none" />
       </div>
-      <pre className="mt-1 whitespace-pre-wrap font-sans text-xs leading-relaxed text-slate-600">{email.body}</pre>
+      <textarea
+        value={bodyText}
+        onChange={(e) => setBodyText(e.target.value)}
+        rows={Math.min(16, bodyText.split('\n').length + 1)}
+        className="mt-1 w-full resize-y rounded-lg border border-slate-200 bg-white/60 px-2.5 py-2 font-sans text-xs leading-relaxed text-slate-700 focus:border-brand-400 focus:outline-none dark:bg-white/5"
+      />
       {err && <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-700">{err}</div>}
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <Button size="sm" variant="secondary" onClick={copy}>{L('복사', 'Copy')}</Button>
-        {!msReady && <span className="self-center text-[10px] text-slate-400">{L('설정에서 Microsoft 365 연결 시 실제 전송', 'Connect Microsoft 365 in Settings to send for real')}</span>}
+        {!sig && <span className="text-[10px] text-amber-600">{L('설정 → 이메일 서명에 이름·연락처를 등록하면 자동으로 들어갑니다', 'Add your signature in Settings → Email signature to auto-fill it')}</span>}
+        {!msReady && <span className="text-[10px] text-slate-400">{L('Microsoft 365 연결 시 실제 전송', 'Connect Microsoft 365 to send for real')}</span>}
       </div>
     </div>
   )
