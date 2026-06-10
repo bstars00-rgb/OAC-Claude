@@ -11,6 +11,15 @@ import { useRelationships } from '../data/useRelationships'
 import { useToast } from '../components/Toast'
 import { TODAY } from '../utils/format'
 import { exportBackup, importBackup } from '../utils/backup'
+import {
+  isConfigured as sbConfigured,
+  getSession as sbSession,
+  onAuthChange as sbOnAuth,
+  sendMagicLink as sbMagicLink,
+  signOut as sbSignOut,
+  pushState as sbPush,
+  pullState as sbPull,
+} from '../utils/supabaseClient'
 import { IntegrationsContent } from './Integrations'
 import {
   connect as msConnect,
@@ -96,6 +105,9 @@ export function Settings() {
         </div>
       </Card>
 
+      {/* Cloud sync (Supabase) */}
+      <CloudSyncCard />
+
       {/* Backup & Restore */}
       <BackupCard />
 
@@ -112,6 +124,123 @@ export function Settings() {
       <IntegrationsContent />
     </div>
   )
+}
+
+function CloudSyncCard() {
+  const { lang } = useT()
+  const ai = useAiSettings()
+  const toast = useToast()
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
+  const cfg = { url: ai.supabaseUrl, anonKey: ai.supabaseAnonKey }
+  const configured = sbConfigured(cfg)
+
+  const [email, setEmail] = useState('')
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [busy, setBusy] = useState<'link' | 'push' | 'pull' | null>(null)
+  const [error, setError] = useState('')
+  const [showHelp, setShowHelp] = useState(false)
+
+  useEffect(() => {
+    let unsub = () => {}
+    let alive = true
+    if (configured) {
+      sbSession(cfg).then((s) => { if (alive) setUserEmail(s?.user?.email ?? null) }).catch(() => {})
+      sbOnAuth(cfg, (s) => setUserEmail(s?.user?.email ?? null)).then((u) => { unsub = u }).catch(() => {})
+    }
+    return () => { alive = false; unsub() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ai.supabaseUrl, ai.supabaseAnonKey])
+
+  const sendLink = async () => {
+    setError(''); setBusy('link')
+    try {
+      await sbMagicLink(cfg, email)
+      toast.notify(L('매직링크 전송됨', 'Magic link sent'), L(`${email} 메일함에서 링크를 클릭하세요`, `Click the link in ${email}`))
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setBusy(null) }
+  }
+  const doPush = async () => {
+    setError(''); setBusy('push')
+    try { await sbPush(cfg, new Date().toISOString()); toast.notify(L('클라우드에 저장됨', 'Saved to cloud'), L('내 데이터를 업로드했어요', 'Your data was uploaded')) }
+    catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setBusy(null) }
+  }
+  const doPull = async () => {
+    if (!window.confirm(L('클라우드 데이터로 이 기기를 덮어씁니다. 계속할까요?', 'This overwrites this device with the cloud data. Continue?'))) return
+    setError(''); setBusy('pull')
+    try {
+      const applied = await sbPull(cfg)
+      if (applied) { toast.notify(L('내려받기 완료', 'Downloaded'), L('새로고침합니다', 'Reloading')); setTimeout(() => window.location.reload(), 700) }
+      else toast.notify(L('클라우드가 비어 있음', 'Cloud is empty'), L('먼저 업로드하세요', 'Upload first'))
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setBusy(null) }
+  }
+  const doSignOut = async () => { try { await sbSignOut(cfg) } catch { /* ignore */ } setUserEmail(null) }
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between">
+        <CardHeader title={L('클라우드 동기화 (Supabase)', 'Cloud sync (Supabase)')} subtitle={L('로그인하면 어느 기기에서나 같은 데이터를 씁니다 (미로그인 시 이 브라우저에 저장)', 'Sign in to use the same data on any device (otherwise stored in this browser)')} icon={<CloudIcon />} />
+        <Badge tone={userEmail ? 'green' : configured ? 'sky' : 'slate'} dot>{userEmail ? L('로그인됨', 'Signed in') : configured ? L('설정됨', 'Configured') : L('미설정', 'Not set')}</Badge>
+      </div>
+
+      {!configured ? (
+        <div className="mt-1 space-y-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">Supabase Project URL</label>
+            <input value={ai.supabaseUrl} onChange={(e) => ai.setSupabaseUrl(e.target.value.trim())} placeholder="https://xxxx.supabase.co" className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs focus:border-brand-400 focus:outline-none" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">Anon (public) key</label>
+            <input value={ai.supabaseAnonKey} onChange={(e) => ai.setSupabaseAnonKey(e.target.value.trim())} placeholder="eyJhbGciOi..." className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs focus:border-brand-400 focus:outline-none" />
+            <p className="mt-1 text-[11px] text-slate-400">{L('anon 키는 공개돼도 안전합니다(RLS로 보호). service_role 키는 절대 넣지 마세요.', 'The anon key is safe to expose (RLS-protected). Never paste the service_role key.')}</p>
+          </div>
+        </div>
+      ) : !userEmail ? (
+        <div className="mt-1 flex flex-wrap items-end gap-2">
+          <div className="flex-1 min-w-[200px]">
+            <label className="mb-1 block text-xs font-medium text-slate-500">{L('이메일 (매직링크)', 'Email (magic link)')}</label>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@company.com" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none" />
+          </div>
+          <Button size="sm" onClick={sendLink} disabled={!email.includes('@') || busy === 'link'}>{busy === 'link' ? L('전송 중…', 'Sending…') : L('매직링크 보내기', 'Send magic link')}</Button>
+          <button onClick={() => { ai.setSupabaseUrl(''); ai.setSupabaseAnonKey('') }} className="text-[11px] text-slate-400 hover:text-slate-600">{L('설정 변경', 'Edit config')}</button>
+        </div>
+      ) : (
+        <div className="mt-1 space-y-2">
+          <div className="text-sm text-slate-700">{L('로그인:', 'Signed in:')} <span className="font-medium">{userEmail}</span></div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={doPush} disabled={busy === 'push'}>{busy === 'push' ? L('업로드 중…', 'Uploading…') : L('클라우드로 업로드', 'Upload to cloud')}</Button>
+            <Button size="sm" variant="secondary" onClick={doPull} disabled={busy === 'pull'}>{busy === 'pull' ? L('내려받는 중…', 'Downloading…') : L('클라우드에서 내려받기', 'Download from cloud')}</Button>
+            <Button size="sm" variant="secondary" onClick={doSignOut}>{L('로그아웃', 'Sign out')}</Button>
+          </div>
+          <p className="text-[11px] text-emerald-600">{L('✓ 변경사항은 자동으로 클라우드에 저장됩니다.', '✓ Changes auto-save to the cloud.')}</p>
+        </div>
+      )}
+
+      {error && <div className="mt-3 max-w-md rounded-lg border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-700">{error}</div>}
+
+      <button onClick={() => setShowHelp((v) => !v)} className="mt-3 text-[11px] font-medium text-brand-600 hover:text-brand-700">{showHelp ? L('설정 방법 닫기', 'Hide setup') : L('처음이신가요? 설정 방법', 'First time? Setup steps')} {showHelp ? '▲' : '▼'}</button>
+      {showHelp && (
+        <div className="mt-2 max-w-2xl space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-600">
+          <p>1. <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" className="text-brand-600 underline">supabase.com</a> {L('→ 새 프로젝트(무료) 생성', '→ create a free project')}</p>
+          <p>2. {L('Settings → API 에서 Project URL과 anon public 키를 복사해 위에 붙여넣기', 'Settings → API: copy the Project URL and anon public key above')}</p>
+          <p>3. {L('SQL Editor에서 아래를 실행 (테이블 + 보안 정책):', 'SQL Editor: run this (table + security policies):')}</p>
+          <pre className="overflow-x-auto rounded bg-white p-2 font-mono text-[10px] leading-relaxed text-slate-700 dark:bg-black/30">{`create table if not exists public.oac_state (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.oac_state enable row level security;
+create policy "own_select" on public.oac_state for select using (auth.uid() = user_id);
+create policy "own_insert" on public.oac_state for insert with check (auth.uid() = user_id);
+create policy "own_update" on public.oac_state for update using (auth.uid() = user_id);`}</pre>
+          <p>4. {L('Authentication → URL Configuration 의 Redirect URLs에 추가:', 'Authentication → URL Configuration → add to Redirect URLs:')} <code className="rounded bg-white px-1 font-mono text-[10px]">{redirectUri()}</code></p>
+          <p className="text-amber-700">⚠️ {L('보안을 위해 API 키(Anthropic/OpenAI)는 클라우드에 저장되지 않습니다 — 기기마다 다시 입력하세요.', 'For security, your AI API keys are NOT stored in the cloud — re-enter them per device.')}</p>
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function CloudIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 .5-9 6 6 0 0 0-11.5-1.5A4 4 0 0 0 6.5 19h11z" /></svg>
 }
 
 function BackupCard() {

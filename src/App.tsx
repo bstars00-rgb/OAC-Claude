@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { CloudAutoSync } from './components/CloudAutoSync'
 import { ToastProvider } from './components/Toast'
 import { ThemeProvider } from './theme'
 import { LanguageProvider } from './i18n'
@@ -20,6 +21,7 @@ export default function App() {
     <DatasetProvider>
     <AiSettingsProvider>
     <ToastProvider>
+      <CloudAutoSync />
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
