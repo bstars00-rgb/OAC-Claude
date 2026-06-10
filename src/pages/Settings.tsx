@@ -138,6 +138,7 @@ function CloudSyncCard() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [busy, setBusy] = useState<'link' | 'push' | 'pull' | null>(null)
   const [error, setError] = useState('')
+  const [lastSync, setLastSync] = useState<string | null>(null)
   const [showHelp, setShowHelp] = useState(false)
 
   useEffect(() => {
@@ -160,8 +161,14 @@ function CloudSyncCard() {
   }
   const doPush = async () => {
     setError(''); setBusy('push')
-    try { await sbPush(cfg, new Date().toISOString()); toast.notify(L('클라우드에 저장됨', 'Saved to cloud'), L('내 데이터를 업로드했어요', 'Your data was uploaded')) }
-    catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setBusy(null) }
+    try {
+      await sbPush(cfg, new Date().toISOString())
+      setLastSync(new Date().toLocaleTimeString())
+      toast.notify(L('클라우드에 저장됨', 'Saved to cloud'), L('내 데이터를 업로드했어요', 'Your data was uploaded'))
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(msg || L('알 수 없는 오류 (브라우저 콘솔을 확인하세요)', 'Unknown error (check the browser console)'))
+    } finally { setBusy(null) }
   }
   const doPull = async () => {
     if (!window.confirm(L('클라우드 데이터로 이 기기를 덮어씁니다. 계속할까요?', 'This overwrites this device with the cloud data. Continue?'))) return
@@ -210,7 +217,11 @@ function CloudSyncCard() {
             <Button size="sm" variant="secondary" onClick={doPull} disabled={busy === 'pull'}>{busy === 'pull' ? L('내려받는 중…', 'Downloading…') : L('클라우드에서 내려받기', 'Download from cloud')}</Button>
             <Button size="sm" variant="secondary" onClick={doSignOut}>{L('로그아웃', 'Sign out')}</Button>
           </div>
-          <p className="text-[11px] text-emerald-600">{L('✓ 변경사항은 자동으로 클라우드에 저장됩니다.', '✓ Changes auto-save to the cloud.')}</p>
+          {lastSync ? (
+            <p className="text-[11px] font-medium text-emerald-600">{L(`✓ 마지막 클라우드 저장: ${lastSync}`, `✓ Last saved to cloud: ${lastSync}`)}</p>
+          ) : (
+            <p className="text-[11px] text-emerald-600">{L('✓ 변경사항은 자동으로 클라우드에 저장됩니다.', '✓ Changes auto-save to the cloud.')}</p>
+          )}
         </div>
       )}
 
