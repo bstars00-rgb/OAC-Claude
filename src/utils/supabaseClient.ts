@@ -19,15 +19,32 @@ export interface SbConfig {
 let client: Client | null = null
 let clientKey = ''
 
+// Forgive common paste mistakes: dashboard URLs, trailing slashes, missing scheme,
+// or an accidental path. Returns the clean API origin: https://<ref>.supabase.co
+export function normalizeSupabaseUrl(raw: string): string {
+  let s = (raw || '').trim()
+  if (!s) return ''
+  const dash = s.match(/supabase\.com\/dashboard\/project\/([a-z0-9]+)/i)
+  if (dash) return `https://${dash[1]}.supabase.co`
+  if (!/^https?:\/\//i.test(s)) s = 'https://' + s
+  try {
+    const u = new URL(s)
+    return `${u.protocol}//${u.host}`
+  } catch {
+    return s.replace(/\/+$/, '')
+  }
+}
+
 export function isConfigured(c: SbConfig): boolean {
-  return /^https?:\/\/.+/.test(c.url.trim()) && c.anonKey.trim().length > 20
+  return /^https?:\/\/.+\..+/.test(normalizeSupabaseUrl(c.url)) && c.anonKey.trim().length > 20
 }
 
 async function getClient(c: SbConfig): Promise<Client> {
-  const key = `${c.url}|${c.anonKey}`
+  const url = normalizeSupabaseUrl(c.url)
+  const key = `${url}|${c.anonKey}`
   if (client && clientKey === key) return client
   const { createClient } = await import('@supabase/supabase-js')
-  client = createClient(c.url.trim(), c.anonKey.trim(), {
+  client = createClient(url, c.anonKey.trim(), {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
   })
   clientKey = key
