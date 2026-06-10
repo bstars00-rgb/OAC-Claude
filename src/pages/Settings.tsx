@@ -91,22 +91,6 @@ export function Settings() {
         </div>
       </Card>
 
-      {/* Data source — real vs demo */}
-      <Card>
-        <CardHeader title={t('set.dataSource')} subtitle={t('set.dataSourceSub')} icon={<DbIcon />} />
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {([false, true] as const).map((demo) => (
-            <button key={String(demo)} onClick={() => ai.setDemoData(demo)} className={`flex items-start gap-3 rounded-xl border p-3 text-left transition ${ai.demoData === demo ? 'border-brand-300 bg-brand-50/60' : 'border-slate-200 hover:bg-slate-50'}`}>
-              <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${ai.demoData === demo ? 'border-brand-600' : 'border-slate-300'}`}>{ai.demoData === demo && <span className="h-2 w-2 rounded-full bg-brand-600" />}</span>
-              <span>
-                <span className="block text-sm font-semibold text-slate-800">{demo ? t('set.demoDataLabel') : t('set.realData')}</span>
-                <span className="block text-xs text-slate-500">{demo ? t('set.demoDataDesc') : t('set.realDataDesc')}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </Card>
-
       {/* Cloud sync (Supabase) */}
       <CloudSyncCard />
 

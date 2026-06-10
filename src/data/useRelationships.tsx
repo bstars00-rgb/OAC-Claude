@@ -2,12 +2,11 @@
 // relationships; in real mode it synthesizes relationships from the user's own
 // captured data (the OAC Assistant workspace).
 
-import { useAiSettings } from '../utils/aiSettings'
 import { useT, type Lang } from '../i18n'
 import { useCaptureStore, type CaptureAccount, type CaptureEntry } from './captureStore'
 import { useDatasets } from './datasetStore'
 import { datasetRelationships } from './datasetRelationships'
-import { getEntities, entityById, type Entity, type Region } from './entities'
+import { type Entity, type Region } from './entities'
 
 const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))]
 
@@ -48,16 +47,12 @@ export interface RelationshipsResult {
 }
 
 export function useRelationships(): RelationshipsResult {
-  const { demoData } = useAiSettings()
   const { lang } = useT()
   const store = useCaptureStore()
   const datasets = useDatasets()
 
-  if (demoData) {
-    return { isDemo: true, list: getEntities(), byId: (id) => entityById(id) }
-  }
-
-  // captured (assistant) relationships + relationships synthesized from imported data
+  // Real data only — captured (assistant) relationships + relationships
+  // synthesized from imported RawData. (Demo sample data has been removed.)
   const captured = store.accounts.map((a) => synthRelationship(a, store.entriesByEntity(a.accountId), lang))
   const fromData = datasetRelationships(datasets.snapshots, lang)
   const seen = new Set(captured.map((e) => e.id))

@@ -19,7 +19,7 @@ const DICT: Record<string, Entry> = {
   'nav.meeting': { en: 'Meeting Recorder', ko: '미팅 레코더' },
   'nav.email': { en: 'Email Assistant', ko: '이메일 어시스턴트' },
   'nav.report': { en: 'Report Generator', ko: '리포트 생성기' },
-  'nav.data': { en: 'Data Insight', ko: '데이터 인사이트' },
+  'nav.data': { en: 'RawData', ko: '로우데이터' },
   'nav.integrations': { en: 'Integrations', ko: '연동' },
 
   // Topbar
@@ -61,10 +61,10 @@ const DICT: Record<string, Entry> = {
     en: 'Create CEO briefings, partner status reports, issue reports, and sales updates from OAC context.',
     ko: 'OAC 맥락에서 CEO 브리핑, 파트너 현황 리포트, 이슈 리포트, 세일즈 업데이트를 생성합니다.',
   },
-  'page.data.title': { en: 'Data Insight', ko: '데이터 인사이트' },
+  'page.data.title': { en: 'RawData', ko: '로우데이터' },
   'page.data.subtitle': {
-    en: 'Turn booking, revenue, cancellation, failure, and operational data into AI-powered business strategy.',
-    ko: '예약, 매출, 취소, 실패, 운영 데이터를 AI 기반 비즈니스 전략으로 전환합니다.',
+    en: 'Ohmyhotel RawData (Booking / Check Out) — trends & metrics. To be synced with the Ohmyhotel MCP database.',
+    ko: '오마이호텔 RawData(부킹·체크아웃) 추세·지표. 추후 오마이호텔 MCP 데이터베이스와 동기화 예정.',
   },
   'page.integrations.title': { en: 'Integrations', ko: '연동' },
   'page.integrations.subtitle': {
