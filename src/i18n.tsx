@@ -263,6 +263,7 @@ const DICT: Record<string, Entry> = {
   'set.aiEngineSub': { en: 'Demo (mock) or your own Claude API key', ko: '데모(모의) 또는 본인 Claude API 키' },
   'set.workspace': { en: 'Workspace', ko: '워크스페이스' },
   'set.clearWorkspace': { en: 'Clear captured workspace data', ko: '캡처된 워크스페이스 데이터 비우기' },
+  'set.autosaved': { en: 'Changes are saved automatically — just go to the OAC Assistant.', ko: '변경사항은 자동 저장됩니다 — 바로 OAC 어시스턴트에서 사용하세요. (별도 완료 버튼 없음)' },
 }
 
 interface I18nCtx {

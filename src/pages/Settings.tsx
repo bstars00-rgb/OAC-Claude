@@ -51,6 +51,10 @@ export function Settings() {
             <div className="max-w-md rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[11px] leading-relaxed text-amber-800">⚠️ {t('set.warn')}</div>
           </div>
         )}
+        <div className="mt-3 flex items-center gap-1.5 text-[11px] font-medium text-emerald-600">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+          {t('set.autosaved')}
+        </div>
       </Card>
 
       {/* Workspace */}
