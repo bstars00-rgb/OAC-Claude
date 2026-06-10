@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '../components/Layout'
 import { Card, CardHeader } from '../components/Card'
@@ -7,7 +7,14 @@ import { Button } from '../components/Button'
 import { DatasetInsights } from '../components/DatasetInsights'
 import { useT } from '../i18n'
 import { useDatasets } from '../data/datasetStore'
+import { useAiSettings } from '../utils/aiSettings'
+import { generateInsight, type Insight } from '../utils/insights'
+import type { ChartData } from '../utils/datasetQuery'
+import { TODAY } from '../utils/format'
 import type { DatasetSnapshot } from '../utils/dataImport'
+
+const INSIGHTS_KEY = 'oac-insights-v1'
+let insightSeq = 0
 
 const isYen = (label: string) => label.includes('¥')
 const fmt = (n: number, yen: boolean) => (yen ? '¥' : '') + Math.round(n).toLocaleString()
@@ -38,6 +45,9 @@ export function DataInsight() {
     <div className="oac-fade-in">
       <PageHeader title={t('page.data.title')} subtitle={t('page.data.subtitle')} />
 
+      {/* AI insight board — ask, and the interpreted insight shows here */}
+      <AiInsightBoard L={L} />
+
       {/* trends + Top N (real, from imported snapshots) */}
       <DatasetInsights />
 
@@ -62,6 +72,115 @@ export function DataInsight() {
     </div>
   )
 }
+
+function loadInsights(): Insight[] {
+  try {
+    const raw = localStorage.getItem(INSIGHTS_KEY)
+    if (raw) return JSON.parse(raw) as Insight[]
+  } catch {
+    /* ignore */
+  }
+  return []
+}
+
+function MiniChart({ chart }: { chart: ChartData }) {
+  const fmt = (n: number) => (chart.unit === 'yen' ? '¥' : '') + Math.round(n).toLocaleString()
+  const max = Math.max(...chart.points.map((p) => p.value), 1)
+  return (
+    <div className="mt-2 space-y-1.5">
+      {chart.points.map((p) => (
+        <div key={p.label} className="flex items-center gap-2">
+          <span className="w-28 shrink-0 truncate text-[11px] font-medium text-slate-600" title={p.label}>{p.label}</span>
+          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+            <div className="h-full rounded-full bg-gradient-to-r from-brand-600 to-violet-600" style={{ width: `${Math.max(2, (p.value / max) * 100)}%` }} />
+          </div>
+          <span className="w-24 shrink-0 text-right text-[11px] font-semibold text-slate-700">{fmt(p.value)}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function AiInsightBoard({ L }: { L: (ko: string, en: string) => string }) {
+  const { lang } = useT()
+  const ds = useDatasets()
+  const ai = useAiSettings()
+  const [q, setQ] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [insights, setInsights] = useState<Insight[]>(loadInsights)
+
+  useEffect(() => {
+    try { localStorage.setItem(INSIGHTS_KEY, JSON.stringify(insights.slice(0, 30))) } catch { /* ignore */ }
+  }, [insights])
+
+  const suggestions = [
+    L('이번 주 핵심 요약', 'This week — key summary'),
+    L('수익 Top5 호텔', 'Top 5 hotels by revenue'),
+    L('판매처 판매액 Top10', 'Top 10 sellers by sales'),
+    L('아고다 추세', 'Agoda trend'),
+  ]
+
+  const run = async (question: string) => {
+    const ques = question.trim()
+    if (!ques) return
+    setBusy(true); setError('')
+    try {
+      const r = await generateInsight({
+        question: ques,
+        snapshots: ds.snapshots,
+        lang,
+        live: ai.isLive ? { provider: ai.provider, apiKey: ai.activeKey, model: ai.model } : undefined,
+      })
+      setInsights((prev) => [{ id: `in-${TODAY}-${insightSeq++}`, ts: TODAY, question: ques, text: r.text, chart: r.chart }, ...prev])
+      setQ('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card className="mb-5">
+      <CardHeader title={L('AI 인사이트', 'AI Insight')} subtitle={ai.isLive ? L('질문하면 AI가 데이터를 해석해 인사이트를 보여줍니다', 'Ask, and AI interprets your data into an insight') : L('데모: 데이터에서 핵심 수치를 계산해 보여줍니다 (실제 AI는 설정에서 키 입력)', 'Demo: computes key figures (add a key in Settings for real AI)')} icon={<SparkIcon />} />
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') run(q) }}
+          placeholder={L('무엇이 궁금하세요? 예: 이번 주 수익, 아고다 4월 매출, 취소율 높은 호텔', 'What do you want to know? e.g. revenue this week, Agoda April sales')}
+          className="min-w-[240px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+        />
+        <Button size="sm" onClick={() => run(q)} disabled={busy || !ds.snapshots.length}>{busy ? L('분석 중…', 'Analyzing…') : L('인사이트 생성', 'Generate')}</Button>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {suggestions.map((s) => (
+          <button key={s} onClick={() => run(s)} disabled={busy || !ds.snapshots.length} className="rounded-full border border-slate-200 px-2.5 py-0.5 text-[11px] font-medium text-slate-500 transition hover:border-brand-300 hover:text-brand-700">{s}</button>
+        ))}
+      </div>
+      {!ds.snapshots.length && <p className="mt-2 text-[11px] text-amber-600">{L('먼저 설정 → 로우데이터에서 데이터를 가져오세요.', 'Import RawData in Settings first.')}</p>}
+      {error && <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-700">{error}</div>}
+
+      {insights.length > 0 && (
+        <div className="mt-3 space-y-3">
+          {insights.map((it) => (
+            <div key={it.id} className="rounded-xl border border-brand-100 bg-brand-50/40 p-3 dark:bg-brand-500/10">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-xs font-bold text-brand-700">{it.question}</span>
+                <button onClick={() => setInsights((prev) => prev.filter((x) => x.id !== it.id))} className="shrink-0 text-[11px] text-slate-400 hover:text-rose-500">{L('삭제', 'Delete')}</button>
+              </div>
+              <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-slate-700">{it.text}</p>
+              {it.chart && <MiniChart chart={it.chart} />}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function SparkIcon() { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 4.6L18.5 9 14 11l-2 5-2-5L5.5 9l4.6-1.4L12 3z" /></svg> }
 
 function DimensionExplorer({ L }: { L: (ko: string, en: string) => string }) {
   const ds = useDatasets()
