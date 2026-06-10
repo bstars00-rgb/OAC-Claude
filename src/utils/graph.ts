@@ -18,6 +18,8 @@ export const GRAPH_SCOPES = ['User.Read', 'Mail.Read', 'Chat.Read']
 // Send is requested INCREMENTALLY — only when the user actually sends an email —
 // so the more sensitive Mail.Send permission never blocks login/read/sync.
 export const SEND_SCOPES = ['Mail.Send']
+// File read (OneDrive / SharePoint) — incremental, only when importing from the cloud drive.
+export const FILES_SCOPES = ['Files.Read.All']
 
 export interface MsConnection {
   clientId: string
@@ -147,8 +149,8 @@ async function token(conn: MsConnection, scopes: string[] = GRAPH_SCOPES): Promi
   }
 }
 
-async function graphGet<T>(conn: MsConnection, path: string): Promise<T> {
-  const t = await token(conn)
+async function graphGet<T>(conn: MsConnection, path: string, scopes: string[] = GRAPH_SCOPES): Promise<T> {
+  const t = await token(conn, scopes)
   const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
     headers: { Authorization: `Bearer ${t}` },
   })
@@ -279,6 +281,47 @@ export async function fetchTeams(conn: MsConnection, opts: { sinceDays?: number;
     })
   }
   return items
+}
+
+// ── OneDrive / SharePoint files ──────────────────────────────────────────────
+export interface DriveFile {
+  id: string
+  name: string
+  lastModified: string
+  size: number
+}
+
+interface DriveItem {
+  id?: string
+  name?: string
+  size?: number
+  lastModifiedDateTime?: string
+  file?: { mimeType?: string }
+}
+
+/** List recent spreadsheet files across the user's OneDrive + shared (SharePoint) files. */
+export async function listDriveSpreadsheets(conn: MsConnection, top = 25): Promise<DriveFile[]> {
+  const data = await graphGet<{ value: DriveItem[] }>(
+    conn,
+    `/me/drive/root/search(q='.xlsx')?$top=${top}&$select=id,name,size,lastModifiedDateTime,file`,
+    FILES_SCOPES,
+  )
+  return (data.value ?? [])
+    .filter((f) => f.id && f.name && /\.(xlsx|xls|csv)$/i.test(f.name))
+    .map((f) => ({ id: f.id!, name: f.name!, lastModified: (f.lastModifiedDateTime ?? '').slice(0, 10), size: f.size ?? 0 }))
+}
+
+/** Download a drive item's content as bytes (for the .xlsx parser). */
+export async function downloadDriveItem(conn: MsConnection, id: string): Promise<ArrayBuffer> {
+  const t = await token(conn, FILES_SCOPES)
+  const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${id}/content`, {
+    headers: { Authorization: `Bearer ${t}` },
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Graph ${res.status}: ${body.slice(0, 200)}`)
+  }
+  return res.arrayBuffer()
 }
 
 // ── Map fetched items → relationship workspace entries ───────────────────────

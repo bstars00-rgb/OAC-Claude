@@ -5,9 +5,12 @@ import { Button } from './Button'
 import { useToast } from './Toast'
 import { useT } from '../i18n'
 import { useDatasets } from '../data/datasetStore'
+import { useAiSettings } from '../utils/aiSettings'
 import { TODAY } from '../utils/format'
+import { listDriveSpreadsheets, downloadDriveItem, type DriveFile } from '../utils/graph'
 import {
   parseFile,
+  parseArrayBuffer,
   inferNumericHeaders,
   suggestMapping,
   derivePeriodLabel,
@@ -44,6 +47,11 @@ export function DataImportPanel() {
   const [metrics, setMetrics] = useState<MetricMap[]>([])
   const [preset, setPreset] = useState<'ohmyhotel' | 'generic'>('generic')
   const [openImport, setOpenImport] = useState(false)
+  // OneDrive / SharePoint picker
+  const ai = useAiSettings()
+  const msReady = ai.msClientId.trim().length > 0
+  const [driveFiles, setDriveFiles] = useState<DriveFile[] | null>(null)
+  const [driveBusy, setDriveBusy] = useState(false)
 
   const numericHeaders = useMemo(
     () => (parsed ? inferNumericHeaders(parsed.rows, parsed.headers) : []),
@@ -51,35 +59,63 @@ export function DataImportPanel() {
   )
 
   const reset = () => {
-    setParsed(null); setFileName(''); setError(''); setDimension(''); setExtraDims([]); setMetrics([]); setPeriod(''); setPreset('generic')
+    setParsed(null); setFileName(''); setError(''); setDimension(''); setExtraDims([]); setMetrics([]); setPeriod(''); setPreset('generic'); setDriveFiles(null)
     if (fileRef.current) fileRef.current.value = ''
+  }
+
+  // shared: apply a parsed sheet + smart defaults (profile-aware Ohmyhotel preset)
+  const applyParsed = (p: ParsedSheet, name: string) => {
+    if (!p.rows.length) throw new Error(L('빈 시트입니다. 데이터가 있는 파일을 선택하세요.', 'The sheet is empty.'))
+    setParsed(p)
+    setFileName(name)
+    const sug = suggestMapping(p.headers, profile)
+    setPreset(sug.preset)
+    if (sug.preset === 'ohmyhotel' && sug.metrics.length) {
+      setDimension(sug.dimension)
+      setExtraDims(sug.extraDimensions)
+      setMetrics(sug.metrics)
+      const rawPv = sug.periodColumn ? p.rows.find((r) => r[sug.periodColumn!])?.[sug.periodColumn!] : ''
+      const pv = derivePeriodLabel(rawPv, profile)
+      setPeriod(pv || (profile === 'checkout' ? TODAY.slice(0, 7) : TODAY))
+    } else {
+      const textCols = p.headers.filter((h) => !inferNumericHeaders(p.rows, [h]).length)
+      setDimension(textCols[0] ?? p.headers[0] ?? '')
+      const nums = inferNumericHeaders(p.rows, p.headers)
+      setMetrics(nums.slice(0, 4).map((h) => ({ header: h, label: h })))
+      setPeriod(profile === 'checkout' ? TODAY.slice(0, 7) : TODAY)
+    }
   }
 
   const onFile = async (file: File | undefined) => {
     if (!file) return
     setBusy(true); setError('')
     try {
-      const p = await parseFile(file)
-      if (!p.rows.length) throw new Error(L('빈 시트입니다. 데이터가 있는 파일을 선택하세요.', 'The sheet is empty.'))
-      setParsed(p)
-      setFileName(file.name)
-      // smart defaults — recognize the Ohmyhotel RawData schema first (profile-aware)
-      const sug = suggestMapping(p.headers, profile)
-      setPreset(sug.preset)
-      if (sug.preset === 'ohmyhotel' && sug.metrics.length) {
-        setDimension(sug.dimension)
-        setExtraDims(sug.extraDimensions)
-        setMetrics(sug.metrics)
-        const rawPv = sug.periodColumn ? p.rows.find((r) => r[sug.periodColumn!])?.[sug.periodColumn!] : ''
-        const pv = derivePeriodLabel(rawPv, profile)
-        setPeriod(pv || (profile === 'checkout' ? TODAY.slice(0, 7) : TODAY))
-      } else {
-        const textCols = p.headers.filter((h) => !inferNumericHeaders(p.rows, [h]).length)
-        setDimension(textCols[0] ?? p.headers[0] ?? '')
-        const nums = inferNumericHeaders(p.rows, p.headers)
-        setMetrics(nums.slice(0, 4).map((h) => ({ header: h, label: h })))
-        setPeriod(profile === 'checkout' ? TODAY.slice(0, 7) : TODAY)
-      }
+      applyParsed(await parseFile(file), file.name)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      reset()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const browseDrive = async () => {
+    setDriveBusy(true); setError('')
+    try {
+      const files = await listDriveSpreadsheets({ clientId: ai.msClientId, tenant: ai.msTenant })
+      setDriveFiles(files)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDriveBusy(false)
+    }
+  }
+
+  const pickDriveFile = async (f: DriveFile) => {
+    setBusy(true); setError(''); setDriveFiles(null)
+    try {
+      const buf = await downloadDriveItem({ clientId: ai.msClientId, tenant: ai.msTenant }, f.id)
+      applyParsed(await parseArrayBuffer(buf), f.name)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       reset()
@@ -154,6 +190,30 @@ export function DataImportPanel() {
                 <span className="text-sm font-medium text-slate-600">{busy ? L('읽는 중…', 'Reading…') : L('.xlsx 파일 선택', 'Choose .xlsx file')}</span>
                 <span className="text-[11px] text-slate-400">{L('파일은 브라우저에서만 처리되며 어디로도 전송되지 않습니다', 'Parsed in your browser — never uploaded anywhere')}</span>
               </button>
+
+              {/* OneDrive / SharePoint */}
+              {msReady && (
+                <div className="mt-2.5">
+                  <Button size="sm" variant="secondary" onClick={browseDrive} disabled={driveBusy || busy}>
+                    {driveBusy ? L('불러오는 중…', 'Loading…') : L('☁ OneDrive/SharePoint에서 가져오기', '☁ Import from OneDrive/SharePoint')}
+                  </Button>
+                  {driveFiles && (
+                    <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-slate-200 dark:border-white/10">
+                      {driveFiles.length === 0 ? (
+                        <div className="p-3 text-[11px] text-slate-400">{L('스프레드시트(.xlsx)를 찾지 못했어요', 'No spreadsheets found')}</div>
+                      ) : (
+                        driveFiles.map((f) => (
+                          <button key={f.id} onClick={() => pickDriveFile(f)} className="flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left text-xs transition last:border-0 hover:bg-brand-50/40 dark:border-white/5">
+                            <span className="flex-1 truncate font-medium text-slate-700">{f.name}</span>
+                            <span className="shrink-0 text-[10px] text-slate-400">{f.lastModified}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mt-2 text-right">
                 <button onClick={() => setOpenImport(false)} className="text-[11px] text-slate-400 hover:text-slate-600">{L('닫기', 'Close')}</button>
               </div>
