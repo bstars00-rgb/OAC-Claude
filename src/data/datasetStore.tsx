@@ -30,7 +30,17 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(KEY, JSON.stringify(snapshots))
     } catch {
-      /* ignore */
+      // Quota exceeded — prune the OLDEST snapshots (kept newest-first) until it
+      // fits, and update state to match so the UI never diverges from storage.
+      for (let keep = snapshots.length - 1; keep >= 1; keep--) {
+        try {
+          localStorage.setItem(KEY, JSON.stringify(snapshots.slice(0, keep)))
+          setSnapshots(snapshots.slice(0, keep))
+          return
+        } catch {
+          /* keep pruning */
+        }
+      }
     }
   }, [snapshots])
 

@@ -72,6 +72,14 @@ describe('datasetQuery', () => {
     expect(r.chart!.points.some((p) => p.label === '2026-04')).toBe(true)
   })
 
+  it('does NOT falsely label a month when only weekly booking data exists', () => {
+    // booking weeks have no month; asking "4월" must not claim April with a week value
+    const r = answerDataQueryRich('아고다 4월 매출', [snap('2026-W23')], 'ko')!
+    expect(r.text).toContain('Agoda')
+    expect(r.text).not.toMatch(/^Agoda · 4월 매출/) // no fake month claim
+    expect(r.text).toMatch(/데이터가 없어|최근/) // honest fallback
+  })
+
   it('ranks sellers when asked "판매처 수익 Top"', () => {
     const r = answerDataQueryRich('판매처 수익 Top 2', [snap()], 'ko')!
     expect(r.text).toContain('Seller Name')

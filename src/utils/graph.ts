@@ -426,11 +426,17 @@ export function matchRelationship(
 ): RelMatch | undefined {
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9가-힣]/g, '')
   const company = item.company || companyFromEmail(item.personEmail, item.personName).company
-  const cands = [company, item.personName].filter(Boolean).map(norm).filter((c) => c.length >= 3)
+  const cands = [company, item.personName].filter(Boolean).map(norm).filter((c) => c.length >= 4)
+  // prefer the longest matching relationship to avoid loose 4-char merges
+  let best: RelMatch | undefined
+  let bestLen = 0
   for (const e of relationships) {
     const en = norm(e.name)
-    if (en.length < 3) continue
-    if (cands.some((c) => en.includes(c) || c.includes(en))) return { accountId: e.id, accountName: e.name }
+    if (en.length < 4) continue
+    if (cands.some((c) => en.includes(c) || c.includes(en)) && en.length > bestLen) {
+      best = { accountId: e.id, accountName: e.name }
+      bestLen = en.length
+    }
   }
-  return undefined
+  return best
 }

@@ -277,7 +277,7 @@ const DICT: Record<string, Entry> = {
   'rel.emptyTitle': { en: 'No relationships yet', ko: '아직 관계가 없어요' },
   'rel.emptyDesc': { en: 'Tell the OAC Assistant about a customer, supplier, partner, project, hire, or issue — it becomes a relationship here.', ko: 'OAC 어시스턴트에 고객·공급사·파트너·프로젝트·채용·이슈에 대해 말하면, 여기에 관계로 정리됩니다.' },
   'dash.emptyTitle': { en: 'Your CRM is empty — start by talking to OAC', ko: 'CRM이 비어 있어요 — OAC에게 말하며 시작하세요' },
-  'dash.emptyDesc': { en: 'Capture your first note in the OAC Assistant, or load the demo data in Settings to explore.', ko: 'OAC 어시스턴트에 첫 메모를 입력하거나, 설정에서 데모 데이터를 불러와 둘러보세요.' },
+  'dash.emptyDesc': { en: 'Capture your first note in the OAC Assistant, or import your data in Settings.', ko: 'OAC 어시스턴트에 첫 메모를 입력하거나, 설정에서 데이터를 가져오세요.' },
   'dash.enableDemo': { en: 'Load demo data', ko: '데모 데이터 불러오기' },
   'dash.recentActivity': { en: 'Recent Activity', ko: '최근 활동' },
   'dash.noTodos': { en: 'No open to-dos.', ko: '진행 중 할 일이 없어요.' },

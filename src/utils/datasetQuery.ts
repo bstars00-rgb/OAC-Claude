@@ -91,7 +91,7 @@ function findEntity(text: string, snapshots: DatasetSnapshot[]): { name: string;
     for (const dim of dims) {
       for (const g of groupsForDim(s, dim)) {
         const kn = norm(g.key)
-        if (kn.length < 3) continue
+        if (kn.length < 4) continue // avoid 3-char false positives (e.g. "ana" in "analysis")
         // query mentions this entity (alias-normalized), either script
         if (qn.includes(kn) || q.includes(g.key.toLowerCase())) {
           const prev = seen.get(kn)
@@ -124,16 +124,22 @@ export function answerDataQueryRich(text: string, snapshots: DatasetSnapshot[], 
       const g = groupsForDim(s, ent.dim).find((x) => norm(x.key) === norm(ent.name))
       if (g) points.push({ label: s.periodLabel, value: valOf(g) })
     }
+    // If a month was asked for, only claim it when a period actually maps to that
+    // month (checkout YYYY-MM). Booking weeks have no month → don't fake the label.
+    let monthMatched = false
     if (month) {
       const f = points.filter((p) => monthOfPeriod(p.label) === month)
-      if (f.length) points = f
+      if (f.length) { points = f; monthMatched = true }
     }
     if (!points.length) return null
     const metricName = isCount ? (ko ? '건수' : 'count') : label
     const last = points[points.length - 1]
-    const head = month
-      ? ko ? `${ent.name} · ${month}월 ${metricName}: ${fmtNum(last.value, withYen)}` : `${ent.name} · ${metricName} in month ${month}: ${fmtNum(last.value, withYen)}`
-      : ko ? `${ent.name} · ${metricName} (최근 ${last.label}): ${fmtNum(last.value, withYen)}` : `${ent.name} · ${metricName} (latest ${last.label}): ${fmtNum(last.value, withYen)}`
+    const head =
+      month && monthMatched
+        ? ko ? `${ent.name} · ${month}월 ${metricName}: ${fmtNum(last.value, withYen)}` : `${ent.name} · ${metricName} in month ${month}: ${fmtNum(last.value, withYen)}`
+        : month && !monthMatched
+          ? ko ? `${ent.name} · ${month}월 데이터가 없어 최근(${last.label}) ${metricName}: ${fmtNum(last.value, withYen)}` : `${ent.name} · no data for month ${month}; latest (${last.label}) ${metricName}: ${fmtNum(last.value, withYen)}`
+          : ko ? `${ent.name} · ${metricName} (최근 ${last.label}): ${fmtNum(last.value, withYen)}` : `${ent.name} · ${metricName} (latest ${last.label}): ${fmtNum(last.value, withYen)}`
     const trend = points.length > 1 ? '\n' + points.map((p) => `${p.label}: ${fmtNum(p.value, withYen)}`).join('\n') : ''
     return {
       text: head + trend,

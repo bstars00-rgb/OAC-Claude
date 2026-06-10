@@ -24,7 +24,10 @@ export function CloudAutoSync() {
       try {
         const caps = JSON.parse(localStorage.getItem('oac-captures-v1') || '[]')
         const ds = JSON.parse(localStorage.getItem('oac-datasets-v1') || '[]')
-        return !caps?.length && !ds?.length
+        const chat = JSON.parse(localStorage.getItem('oac-chat-v1') || '[]')
+        // treat as empty only if there are no captures, datasets, AND no chat —
+        // otherwise an auto-pull could overwrite a chat-only device's local data.
+        return !caps?.length && !ds?.length && !chat?.length
       } catch {
         return true
       }
@@ -48,7 +51,9 @@ export function CloudAutoSync() {
 
     const onSignedIn = async () => {
       try {
-        if (localEmpty()) {
+        // pull once per page-load (guard against a pull→reload→pull loop)
+        if (localEmpty() && !sessionStorage.getItem('oac-cloud-pulled')) {
+          sessionStorage.setItem('oac-cloud-pulled', '1')
           const applied = await pullState(cfg)
           if (applied && !cancelled) {
             window.location.reload()

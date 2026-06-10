@@ -6,8 +6,6 @@
 // shared/production key to the client.
 
 import type { Attachment } from './files'
-import { entities } from '../data/entities'
-import { metricsByEntity } from '../data/salesData'
 import type { Lang } from '../i18n'
 
 const ENDPOINT = 'https://api.anthropic.com/v1/messages'
@@ -68,19 +66,6 @@ Put the complete email in the "body" field (plain text, with greeting and sign-o
 Known CRM relationships and recent captures (use to ground your answers; do not invent data):
 ${crmContext}${sigLine}`
 }
-
-// Compact CRM context from the seeded relationships (English source for grounding).
-export const buildEntityContext = (): string =>
-  entities
-    .map((e) => {
-      const m = metricsByEntity(e.id)
-      const metric =
-        m && m.kind === 'booking'
-          ? ` | ${m.bookings} bookings/mo, ${m.failureRate}% failure`
-          : ''
-      return `- ${e.name} [${e.detectedContext}] owner ${e.owner}, ${e.region}, health ${e.relationshipHealthScore}. Focus: ${e.currentFocus}. Next: ${e.nextBestAction}${metric}`
-    })
-    .join('\n')
 
 type ContentBlock =
   | { type: 'text'; text: string }

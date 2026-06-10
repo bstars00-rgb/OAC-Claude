@@ -1,18 +1,25 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { searchEntities } from '../data/entities'
 import { ContextBadge } from './ContextBadge'
 import { useT } from '../i18n'
+import { useRelationships } from '../data/useRelationships'
 
-// Global search — the heart of the product. "Search the name. OAC finds the context."
+// Global search — "Search the name. OAC finds the context." Real data only.
 export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const wrapRef = useRef<HTMLDivElement>(null)
-  const { t } = useT()
+  const { t, lang } = useT()
+  const rel = useRelationships()
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
 
-  const results = query.trim() ? searchEntities(query).slice(0, 6) : []
+  const q = query.trim().toLowerCase()
+  const results = q
+    ? rel.list
+        .filter((e) => [e.name, e.detectedContext, e.region, e.owner].filter(Boolean).some((v) => String(v).toLowerCase().includes(q)))
+        .slice(0, 6)
+    : []
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -22,10 +29,10 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
 
-  const submit = (q: string) => {
-    if (!q.trim()) return
+  const submit = (text: string) => {
+    if (!text.trim()) return
     setOpen(false)
-    navigate(`/ask?q=${encodeURIComponent(q)}`)
+    navigate(`/assistant?q=${encodeURIComponent(text)}`)
   }
 
   const hero = variant === 'hero'
@@ -51,19 +58,11 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={(e) => e.key === 'Enter' && submit(query)}
-          placeholder={
-            hero
-              ? 'Search a name or ask OAC — “What should I do next with Klook?”'
-              : t('top.search')
-          }
-          className={`w-full bg-transparent text-slate-800 placeholder:text-slate-400 focus:outline-none ${
-            hero ? 'text-base' : 'text-sm'
-          }`}
+          placeholder={hero ? L('이름으로 검색하거나 OAC에게 물어보세요', 'Search a name or ask OAC') : t('top.search')}
+          className={`w-full bg-transparent text-slate-800 placeholder:text-slate-400 focus:outline-none ${hero ? 'text-base' : 'text-sm'}`}
         />
         {query && (
-          <kbd className="hidden shrink-0 rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-400 sm:block">
-            Enter
-          </kbd>
+          <kbd className="hidden shrink-0 rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-400 sm:block">Enter</kbd>
         )}
       </div>
 
@@ -72,7 +71,7 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
           {results.length > 0 ? (
             <>
               <div className="border-b border-slate-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                Business Relationships
+                {L('관계', 'Relationships')}
               </div>
               {results.map((e) => (
                 <button
@@ -85,18 +84,14 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
                 >
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-slate-800">{e.name}</div>
-                    <div className="truncate text-xs text-slate-400">
-                      {e.owner} · {e.region}
-                    </div>
+                    <div className="truncate text-xs text-slate-400">{e.detectedContext} · {e.region}</div>
                   </div>
                   <ContextBadge context={e.detectedContext} size="sm" />
                 </button>
               ))}
             </>
           ) : (
-            <div className="px-3 py-3 text-sm text-slate-500">
-              No relationship matched. Press Enter to ask OAC anyway.
-            </div>
+            <div className="px-3 py-3 text-sm text-slate-500">{L('일치하는 관계 없음. Enter로 OAC에게 바로 물어보세요.', 'No relationship matched. Press Enter to ask OAC.')}</div>
           )}
           <button
             onClick={() => submit(query)}
@@ -105,7 +100,7 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 3l1.9 4.6L18.5 9 14 11l-2 5-2-5L5.5 9l4.6-1.4L12 3z" />
             </svg>
-            Ask OAC: “{query}”
+            {L('OAC에게 묻기', 'Ask OAC')}: “{query}”
           </button>
         </div>
       )}

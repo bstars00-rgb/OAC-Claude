@@ -276,7 +276,7 @@ function RealDashboard({ relationships }: { relationships: Entity[] }) {
           <p className="mt-1 max-w-md text-sm text-slate-500">{t('dash.emptyDesc')}</p>
           <div className="mt-4 flex gap-2">
             <Button onClick={() => navigate('/assistant')} icon={<SparkIcon />}>{t('nav.assistant')}</Button>
-            <Button variant="secondary" onClick={() => navigate('/settings')}>{t('dash.enableDemo')}</Button>
+            <Button variant="secondary" onClick={() => navigate('/settings')}>{lang === 'ko' ? '데이터 가져오기' : 'Import data'}</Button>
           </div>
         </Card>
       </div>
