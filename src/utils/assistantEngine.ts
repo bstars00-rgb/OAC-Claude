@@ -2,11 +2,12 @@
 // or the real Anthropic API (live), and normalizes the result into prose +
 // optional structured CRM records.
 
-import { callAssistant, buildEntityContext, type ChatTurnLite } from './aiClient'
+import { callAssistant, type ChatTurnLite } from './aiClient'
 import { structureCapture, type StructuredCapture, type Category, type Priority } from './captureAI'
-import { entities, localizeEntity, type Entity } from './../data/entities'
+import { type Entity } from './../data/entities'
 import { draftSeedForEntity } from '../data/emails'
 import { reportByEntityAndType } from '../data/reports'
+import { metricsByEntity } from '../data/salesData'
 import type { Attachment } from './files'
 import type { Lang } from '../i18n'
 import { TODAY, formatDate } from './format'
@@ -47,6 +48,7 @@ interface RunOpts {
   userText: string
   attachments: Attachment[]
   memory: AssistantMemory // workspace memory (state before this turn)
+  relationships: Entity[] // the active relationships (seeded demo OR the user's own)
 }
 
 const CATEGORIES: Category[] = ['Customer', 'Supplier', 'Partner', 'Project', 'Recruiting', 'Legal', 'Operations', 'Finance', 'General']
@@ -58,12 +60,23 @@ const addDays = (iso: string, n: number): string => {
   return d.toISOString().slice(0, 10)
 }
 
-const matchEntity = (text: string) => {
+const matchEntity = (text: string, rels: Entity[]) => {
   const q = text.toLowerCase()
-  return [...entities]
+  return [...rels]
     .sort((a, b) => b.name.length - a.name.length)
-    .find((e) => q.includes(e.name.toLowerCase()))
+    .find((e) => e.name.length > 1 && q.includes(e.name.toLowerCase()))
 }
+
+// Compact CRM context for the live model, built from the active relationships.
+const buildContext = (rels: Entity[]): string =>
+  rels
+    .slice(0, 24)
+    .map((e) => {
+      const m = metricsByEntity(e.id)
+      const metric = m && m.kind === 'booking' ? ` | ${m.bookings} bookings/mo, ${m.failureRate}% failure` : ''
+      return `- ${e.name} [${e.detectedContext}] owner ${e.owner}, ${e.region}, health ${e.relationshipHealthScore}. Focus: ${e.currentFocus}. Next: ${e.nextBestAction}${metric}`
+    })
+    .join('\n')
 
 const hasCaptureCues = (text: string): boolean =>
   text.trim().length > 14 &&
@@ -83,10 +96,10 @@ const A_STATUS = /(진행|상황|진척|어때|어떻게\s*(돼|됐|되|진행)|
 const A_MEETING = /(미팅|회의|met\b|통화|call\b|meeting)/i
 
 // ── normalize a live JSON block into a StructuredCapture ─────────────────────
-const resolveAccount = (name: string): { name: string; id: string; isExisting: boolean } => {
+const resolveAccount = (name: string, rels: Entity[]): { name: string; id: string; isExisting: boolean } => {
   const lower = (name ?? '').toLowerCase()
-  const hit = [...entities].sort((a, b) => b.name.length - a.name.length).find((e) => lower.includes(e.name.toLowerCase()) || e.name.toLowerCase().includes(lower))
-  if (hit && lower) return { name: hit.name, id: hit.id, isExisting: true }
+  const hit = [...rels].sort((a, b) => b.name.length - a.name.length).find((e) => lower && (lower.includes(e.name.toLowerCase()) || e.name.toLowerCase().includes(lower)))
+  if (hit) return { name: hit.name, id: hit.id, isExisting: true }
   const clean = (name || 'New Item').trim()
   const id = 'cap-' + clean.toLowerCase().replace(/[^a-z0-9가-힣]+/g, '-').replace(/^-|-$/g, '')
   return { name: clean, id, isExisting: false }
@@ -112,10 +125,10 @@ const buildArtifacts = (name: string, context: string, summary: string, todos: {
   return { report, email }
 }
 
-const parseStructured = (raw: unknown, lang: Lang): StructuredCapture | undefined => {
+const parseStructured = (raw: unknown, lang: Lang, rels: Entity[]): StructuredCapture | undefined => {
   if (!raw || typeof raw !== 'object') return undefined
   const j = raw as Record<string, unknown>
-  const acct = resolveAccount(String(j.account ?? ''))
+  const acct = resolveAccount(String(j.account ?? ''), rels)
   const category: Category = CATEGORIES.includes(j.category as Category) ? (j.category as Category) : 'General'
   const detectedContext = String(j.detectedContext ?? category)
   const summary = String(j.summary ?? '')
@@ -264,7 +277,8 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
         ? '\nRecent assistant activity (what you already did):\n' +
           opts.memory.updates.slice(0, 10).map((u) => `- ${u.accountId} (${u.date}) ${u.kind ?? 'note'}: ${u.summary}${u.nextBestAction ? ` → next: ${u.nextBestAction}` : ''}`).join('\n')
         : ''
-      const crmContext = `${buildEntityContext()}\n${captures}${activity}`.trim()
+      const ctx = opts.relationships.length ? buildContext(opts.relationships) : (opts.lang === 'ko' ? '(아직 등록된 관계 없음)' : '(no relationships yet)')
+      const crmContext = `${ctx}\n${captures}${activity}`.trim()
       const raw = await callAssistant({
         apiKey: opts.apiKey,
         model: opts.model,
@@ -280,12 +294,12 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
       if (m) {
         text = raw.replace(m[0], '').trim()
         try {
-          structured = parseStructured(JSON.parse(m[1].trim()), opts.lang)
+          structured = parseStructured(JSON.parse(m[1].trim()), opts.lang, opts.relationships)
         } catch {
           structured = undefined
         }
       }
-      const ent = matchEntity(opts.userText)
+      const ent = matchEntity(opts.userText, opts.relationships)
       const entityId = structured?.isExisting ? structured.accountId : ent?.id
       return { text: text || (opts.lang === 'ko' ? '응답을 받았습니다.' : 'Done.'), structured, entityId }
     } catch (e) {
@@ -301,7 +315,7 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
   }
 
   // ── demo: mock engine ─────────────────────────────────────────────────────
-  const ent = matchEntity(opts.userText)
+  const ent = matchEntity(opts.userText, opts.relationships)
   const fileNote =
     opts.attachments.length > 0
       ? opts.lang === 'ko'
@@ -312,7 +326,7 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
   // Existing relationship → the assistant can act on it (review, email, report,
   // meeting/update) and reflect the change on Relationship 360, or answer status.
   if (ent) {
-    const e = localizeEntity(ent)
+    const e = ent // already localized by the relationships source
     const text = opts.userText
     if (A_EMAIL.test(text)) {
       const r = emailReply(e, opts.lang)
@@ -326,7 +340,7 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
       const r = meetingUpdate(text, e, opts.memory, opts.lang)
       return { text: r.text + fileNote, structured: r.structured, entityId: e.id }
     }
-    if (A_REVIEW.test(text)) {
+    if (A_REVIEW.test(text) && e.risks.length > 0) {
       const r = reviewUpdate(e, opts.lang)
       return { text: r.text + fileNote, structured: r.structured, entityId: e.id }
     }

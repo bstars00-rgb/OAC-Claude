@@ -264,6 +264,25 @@ const DICT: Record<string, Entry> = {
   'set.workspace': { en: 'Workspace', ko: '워크스페이스' },
   'set.clearWorkspace': { en: 'Clear captured workspace data', ko: '캡처된 워크스페이스 데이터 비우기' },
   'set.autosaved': { en: 'Changes are saved automatically — just go to the OAC Assistant.', ko: '변경사항은 자동 저장됩니다 — 바로 OAC 어시스턴트에서 사용하세요. (별도 완료 버튼 없음)' },
+
+  // Demo data toggle
+  'set.dataSource': { en: 'Data', ko: '데이터' },
+  'set.dataSourceSub': { en: 'Use your own captured data, or load the Ohmyhotel demo set', ko: '내가 입력한 데이터로 쓸지, Ohmyhotel 데모 데이터를 불러올지' },
+  'set.realData': { en: 'My data (real use)', ko: '내 데이터 (실제 사용)' },
+  'set.realDataDesc': { en: 'Dashboard & Relationship 360 show only the relationships you capture via the assistant.', ko: '대시보드·관계 360에 어시스턴트로 입력한 관계만 표시됩니다.' },
+  'set.demoDataLabel': { en: 'Demo data (Ohmyhotel sample)', ko: '데모 데이터 (Ohmyhotel 샘플)' },
+  'set.demoDataDesc': { en: 'Load the 16 sample relationships (Klook, Yeogi Eottae…) and mock data to explore the showcase.', ko: '16개 샘플 관계(Klook, 여기어때…)와 목데이터를 불러와 데모를 둘러봅니다.' },
+
+  // Empty states
+  'rel.emptyTitle': { en: 'No relationships yet', ko: '아직 관계가 없어요' },
+  'rel.emptyDesc': { en: 'Tell the OAC Assistant about a customer, supplier, partner, project, hire, or issue — it becomes a relationship here.', ko: 'OAC 어시스턴트에 고객·공급사·파트너·프로젝트·채용·이슈에 대해 말하면, 여기에 관계로 정리됩니다.' },
+  'dash.emptyTitle': { en: 'Your CRM is empty — start by talking to OAC', ko: 'CRM이 비어 있어요 — OAC에게 말하며 시작하세요' },
+  'dash.emptyDesc': { en: 'Capture your first note in the OAC Assistant, or load the demo data in Settings to explore.', ko: 'OAC 어시스턴트에 첫 메모를 입력하거나, 설정에서 데모 데이터를 불러와 둘러보세요.' },
+  'dash.enableDemo': { en: 'Load demo data', ko: '데모 데이터 불러오기' },
+  'dash.recentActivity': { en: 'Recent Activity', ko: '최근 활동' },
+  'dash.noTodos': { en: 'No open to-dos.', ko: '진행 중 할 일이 없어요.' },
+  'data.emptyTitle': { en: 'No data yet', ko: '아직 데이터가 없어요' },
+  'data.emptyDesc': { en: 'Capture relationships in the OAC Assistant first. In a real deployment this view is fed by Excel & internal DB.', ko: '먼저 OAC 어시스턴트로 관계를 입력하세요. 실제 배포에서는 이 화면이 Excel·내부 DB로 채워집니다.' },
 }
 
 interface I18nCtx {

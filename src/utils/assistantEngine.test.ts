@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { runAssistant, type AssistantMemory } from './assistantEngine'
+import { getEntities } from '../data/entities'
 
 const emptyMemory: AssistantMemory = { accounts: [], updates: [], totalAccounts: 0, totalOpenTodos: 0, totalRisks: 0 }
 
@@ -9,6 +10,7 @@ const base = {
   model: 'claude-opus-4-8',
   history: [],
   attachments: [],
+  relationships: getEntities(), // seeded relationships (demo) for the action tests
 }
 
 describe('runAssistant (demo) — control center', () => {

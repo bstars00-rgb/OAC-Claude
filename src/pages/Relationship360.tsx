@@ -13,7 +13,8 @@ import { Sparkline, GaugeBar, Donut } from '../components/DemoChart'
 import { useToast } from '../components/Toast'
 import { useT } from '../i18n'
 import { useCaptureStore } from '../data/captureStore'
-import { entities, getEntities, entityById, healthBand, type Entity } from '../data/entities'
+import { useRelationships } from '../data/useRelationships'
+import { healthBand, type Entity } from '../data/entities'
 import { metricsByEntity } from '../data/salesData'
 import { tasksByEntity } from '../data/tasks'
 import { emailsByEntity, draftSeedForEntity } from '../data/emails'
@@ -48,19 +49,23 @@ const statusTone: Record<string, BadgeTone> = {
 export function Relationship360() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const entity = id ? entityById(id) : getEntities()[0]
-  if (!entity) return <RelationshipPicker />
-  return <RelationshipDetail entity={entity} key={entity.id} navigateTo={navigate} />
+  const rel = useRelationships()
+  const entity = (id ? rel.byId(id) : undefined) ?? rel.list[0]
+  if (!entity) return <RelationshipEmpty />
+  return <RelationshipDetail entity={entity} options={rel.list} key={entity.id} navigateTo={navigate} />
 }
 
-function RelationshipPicker() {
+function RelationshipEmpty() {
   const navigate = useNavigate()
   const { t } = useT()
   return (
     <div className="oac-fade-in">
       <PageHeader title={t('page.relationship.title')} subtitle={t('page.relationship.subtitle')} />
-      <Card>
-        <EntitySelector value={entities[0].id} onChange={(id) => navigate(`/relationship/${id}`)} />
+      <Card className="flex flex-col items-center py-12 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-violet-600 text-white"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></svg></span>
+        <h2 className="mt-4 text-lg font-bold text-slate-900">{t('rel.emptyTitle')}</h2>
+        <p className="mt-1 max-w-md text-sm text-slate-500">{t('rel.emptyDesc')}</p>
+        <Button className="mt-4" onClick={() => navigate('/assistant')}>{t('nav.assistant')} →</Button>
       </Card>
     </div>
   )
@@ -68,7 +73,7 @@ function RelationshipPicker() {
 
 type Tab = 'overview' | 'timeline' | 'communication' | 'tasks' | 'data' | 'ai'
 
-function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo: (to: string) => void }) {
+function RelationshipDetail({ entity, options, navigateTo }: { entity: Entity; options: Entity[]; navigateTo: (to: string) => void }) {
   const { demoAction } = useToast()
   const { t, lang } = useT()
   const store = useCaptureStore()
@@ -103,7 +108,7 @@ function RelationshipDetail({ entity, navigateTo }: { entity: Entity; navigateTo
       {/* Header card */}
       <Card className="mb-5">
         <div className="mb-4 max-w-xs">
-          <EntitySelector value={entity.id} onChange={(id) => navigateTo(`/relationship/${id}`)} label={t('l.switchRel')} />
+          <EntitySelector value={entity.id} options={options} onChange={(id) => navigateTo(`/relationship/${id}`)} label={t('l.switchRel')} />
         </div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3.5">

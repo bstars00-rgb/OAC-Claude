@@ -10,9 +10,9 @@ import { EntitySelector } from '../components/EntitySelector'
 import { BarChart, Sparkline, Donut, GaugeBar } from '../components/DemoChart'
 import { useToast } from '../components/Toast'
 import { useT } from '../i18n'
-import { entityById } from '../data/entities'
 import { metricsByEntity } from '../data/salesData'
 import { insightByEntity } from '../data/insights'
+import { useRelationships } from '../data/useRelationships'
 import { formatUsd, formatNumber, formatPct } from '../utils/format'
 
 const SOURCES = ['Outlook', 'Teams', 'Excel', 'Internal DB']
@@ -22,13 +22,27 @@ export function DataInsight() {
   const navigate = useNavigate()
   const { demoAction } = useToast()
   const { t } = useT()
-  const initial = params.get('entity') && entityById(params.get('entity')!) ? params.get('entity')! : 'yeogi'
+  const rel = useRelationships()
+  const paramId = params.get('entity')
+  const initial = paramId && rel.byId(paramId) ? paramId : rel.list[0]?.id ?? ''
   const [entityId, setEntityId] = useState(initial)
   const [range, setRange] = useState('Last 6 months')
 
-  const entity = entityById(entityId)!
-  const m = metricsByEntity(entityId)
-  const insight = insightByEntity(entityId)
+  const entity = rel.byId(entityId) ?? rel.list[0]
+  if (!entity) {
+    return (
+      <div className="oac-fade-in">
+        <PageHeader title={t('page.data.title')} subtitle={t('page.data.subtitle')} />
+        <Card className="flex flex-col items-center py-12 text-center">
+          <h2 className="text-lg font-bold text-slate-900">{t('data.emptyTitle')}</h2>
+          <p className="mt-1 max-w-md text-sm text-slate-500">{t('data.emptyDesc')}</p>
+          <Button className="mt-4" onClick={() => navigate('/assistant')}>{t('nav.assistant')} →</Button>
+        </Card>
+      </div>
+    )
+  }
+  const m = metricsByEntity(entity.id)
+  const insight = insightByEntity(entity.id)
 
   return (
     <div className="oac-fade-in">
@@ -37,7 +51,7 @@ export function DataInsight() {
       {/* Top controls */}
       <Card className="mb-5">
         <div className="flex flex-wrap items-end gap-4">
-          <div className="min-w-[220px] flex-1"><EntitySelector value={entityId} onChange={setEntityId} label="Relationship" /></div>
+          <div className="min-w-[220px] flex-1"><EntitySelector value={entity.id} options={rel.list} onChange={setEntityId} label="Relationship" /></div>
           <div>
             <label className="mb-1.5 block text-xs font-medium text-slate-500">Date range</label>
             <select value={range} onChange={(e) => setRange(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none">

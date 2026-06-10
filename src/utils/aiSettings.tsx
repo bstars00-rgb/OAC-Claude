@@ -24,12 +24,16 @@ interface AiSettings {
   mode: AiMode
   apiKey: string
   model: string
+  // When false, the seeded Ohmyhotel demo relationships & mock data are hidden,
+  // and the app runs on the user's own captured data only.
+  demoData: boolean
 }
 
 interface AiSettingsCtx extends AiSettings {
   setMode: (m: AiMode) => void
   setApiKey: (k: string) => void
   setModel: (m: string) => void
+  setDemoData: (v: boolean) => void
   isLive: boolean
 }
 
@@ -44,12 +48,14 @@ const read = (): AiSettings => {
         mode: p.mode === 'live' ? 'live' : 'demo',
         apiKey: typeof p.apiKey === 'string' ? p.apiKey : '',
         model: typeof p.model === 'string' ? p.model : AI_MODELS[0].id,
+        demoData: typeof p.demoData === 'boolean' ? p.demoData : false,
       }
     }
   } catch {
     /* ignore */
   }
-  return { mode: 'demo', apiKey: '', model: AI_MODELS[0].id }
+  // Default to REAL mode (no demo data) — the user is starting to use OAC for real.
+  return { mode: 'demo', apiKey: '', model: AI_MODELS[0].id, demoData: false }
 }
 
 const Ctx = createContext<AiSettingsCtx | null>(null)
@@ -68,11 +74,12 @@ export function AiSettingsProvider({ children }: { children: ReactNode }) {
   const setMode = (mode: AiMode) => setSettings((s) => ({ ...s, mode }))
   const setApiKey = (apiKey: string) => setSettings((s) => ({ ...s, apiKey }))
   const setModel = (model: string) => setSettings((s) => ({ ...s, model }))
+  const setDemoData = (demoData: boolean) => setSettings((s) => ({ ...s, demoData }))
 
   const isLive = settings.mode === 'live' && settings.apiKey.trim().length > 0
 
   return (
-    <Ctx.Provider value={{ ...settings, setMode, setApiKey, setModel, isLive }}>
+    <Ctx.Provider value={{ ...settings, setMode, setApiKey, setModel, setDemoData, isLive }}>
       {children}
     </Ctx.Provider>
   )

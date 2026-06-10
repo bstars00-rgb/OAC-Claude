@@ -1,25 +1,27 @@
 import { useState, useRef, useEffect } from 'react'
-import { getEntities, entityById } from '../data/entities'
+import { getEntities, entityById, type Entity } from '../data/entities'
 import { initials } from '../utils/format'
 import { useT } from '../i18n'
 
-// A dropdown to pick a business relationship. Used by the tool pages
-// (Email Assistant, Report Generator, Meeting Recorder, Data Insight).
-// Note: this selects a *relationship by name* — never an "account type".
+// A dropdown to pick a business relationship. Pass `options` to drive it from a
+// specific list (e.g. the user's own captured relationships); otherwise it uses
+// the seeded relationships. Selects by name — never an "account type".
 export function EntitySelector({
   value,
   onChange,
+  options,
   label = 'Business Relationship',
 }: {
   value: string
   onChange: (id: string) => void
+  options?: Entity[]
   label?: string
 }) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   useT() // re-render on language change
-  const selected = entityById(value)
-  const list = getEntities()
+  const list = options ?? getEntities()
+  const selected = list.find((e) => e.id === value) ?? entityById(value)
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {

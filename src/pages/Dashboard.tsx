@@ -7,13 +7,15 @@ import { ContextBadge } from '../components/ContextBadge'
 import { Button } from '../components/Button'
 import { useToast } from '../components/Toast'
 import { useT } from '../i18n'
-import { entities, getEntities, healthBand, contextGroups, entityById } from '../data/entities'
+import { entities, getEntities, healthBand, contextGroups, entityById, type Entity } from '../data/entities'
 import { getTodaysBriefing, insightByEntity } from '../data/insights'
 import { openTasksSorted } from '../data/tasks'
 import { latestMeetings } from '../data/meetings'
 import { draftEmails } from '../data/emails'
 import { portfolioTotals } from '../data/salesData'
-import { formatUsd, formatNumber, formatDate, initials } from '../utils/format'
+import { useRelationships } from '../data/useRelationships'
+import { useCaptureStore } from '../data/captureStore'
+import { formatUsd, formatNumber, formatDate, daysAgo, initials } from '../utils/format'
 
 const bandTone: Record<string, BadgeTone> = {
   Healthy: 'green',
@@ -33,6 +35,11 @@ const ATTENTION_CONTEXTS = [
 ]
 
 export function Dashboard() {
+  const rel = useRelationships()
+  return rel.isDemo ? <DemoDashboard /> : <RealDashboard relationships={rel.list} />
+}
+
+function DemoDashboard() {
   const navigate = useNavigate()
   const { demoAction } = useToast()
   const { t, lang } = useT()
@@ -237,6 +244,131 @@ export function Dashboard() {
             <p className="mt-4 border-t border-white/10 pt-3 text-xs leading-relaxed text-white/60">
               검색만 하세요. 분류와 정리는 OAC가 합니다.
             </p>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Real-mode dashboard (the user's own captured data) ───────────────────────
+function RealDashboard({ relationships }: { relationships: Entity[] }) {
+  const navigate = useNavigate()
+  const { t, lang } = useT()
+  const store = useCaptureStore()
+
+  const priorities = [...relationships].sort((a, b) => a.relationshipHealthScore - b.relationshipHealthScore).slice(0, 6)
+  const openTodos = store.entries.flatMap((e) => e.todos.filter((td) => !td.done).map((td) => ({ ...td, accountName: e.accountName, accountId: e.accountId })))
+  const recent = store.entries.slice(0, 6)
+
+  // group by detected context
+  const ctxMap = new Map<string, Entity[]>()
+  for (const r of relationships) ctxMap.set(r.detectedContext, [...(ctxMap.get(r.detectedContext) ?? []), r])
+  const groups = [...ctxMap.entries()]
+
+  if (relationships.length === 0) {
+    return (
+      <div className="oac-fade-in">
+        <PageHeader title={t('page.dashboard.title')} subtitle={t('page.dashboard.subtitle')} />
+        <Card className="flex flex-col items-center py-12 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-violet-600 text-white"><SparkIcon /></span>
+          <h2 className="mt-4 text-lg font-bold text-slate-900">{t('dash.emptyTitle')}</h2>
+          <p className="mt-1 max-w-md text-sm text-slate-500">{t('dash.emptyDesc')}</p>
+          <div className="mt-4 flex gap-2">
+            <Button onClick={() => navigate('/assistant')} icon={<SparkIcon />}>{t('nav.assistant')}</Button>
+            <Button variant="secondary" onClick={() => navigate('/settings')}>{t('dash.enableDemo')}</Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="oac-fade-in space-y-5">
+      <PageHeader title={t('page.dashboard.title')} subtitle={t('page.dashboard.subtitle')} actions={<Button onClick={() => navigate('/assistant')} icon={<SparkIcon />}>{t('common.askOAC')}</Button>} />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <MetricCard label={t('cap.accounts')} value={store.stats.accounts} icon={<UsersIcon />} />
+        <MetricCard label={t('cap.openTodos')} value={store.stats.openTodos} icon={<CheckIcon />} />
+        <MetricCard label={t('cap.risks')} value={store.stats.risks} deltaTone={store.stats.risks ? 'down' : 'neutral'} />
+        <MetricCard label={t('cap.captures')} value={store.stats.entries} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-2">
+          <Card padded={false}>
+            <div className="px-5 pt-5"><CardHeader title={t('l.priorityRel')} subtitle={t('l.rankedHealth')} /></div>
+            <div className="divide-y divide-slate-100">
+              {priorities.map((e) => (
+                <button key={e.id} onClick={() => navigate(`/relationship/${e.id}`)} className="flex w-full items-start gap-3 px-5 py-3 text-left transition hover:bg-slate-50">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">{initials(e.name)}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-semibold text-slate-800">{e.name}</span><ContextBadge context={e.detectedContext} size="sm" /></div>
+                    <div className="mt-1 text-xs text-brand-700"><span className="font-medium">{t('l.nextBestActionShort')}:</span> {e.nextBestAction}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </Card>
+
+          <Card padded={false}>
+            <div className="px-5 pt-5"><CardHeader title={t('dash.recentActivity')} subtitle={t('cap.liveStructured')} /></div>
+            <div className="divide-y divide-slate-100">
+              {recent.map((e) => (
+                <div key={e.id} className="px-5 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <button onClick={() => navigate(`/relationship/${e.accountId}`)} className="text-sm font-semibold text-slate-800 hover:text-brand-700">{e.accountName}</button>
+                    <span className="text-[11px] text-slate-400">{formatDate(e.date)} · {daysAgo(e.date)}</span>
+                  </div>
+                  <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{e.timeline.title} — {e.summary}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader title={t('l.contextsAttention')} subtitle={t('l.groupedContext')} />
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              {groups.map(([ctx, rels]) => (
+                <div key={ctx} className="rounded-xl border border-slate-200 p-3">
+                  <ContextBadge context={ctx} size="sm" />
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {rels.map((r) => <button key={r.id} onClick={() => navigate(`/relationship/${r.id}`)} className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-brand-50 hover:text-brand-700">{r.name}</button>)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        <div className="space-y-5">
+          <Card padded={false}>
+            <div className="px-5 pt-5"><CardHeader title={t('l.openFollowups')} subtitle={`${openTodos.length} ${t('l.acrossRel')}`} /></div>
+            {openTodos.length === 0 ? <p className="px-5 pb-5 text-sm text-slate-400">{t('dash.noTodos')}</p> : (
+              <ul className="divide-y divide-slate-100">
+                {openTodos.slice(0, 8).map((td) => (
+                  <li key={td.id} className="px-5 py-3">
+                    <div className="flex items-start gap-2">
+                      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${td.priority === 'High' ? 'bg-rose-500' : td.priority === 'Medium' ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                      <div className="min-w-0 flex-1">
+                        <button onClick={() => navigate(`/relationship/${td.accountId}`)} className="text-left text-sm font-medium text-slate-700 hover:text-brand-700">{td.text}</button>
+                        <div className="mt-0.5 text-[11px] text-slate-400">{td.accountName} · {t('cap.due')} {formatDate(td.due)}</div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          <Card className="bg-gradient-to-br from-slate-900 to-brand-900 text-white">
+            <div className="flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/15"><SparkIcon /></span><span className="text-xs font-bold uppercase tracking-wide text-white/80">{t('l.aiRecActions')}</span></div>
+            <ul className="mt-3 space-y-2.5">
+              {priorities.slice(0, 5).map((e, i) => (
+                <li key={e.id} className="flex gap-2.5"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/15 text-[11px] font-bold">{i + 1}</span><button onClick={() => navigate(`/relationship/${e.id}`)} className="text-left text-sm leading-snug text-white/90 hover:text-white"><span className="font-semibold">{e.name}:</span> {e.nextBestAction}</button></li>
+              ))}
+            </ul>
+            <p className="mt-4 border-t border-white/10 pt-3 text-xs leading-relaxed text-white/60">{lang === 'ko' ? '검색만 하세요. 분류와 정리는 OAC가 합니다.' : 'Search the name. OAC finds the context and prepares the next action.'}</p>
           </Card>
         </div>
       </div>
