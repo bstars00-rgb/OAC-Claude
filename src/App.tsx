@@ -4,6 +4,7 @@ import { ToastProvider } from './components/Toast'
 import { ThemeProvider } from './theme'
 import { LanguageProvider } from './i18n'
 import { CaptureProvider } from './data/captureStore'
+import { DatasetProvider } from './data/datasetStore'
 import { AiSettingsProvider } from './utils/aiSettings'
 import { Dashboard } from './pages/Dashboard'
 import { OACAssistant } from './pages/OACAssistant'
@@ -16,6 +17,7 @@ export default function App() {
     <ThemeProvider>
     <LanguageProvider>
     <CaptureProvider>
+    <DatasetProvider>
     <AiSettingsProvider>
     <ToastProvider>
       <Layout>
@@ -39,6 +41,7 @@ export default function App() {
       </Layout>
     </ToastProvider>
     </AiSettingsProvider>
+    </DatasetProvider>
     </CaptureProvider>
     </LanguageProvider>
     </ThemeProvider>
