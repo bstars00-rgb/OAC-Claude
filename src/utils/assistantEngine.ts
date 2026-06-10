@@ -4,7 +4,7 @@
 
 import { callAssistant, type ChatTurnLite } from './aiClient'
 import { structureCapture, type StructuredCapture, type Category, type Priority } from './captureAI'
-import { answerDataQuery, looksLikeDataQuery, buildDatasetContext } from './datasetQuery'
+import { answerDataQueryRich, looksLikeDataQuery, buildDatasetContext, type ChartData } from './datasetQuery'
 import type { DatasetSnapshot } from './dataImport'
 import { type Entity } from './../data/entities'
 import { draftSeedForEntity } from '../data/emails'
@@ -20,6 +20,7 @@ export interface AssistantReply {
   log?: StructuredCapture // saved to the relationship silently (no card)
   email?: { to: string; subject: string; body: string } // an inline email draft
   report?: { title: string; sections: { heading: string; body: string }[] } // an inline report
+  chart?: ChartData // a data chart (rankings / entity trend) rendered in the chat
   entityId?: string // existing relationship to offer a "View Relationship 360" link
   error?: string
 }
@@ -348,8 +349,8 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
   // there's no specific relationship in focus, or the user explicitly asks to rank.
   const ranking = /top\s*\d|상위|순위|랭킹|랭크|best|가장\s*(많|높|적|낮)/i.test(opts.userText)
   if (opts.datasets?.length && looksLikeDataQuery(opts.userText) && (!ent || ranking)) {
-    const ans = answerDataQuery(opts.userText, opts.datasets, opts.lang)
-    if (ans) return { text: ans }
+    const ans = answerDataQueryRich(opts.userText, opts.datasets, opts.lang)
+    if (ans) return { text: ans.text, chart: ans.chart }
   }
 
   const fileNote =

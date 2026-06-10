@@ -1,28 +1,34 @@
 import { describe, it, expect } from 'vitest'
-import { answerDataQuery, looksLikeDataQuery, buildDatasetContext } from './datasetQuery'
+import { answerDataQuery, answerDataQueryRich, looksLikeDataQuery, buildDatasetContext } from './datasetQuery'
 import { buildSnapshot, type DatasetSnapshot } from './dataImport'
 
-function snap(): DatasetSnapshot {
+const metrics = [
+  { header: '판매액', label: '판매액(¥)' },
+  { header: '수익', label: '수익(¥)' },
+  { header: '룸나잇', label: '룸나잇' },
+]
+
+function snap(period = '2026-W23'): DatasetSnapshot {
   const rows = [
-    { 'Hotel Name': 'Grand Hyatt Jeju', '판매액': '200000', '수익': '30000', '룸나잇': '8' },
-    { 'Hotel Name': 'Hotel Gracery', '판매액': '230000', '수익': '45000', '룸나잇': '15' },
-    { 'Hotel Name': 'Lotte Seoul', '판매액': '120000', '수익': '12000', '룸나잇': '6' },
+    { 'Hotel Name': 'Grand Hyatt Jeju', 'Seller Name': 'Agoda', '판매액': '200000', '수익': '30000', '룸나잇': '8' },
+    { 'Hotel Name': 'Hotel Gracery', 'Seller Name': 'Booking.com', '판매액': '230000', '수익': '45000', '룸나잇': '15' },
+    { 'Hotel Name': 'Lotte Seoul', 'Seller Name': 'Agoda', '판매액': '120000', '수익': '12000', '룸나잇': '6' },
   ]
   return buildSnapshot({
-    profile: 'booking',
-    periodLabel: '2026-W23',
-    fileName: 'raw.xlsx',
-    importedAt: '2026-06-10',
-    rows,
-    mapping: {
-      dimension: 'Hotel Name',
-      extraDimensions: [],
-      metrics: [
-        { header: '판매액', label: '판매액(¥)' },
-        { header: '수익', label: '수익(¥)' },
-        { header: '룸나잇', label: '룸나잇' },
-      ],
-    },
+    profile: 'booking', periodLabel: period, fileName: 'raw.xlsx', importedAt: '2026-06-10',
+    rows, mapping: { dimension: 'Hotel Name', extraDimensions: ['Seller Name'], metrics },
+  })
+}
+
+// A monthly Check Out snapshot for April, grouped so Agoda is a seller.
+function aprilSnap(): DatasetSnapshot {
+  const rows = [
+    { 'Hotel Name': 'A', 'Seller Name': 'Agoda', '판매액': '500000', '수익': '90000', '룸나잇': '40' },
+    { 'Hotel Name': 'B', 'Seller Name': 'Expedia', '판매액': '300000', '수익': '50000', '룸나잇': '20' },
+  ]
+  return buildSnapshot({
+    profile: 'checkout', periodLabel: '2026-04', fileName: 'co.xlsx', importedAt: '2026-05-01',
+    rows, mapping: { dimension: 'Hotel Name', extraDimensions: ['Seller Name'], metrics },
   })
 }
 
@@ -54,5 +60,22 @@ describe('datasetQuery', () => {
     expect(ctx).toContain('2026-W23')
     expect(ctx).toContain('Hotel Name')
     expect(ctx).toMatch(/JPY/)
+  })
+
+  it('answers a Korean channel + month query ("아고다 4월 매출") with a number + chart', () => {
+    const r = answerDataQueryRich('아고다 4월 매출 어때?', [snap(), aprilSnap()], 'ko')!
+    expect(r.text).toContain('Agoda') // matched 아고다 → Agoda via alias
+    expect(r.text).toContain('4월')
+    expect(r.text).toContain('¥500,000') // April sales for Agoda (checkout snapshot)
+    expect(r.chart).toBeDefined()
+    expect(r.chart!.unit).toBe('yen')
+    expect(r.chart!.points.some((p) => p.label === '2026-04')).toBe(true)
+  })
+
+  it('ranks sellers when asked "판매처 수익 Top"', () => {
+    const r = answerDataQueryRich('판매처 수익 Top 2', [snap()], 'ko')!
+    expect(r.text).toContain('Seller Name')
+    expect(r.text).toContain('Agoda') // Agoda revenue = 30000+12000 = 42000 across both rows
+    expect(r.chart!.kind).toBe('bar')
   })
 })

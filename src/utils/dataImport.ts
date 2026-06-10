@@ -38,7 +38,8 @@ export interface DatasetSnapshot {
   fileName: string
   rowCount: number
   mapping: ColumnMapping
-  groups: GroupRow[]
+  groups: GroupRow[] // aggregated by the primary dimension
+  byDimension: Record<string, GroupRow[]> // aggregated by EACH dimension (hotel/seller/vendor/country…)
   totals: Record<string, number>
 }
 
@@ -193,6 +194,25 @@ export function aggregate(rows: Record<string, unknown>[], mapping: ColumnMappin
   })
 }
 
+/** Aggregate rows by a single dimension column (for multi-dimension analysis). */
+export function aggregateBy(rows: Record<string, unknown>[], dimColumn: string, metrics: MetricMap[]): GroupRow[] {
+  const map = new Map<string, GroupRow>()
+  for (const r of rows) {
+    const key = String(r[dimColumn] ?? '').trim() || '(미지정)'
+    let g = map.get(key)
+    if (!g) {
+      g = { key, dims: { [dimColumn]: key }, metrics: Object.fromEntries(metrics.map((m) => [m.label, 0])), rows: 0 }
+      map.set(key, g)
+    }
+    for (const m of metrics) g.metrics[m.label] += toNum(r[m.header])
+    g.rows++
+  }
+  return [...map.values()].sort((a, b) => {
+    const k = metrics[0]?.label
+    return k ? (b.metrics[k] ?? 0) - (a.metrics[k] ?? 0) : a.key.localeCompare(b.key)
+  })
+}
+
 export function totalsOf(groups: GroupRow[], metrics: MetricMap[]): Record<string, number> {
   const t: Record<string, number> = {}
   for (const m of metrics) t[m.label] = groups.reduce((s, g) => s + (g.metrics[m.label] ?? 0), 0)
@@ -210,6 +230,10 @@ export function buildSnapshot(
   },
 ): DatasetSnapshot {
   const groups = aggregate(input.rows, input.mapping)
+  // aggregate by every available dimension (hotel / seller / vendor / country …)
+  const dims = [...new Set([input.mapping.dimension, ...input.mapping.extraDimensions])].filter(Boolean)
+  const byDimension: Record<string, GroupRow[]> = {}
+  for (const d of dims) byDimension[d] = d === input.mapping.dimension ? groups : aggregateBy(input.rows, d, input.mapping.metrics)
   return {
     id: `ds-${input.profile}-${input.periodLabel}-${input.fileName}`.replace(/[^a-zA-Z0-9가-힣-]+/g, '_'),
     profile: input.profile,
@@ -219,6 +243,7 @@ export function buildSnapshot(
     rowCount: input.rows.length,
     mapping: input.mapping,
     groups,
+    byDimension,
     totals: totalsOf(groups, input.mapping.metrics),
   }
 }

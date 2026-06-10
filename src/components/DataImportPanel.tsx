@@ -201,8 +201,8 @@ export function DataImportPanel() {
     <Card className="mb-5">
       <div className="flex items-center justify-between">
         <CardHeader
-          title={L('데이터 가져오기 (RawData)', 'Import data (RawData)')}
-          subtitle={L('어드민 통계 .xlsx를 올리면 컬럼을 매핑해 관계·지표로 정리합니다', 'Upload the admin .xlsx — map columns once to turn rows into metrics')}
+          title={L('로우데이터 (RawData)', 'RawData')}
+          subtitle={L('주간 .xlsx를 폴더에서 자동/수동으로 가져옵니다. 추후 오마이호텔 DB와 연결 예정.', 'Auto/manual import of the weekly .xlsx. Later connected to the Ohmyhotel database.')}
           icon={<UploadIcon />}
         />
         {!openImport && (

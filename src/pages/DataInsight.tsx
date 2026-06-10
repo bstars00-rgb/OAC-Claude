@@ -41,6 +41,9 @@ export function DataInsight() {
       {/* trends + Top N (real, from imported snapshots) */}
       <DatasetInsights />
 
+      {/* dimension explorer — break down by hotel / seller / channel / country */}
+      <DimensionExplorer L={L} />
+
       {/* all snapshots */}
       <div className="mb-2.5 flex items-center gap-2">
         <span className="text-sm font-semibold text-slate-700">{L('가져온 RawData', 'Imported RawData')}</span>
@@ -57,6 +60,53 @@ export function DataInsight() {
         <Button variant="secondary" size="sm" className="mt-3 !bg-white !text-brand-700" onClick={() => navigate('/assistant')}>{L('어시스턴트 열기', 'Open assistant')} →</Button>
       </Card>
     </div>
+  )
+}
+
+function DimensionExplorer({ L }: { L: (ko: string, en: string) => string }) {
+  const ds = useDatasets()
+  const snap = ds.snapshots[0]
+  const dims = snap?.byDimension ? Object.keys(snap.byDimension) : snap ? [snap.mapping.dimension] : []
+  const metrics = snap?.mapping.metrics ?? []
+  const [dim, setDim] = useState(dims[0] ?? '')
+  const [metricLabel, setMetricLabel] = useState(metrics[0]?.label ?? '')
+  if (!snap || !dims.length) return null
+
+  const activeDim = dims.includes(dim) ? dim : dims[0]
+  const activeMetric = metrics.find((m) => m.label === metricLabel)?.label ?? metrics[0]?.label ?? ''
+  const yen = activeMetric.includes('¥')
+  const groups = (snap.byDimension?.[activeDim] ?? snap.groups)
+  const top = [...groups].sort((a, b) => (b.metrics[activeMetric] ?? 0) - (a.metrics[activeMetric] ?? 0)).slice(0, 10)
+  const max = Math.max(...top.map((g) => g.metrics[activeMetric] ?? 0), 1)
+  const total = groups.reduce((s, g) => s + (g.metrics[activeMetric] ?? 0), 0)
+  const fmt = (n: number) => (yen ? '¥' : '') + Math.round(n).toLocaleString()
+
+  return (
+    <Card className="mb-5">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <CardHeader title={L('차원별 분석', 'Breakdown')} subtitle={`${snap.periodLabel} · ${snap.profile === 'booking' ? 'Booking' : 'Check Out'}`} />
+        <div className="flex flex-wrap gap-2">
+          <select value={activeDim} onChange={(e) => setDim(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs focus:border-brand-400 focus:outline-none">
+            {dims.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select value={activeMetric} onChange={(e) => setMetricLabel(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs focus:border-brand-400 focus:outline-none">
+            {metrics.map((m) => <option key={m.label} value={m.label}>{m.label}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="mb-2 text-xs text-slate-500">{L('합계', 'Total')}: <span className="font-bold text-slate-800">{fmt(total)}</span> · {groups.length} {activeDim}</div>
+      <div className="space-y-1.5">
+        {top.map((g) => (
+          <div key={g.key} className="flex items-center gap-2">
+            <span className="w-32 shrink-0 truncate text-[11px] font-medium text-slate-600" title={g.key}>{g.key}</span>
+            <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+              <div className="h-full rounded-full bg-gradient-to-r from-brand-600 to-violet-600" style={{ width: `${Math.max(2, ((g.metrics[activeMetric] ?? 0) / max) * 100)}%` }} />
+            </div>
+            <span className="w-24 shrink-0 text-right text-[11px] font-semibold text-slate-700">{fmt(g.metrics[activeMetric] ?? 0)}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
   )
 }
 

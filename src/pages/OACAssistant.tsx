@@ -13,6 +13,7 @@ import { useCaptureStore } from '../data/captureStore'
 import { useDatasets } from '../data/datasetStore'
 import { useRelationships } from '../data/useRelationships'
 import { runAssistant } from '../utils/assistantEngine'
+import type { ChartData } from '../utils/datasetQuery'
 import { readAttachment, formatBytes, type Attachment } from '../utils/files'
 import type { StructuredCapture, Category } from '../utils/captureAI'
 import { formatDate, daysAgo } from '../utils/format'
@@ -26,6 +27,7 @@ interface ChatMsg {
   structured?: StructuredCapture
   email?: { to: string; subject: string; body: string }
   report?: { title: string; sections: { heading: string; body: string }[] }
+  chart?: ChartData
   entryId?: string
   entityId?: string
   showDetails?: boolean
@@ -128,7 +130,7 @@ export function OACAssistant() {
     setMessages((m) =>
       m.map((x) =>
         x.id === botId
-          ? { ...x, thinking: false, text: reply.text, structured: reply.structured, email: reply.email, report: reply.report, entryId, entityId: reply.entityId }
+          ? { ...x, thinking: false, text: reply.text, structured: reply.structured, email: reply.email, report: reply.report, chart: reply.chart, entryId, entityId: reply.entityId }
           : x,
       ),
     )
@@ -276,6 +278,7 @@ export function OACAssistant() {
               <>
                 <Markdown text={msg.text} />
                 {msg.structured && msg.entryId && <StructuredCard msg={msg} />}
+                {msg.chart && <ChartCard chart={msg.chart} />}
                 {msg.email && <EmailCard email={msg.email} />}
                 {msg.report && <ReportCard report={msg.report} />}
                 {msg.entityId && !msg.structured && (
@@ -560,6 +563,30 @@ function EmailCard({ email }: { email: { to: string; subject: string; body: stri
         <Button size="sm" variant="secondary" onClick={copy}>{L('복사', 'Copy')}</Button>
         {!sig && <span className="text-[10px] text-amber-600">{L('설정 → 이메일 서명에 이름·연락처를 등록하면 자동으로 들어갑니다', 'Add your signature in Settings → Email signature to auto-fill it')}</span>}
         {!msReady && <span className="text-[10px] text-slate-400">{L('Microsoft 365 연결 시 실제 전송', 'Connect Microsoft 365 to send for real')}</span>}
+      </div>
+    </div>
+  )
+}
+
+function ChartCard({ chart }: { chart: ChartData }) {
+  const fmt = (n: number) => (chart.unit === 'yen' ? '¥' : '') + Math.round(n).toLocaleString()
+  const max = Math.max(...chart.points.map((p) => p.value), 1)
+  return (
+    <div className="mt-3 rounded-xl border border-slate-200 p-3 dark:border-white/10">
+      <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18M7 14l3-4 4 3 5-7" /></svg>
+        {chart.title}
+      </div>
+      <div className="space-y-1.5">
+        {chart.points.map((p) => (
+          <div key={p.label} className="flex items-center gap-2">
+            <span className="w-28 shrink-0 truncate text-[11px] font-medium text-slate-600" title={p.label}>{p.label}</span>
+            <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+              <div className="h-full rounded-full bg-gradient-to-r from-brand-600 to-violet-600" style={{ width: `${Math.max(2, (p.value / max) * 100)}%` }} />
+            </div>
+            <span className="w-24 shrink-0 text-right text-[11px] font-semibold text-slate-700">{fmt(p.value)}</span>
+          </div>
+        ))}
       </div>
     </div>
   )
