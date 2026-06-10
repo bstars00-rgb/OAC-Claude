@@ -16,6 +16,7 @@ import {
   suggestMapping,
   derivePeriodLabel,
   buildSnapshot,
+  buildSnapshotsByPeriod,
   type ImportProfile,
   type ParsedSheet,
   type MetricMap,
@@ -136,14 +137,21 @@ export function DataImportPanel() {
     }
   }
 
-  // Auto: build + save a snapshot from a parsed sheet using the Ohmyhotel preset.
+  // Auto: build + save snapshots from a parsed sheet using the Ohmyhotel preset.
+  // Splits multi-period files (e.g. a multi-month Check Out export) into one
+  // snapshot per period.
   const autoSaveParsed = (p: ParsedSheet, name: string, prof: ImportProfile): string | null => {
     const sug = suggestMapping(p.headers, prof)
     if (sug.preset !== 'ohmyhotel' || !sug.metrics.length) return null // can't auto-map → needs manual
-    const rawPv = sug.periodColumn ? p.rows.find((r) => r[sug.periodColumn!])?.[sug.periodColumn!] : ''
-    const periodLabel = derivePeriodLabel(rawPv, prof) || (prof === 'checkout' ? TODAY.slice(0, 7) : TODAY)
-    ds.addSnapshot(buildSnapshot({ profile: prof, periodLabel, fileName: name, importedAt: TODAY, rows: p.rows, mapping: { dimension: sug.dimension, extraDimensions: sug.extraDimensions, metrics: sug.metrics } }))
-    return periodLabel
+    const mapping = { dimension: sug.dimension, extraDimensions: sug.extraDimensions, metrics: sug.metrics }
+    let snaps = buildSnapshotsByPeriod({ profile: prof, fileName: name, importedAt: TODAY, rows: p.rows, mapping, periodColumn: sug.periodColumn })
+    if (!snaps.length) {
+      const periodLabel = prof === 'checkout' ? TODAY.slice(0, 7) : TODAY
+      snaps = [buildSnapshot({ profile: prof, periodLabel, fileName: name, importedAt: TODAY, rows: p.rows, mapping })]
+    }
+    snaps.forEach((s) => ds.addSnapshot(s))
+    const labels = snaps.map((s) => s.periodLabel)
+    return labels.length > 3 ? `${labels.slice(-3).join(', ')} ${L(`외 ${labels.length - 3}`, `+${labels.length - 3}`)}` : labels.join(', ')
   }
   const autoOne = async (f: DriveFile, prof: ImportProfile): Promise<string | null> =>
     autoSaveParsed(await parseArrayBuffer(await downloadDriveItem(conn, f.id)), f.name, prof)

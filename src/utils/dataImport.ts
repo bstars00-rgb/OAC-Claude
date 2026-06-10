@@ -234,6 +234,34 @@ export function totalsOf(groups: GroupRow[], metrics: MetricMap[]): Record<strin
   return t
 }
 
+// Split a file into one snapshot PER period (Check Out month / Booking week),
+// using the period column. A multi-month Check Out export → many monthly
+// snapshots; a single-week Booking file → one weekly snapshot.
+export function buildSnapshotsByPeriod(input: {
+  profile: ImportProfile
+  fileName: string
+  importedAt: string
+  rows: Record<string, unknown>[]
+  mapping: ColumnMapping
+  periodColumn?: string
+  maxPeriods?: number
+}): DatasetSnapshot[] {
+  if (!input.periodColumn) return []
+  const byPeriod = new Map<string, Record<string, unknown>[]>()
+  for (const r of input.rows) {
+    const period = derivePeriodLabel(r[input.periodColumn], input.profile)
+    if (!period) continue
+    const arr = byPeriod.get(period)
+    if (arr) arr.push(r)
+    else byPeriod.set(period, [r])
+  }
+  const cap = input.maxPeriods ?? 24
+  const periods = [...byPeriod.keys()].sort().slice(-cap) // keep the most recent N periods
+  return periods.map((periodLabel) =>
+    buildSnapshot({ profile: input.profile, periodLabel, fileName: input.fileName, importedAt: input.importedAt, rows: byPeriod.get(periodLabel)!, mapping: input.mapping }),
+  )
+}
+
 export function buildSnapshot(
   input: {
     profile: ImportProfile

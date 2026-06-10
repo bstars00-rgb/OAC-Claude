@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as XLSX from 'xlsx'
-import { parseArrayBuffer, aggregate, toNum, inferNumericHeaders, buildSnapshot, suggestMapping, derivePeriodLabel } from './dataImport'
+import { parseArrayBuffer, aggregate, toNum, inferNumericHeaders, buildSnapshot, buildSnapshotsByPeriod, suggestMapping, derivePeriodLabel } from './dataImport'
 
 // Build a small RawData-like workbook in memory (no file system).
 function makeBook(): ArrayBuffer {
@@ -104,6 +104,22 @@ describe('dataImport', () => {
     expect(derivePeriodLabel('2026-06-08', 'booking')).toMatch(/^2026-W\d{2}$/) // full date → ISO week
     expect(derivePeriodLabel('23', 'booking')).toBe('W23') // bare week number
     expect(derivePeriodLabel('', 'checkout')).toBe('')
+  })
+
+  it('splits a multi-month Check Out file into one snapshot per month', () => {
+    const rows = [
+      { 'Hotel Name': 'A', 'Check Out Date': '2026-04-10', '판매액': '100', '수익': '10' },
+      { 'Hotel Name': 'B', 'Check Out Date': '2026-04-20', '판매액': '200', '수익': '20' },
+      { 'Hotel Name': 'A', 'Check Out Date': '2026-05-05', '판매액': '300', '수익': '30' },
+    ]
+    const snaps = buildSnapshotsByPeriod({
+      profile: 'checkout', fileName: 'co.xlsx', importedAt: '2026-06-10', rows,
+      mapping: { dimension: 'Hotel Name', extraDimensions: [], metrics: [{ header: '판매액', label: '판매액(¥)' }, { header: '수익', label: '수익(¥)' }] },
+      periodColumn: 'Check Out Date',
+    })
+    expect(snaps.map((s) => s.periodLabel)).toEqual(['2026-04', '2026-05'])
+    expect(snaps[0].totals['판매액(¥)']).toBe(300) // April: 100 + 200
+    expect(snaps[1].totals['판매액(¥)']).toBe(300) // May: 300
   })
 
   it('buildSnapshot computes totals and a stable id', async () => {

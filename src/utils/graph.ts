@@ -343,8 +343,10 @@ export async function findRawDataFiles(conn: MsConnection): Promise<{ booking?: 
       size: i.size ?? 0,
       path: i.parentReference?.path ?? '',
     }))
+  // Classify by the containing folder (parentReference.path), not the filename —
+  // both files are often named "Hotel Booking List…".
   const latest = (re: RegExp): DriveFile | undefined => {
-    const m = files.filter((f) => re.test(f.path) || re.test(f.name)).sort((a, b) => b.lastModified.localeCompare(a.lastModified))[0]
+    const m = files.filter((f) => (f.path ? re.test(f.path) : re.test(f.name))).sort((a, b) => b.lastModified.localeCompare(a.lastModified))[0]
     return m ? { id: m.id, name: m.name, lastModified: m.lastModified, size: m.size } : undefined
   }
   return { booking: latest(/booking/i), checkout: latest(/check\s*-?\s*out|checkout/i) }

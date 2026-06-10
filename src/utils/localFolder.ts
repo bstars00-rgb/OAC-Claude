@@ -108,7 +108,12 @@ export async function findRawDataFiles(): Promise<{ booking?: File; checkout?: F
       /* skip unreadable */
     }
   }
+  // Classify by the containing FOLDER (not the filename) — both files are often
+  // named "Hotel Booking List…", so the folder disambiguates booking vs check-out.
+  const dirOf = (p: string) => { const i = p.lastIndexOf('/'); return i >= 0 ? p.slice(0, i) : '' }
   const latest = (re: RegExp): File | undefined =>
-    files.filter((x) => re.test(x.path) || re.test(x.file.name)).sort((a, b) => b.file.lastModified - a.file.lastModified)[0]?.file
+    files
+      .filter((x) => { const d = dirOf(x.path); return d ? re.test(d) : re.test(x.file.name) })
+      .sort((a, b) => b.file.lastModified - a.file.lastModified)[0]?.file
   return { booking: latest(/booking/i), checkout: latest(/check\s*-?\s*out|checkout/i) }
 }
