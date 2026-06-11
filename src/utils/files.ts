@@ -48,13 +48,29 @@ export const classify = (file: File): AttachmentKind => {
 }
 
 export const readAttachment = async (file: File): Promise<Attachment> => {
-  const kind = classify(file)
+  const lower = file.name.toLowerCase()
+  const isSheet = lower.endsWith('.xlsx') || lower.endsWith('.xls')
+  const kind = isSheet ? 'text' : classify(file)
   const base: Attachment = {
     id: newId(),
     name: file.name,
     size: file.size,
     kind,
     mediaType: file.type || 'application/octet-stream',
+  }
+  // Excel → parse to a text table so the assistant can actually read it.
+  if (isSheet) {
+    try {
+      const { parseFile } = await import('./dataImport')
+      const p = await parseFile(file)
+      const head = p.headers
+      const rows = p.rows.slice(0, 40)
+      const table = [head.join(' | '), ...rows.map((r) => head.map((h) => String(r[h] ?? '')).join(' | '))].join('\n')
+      base.text = `[Excel "${file.name}"] ${p.rows.length} rows · columns: ${head.join(', ')}\n\n${table}`.slice(0, 20000)
+    } catch {
+      base.kind = 'other'
+    }
+    return base
   }
   if (kind === 'image') {
     base.mediaType = normalizeImageType(file.type)

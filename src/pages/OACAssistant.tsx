@@ -535,10 +535,27 @@ function Composer({ onSubmit, t, lang }: { onSubmit: (text: string, atts: Attach
     }
   }
 
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setDragOver(false)
-    if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files)
-  }
+  // Accept file drops ANYWHERE on the page (not just the small composer) and stop
+  // the browser from opening a file dropped outside the drop zone.
+  useEffect(() => {
+    let depth = 0
+    const onOver = (e: DragEvent) => { if ([...(e.dataTransfer?.types ?? [])].includes('Files')) e.preventDefault() }
+    const onEnter = (e: DragEvent) => { if ([...(e.dataTransfer?.types ?? [])].includes('Files')) { depth++; setDragOver(true) } }
+    const onLeave = () => { depth = Math.max(0, depth - 1); if (depth === 0) setDragOver(false) }
+    const onWinDrop = (e: DragEvent) => { e.preventDefault(); depth = 0; setDragOver(false); if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files) }
+    window.addEventListener('dragover', onOver)
+    window.addEventListener('dragenter', onEnter)
+    window.addEventListener('dragleave', onLeave)
+    window.addEventListener('drop', onWinDrop)
+    return () => {
+      window.removeEventListener('dragover', onOver)
+      window.removeEventListener('dragenter', onEnter)
+      window.removeEventListener('dragleave', onLeave)
+      window.removeEventListener('drop', onWinDrop)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const onPaste = (e: React.ClipboardEvent) => {
     const files = [...(e.clipboardData?.items ?? [])].filter((i) => i.kind === 'file').map((i) => i.getAsFile()).filter(Boolean) as File[]
     if (files.length) { e.preventDefault(); addFiles(files) }
@@ -552,15 +569,12 @@ function Composer({ onSubmit, t, lang }: { onSubmit: (text: string, atts: Attach
   }
 
   return (
-    <div
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-      onDragLeave={(e) => { e.preventDefault(); setDragOver(false) }}
-      onDrop={onDrop}
-      className={`relative mt-3 rounded-2xl border bg-white p-2 shadow-sm transition ${dragOver ? 'border-brand-400 ring-2 ring-brand-200' : 'border-slate-200'}`}
-    >
+    <div className={`relative mt-3 rounded-2xl border bg-white p-2 shadow-sm transition ${dragOver ? 'border-brand-400 ring-2 ring-brand-200' : 'border-slate-200'}`}>
       {dragOver && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-brand-50/80 text-sm font-semibold text-brand-700">
-          {lang === 'ko' ? '여기에 파일을 놓으세요 (이미지·PDF·엑셀·텍스트)' : 'Drop files here (image · PDF · Excel · text)'}
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-brand-900/30">
+          <div className="rounded-2xl border-2 border-dashed border-brand-400 bg-white px-8 py-6 text-base font-bold text-brand-700 shadow-xl">
+            {lang === 'ko' ? '📎 파일을 놓으세요 (이미지·PDF·엑셀·텍스트)' : '📎 Drop files anywhere (image · PDF · Excel · text)'}
+          </div>
         </div>
       )}
       {atts.length > 0 && (
