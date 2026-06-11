@@ -11,9 +11,11 @@ import { MetricCard } from '../components/MetricCard'
 import { Donut } from '../components/DemoChart'
 import { useToast } from '../components/Toast'
 import { useT } from '../i18n'
-import { useCaptureStore } from '../data/captureStore'
+import { useCaptureStore, type CaptureEntry } from '../data/captureStore'
 import { useRelationships } from '../data/useRelationships'
 import { useDatasets } from '../data/datasetStore'
+import { useAiSettings } from '../utils/aiSettings'
+import { callText } from '../utils/aiClient'
 import { datasetMetricsFor } from '../data/datasetRelationships'
 import { healthBand, type Entity } from '../data/entities'
 import { formatDate, daysAgo, initials } from '../utils/format'
@@ -70,6 +72,79 @@ function RelationshipEmpty() {
 }
 
 type Tab = 'overview' | 'timeline' | 'communication' | 'tasks' | 'data' | 'ai'
+
+// B-6: a synthesized briefing from the real captured history — last contact,
+// open work, risks, recommended next move. Deterministic by default; AI on demand.
+function deterministicBriefing(entity: Entity, overlay: CaptureEntry[], nextBestAction: string, lang: 'en' | 'ko'): string {
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
+  const openTodos = overlay.flatMap((e) => e.todos.filter((t) => !t.done))
+  const risks = overlay.flatMap((e) => e.risks)
+  const last = overlay[0]
+  const days = last ? daysAgo(last.date) : ''
+  const parts: string[] = []
+  parts.push(L(
+    `${entity.name}와(과)의 최근 접점은 ${formatDate(last.date)}(${days}) "${last.timeline.title}"였고, 지금까지 ${overlay.length}건의 기록이 있습니다.`,
+    `Last touch with ${entity.name} was ${formatDate(last.date)} (${days}) — "${last.timeline.title}". ${overlay.length} record(s) so far.`,
+  ))
+  if (openTodos.length) {
+    parts.push(L(
+      `미완료 할 일 ${openTodos.length}건${openTodos[0] ? ` (예: ${openTodos[0].text})` : ''}.`,
+      `${openTodos.length} open to-do(s)${openTodos[0] ? ` (e.g. ${openTodos[0].text})` : ''}.`,
+    ))
+  }
+  if (risks.length) {
+    parts.push(L(`주의 리스크 ${risks.length}건: ${risks[0]}.`, `${risks.length} risk(s) flagged: ${risks[0]}.`))
+  }
+  parts.push(L(`권장 다음 액션: ${nextBestAction}`, `Recommended next: ${nextBestAction}`))
+  return parts.join(' ')
+}
+
+function AutoBriefing({ entity, overlay, nextBestAction, lang }: { entity: Entity; overlay: CaptureEntry[]; nextBestAction: string; lang: 'en' | 'ko' }) {
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
+  const ai = useAiSettings()
+  const [aiText, setAiText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const base = deterministicBriefing(entity, overlay, nextBestAction, lang)
+
+  const askAi = async () => {
+    if (busy || !ai.isLive) return
+    setBusy(true)
+    try {
+      const history = overlay.slice(0, 10).map((e) => `- ${e.date} [${e.kind ?? 'note'}] ${e.timeline.title}: ${e.summary}${e.detail ? ` — ${e.detail.slice(0, 200)}` : ''}`).join('\n')
+      const openTodos = overlay.flatMap((e) => e.todos.filter((t) => !t.done)).map((t) => `- ${t.text} (${t.due})`).join('\n')
+      const risks = overlay.flatMap((e) => e.risks).map((r) => `- ${r}`).join('\n')
+      const system = L(
+        '당신은 오마이호텔 B2B 관계 매니저입니다. 주어진 실제 히스토리만 근거로, 이 관계의 현황 브리핑을 4~5문장으로 작성하세요: 지금 상태, 진행 중 이슈/할 일, 리스크, 그리고 다음에 해야 할 가장 중요한 1가지. 구체적 날짜/내용을 인용하고 데이터에 없는 건 추측하지 마세요. 한국어로.',
+        'You are an Ohmyhotel B2B relationship manager. Using ONLY the real history below, write a 4-5 sentence status briefing: where things stand, in-flight issues/to-dos, risks, and the single most important next move. Cite concrete dates/items; never invent anything not present.',
+      )
+      const user = `Relationship: ${entity.name} [${entity.detectedContext}]\nHealth: ${entity.relationshipHealthScore}\n\nHistory:\n${history}\n\nOpen to-dos:\n${openTodos || '(none)'}\n\nRisks:\n${risks || '(none)'}`
+      const text = await callText({ provider: ai.provider, apiKey: ai.activeKey, model: ai.model, system, user })
+      setAiText(text || base)
+    } catch {
+      setAiText(L('AI 브리핑 생성에 실패했습니다.', 'Could not generate an AI briefing.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50/70 via-white to-white p-4 dark:bg-none">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-brand-600 to-violet-600 text-white"><BoltIcon /></span>
+          <span className="text-xs font-bold uppercase tracking-wide text-brand-700">{L('자동 브리핑', 'Auto briefing')}</span>
+        </div>
+        {ai.isLive && (
+          <button onClick={askAi} disabled={busy} className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 disabled:opacity-50">
+            {busy ? L('AI 분석 중…', 'Analyzing…') : aiText ? L('다시 생성', 'Regenerate') : L('✨ AI 브리핑', '✨ AI briefing')}
+          </button>
+        )}
+      </div>
+      <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-200">{aiText || base}</p>
+      {aiText && <span className="mt-1.5 block text-[9px] uppercase tracking-wide text-brand-400">{L('AI 생성', 'AI generated')} · {ai.model.replace('claude-', '')}</span>}
+    </div>
+  )
+}
 
 function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { entity: Entity; list: Entity[]; recents: RecentSearches; onPick: (e: PickTarget) => void; navigateTo: (to: string) => void }) {
   const { demoAction } = useToast()
@@ -162,6 +237,9 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
           </div>
         </div>
       </Card>
+
+      {/* B-6: auto briefing — synthesized from the real captured history */}
+      {overlay.length > 0 && <AutoBriefing entity={entity} overlay={overlay} nextBestAction={nextBestAction} lang={lang} />}
 
       {/* Main AI summary */}
       <InsightBox label={t('l.relSummary')} title={`${entity.name} — ${t('l.whatsHappening')}`} variant={entity.relationshipHealthScore < 60 ? 'critical' : 'ai'}>
