@@ -8,41 +8,21 @@ import { ContextBadge } from '../components/ContextBadge'
 import { InsightBox } from '../components/InsightBox'
 import { Timeline, type TimelineEntry } from '../components/Timeline'
 import { MetricCard } from '../components/MetricCard'
-import { Sparkline, GaugeBar, Donut } from '../components/DemoChart'
+import { Donut } from '../components/DemoChart'
 import { useToast } from '../components/Toast'
 import { useT } from '../i18n'
 import { useCaptureStore } from '../data/captureStore'
 import { useRelationships } from '../data/useRelationships'
+import { useDatasets } from '../data/datasetStore'
+import { datasetMetricsFor } from '../data/datasetRelationships'
 import { healthBand, type Entity } from '../data/entities'
-import { metricsByEntity } from '../data/salesData'
-import { tasksByEntity } from '../data/tasks'
-import { emailsByEntity, draftSeedForEntity } from '../data/emails'
-import { teamsByEntity } from '../data/teamsMessages'
-import { meetingsByEntity } from '../data/meetings'
-import { insightByEntity } from '../data/insights'
-import { reportByEntityAndType } from '../data/reports'
-import { formatUsd, formatNumber, formatPct, formatDate, daysAgo, initials } from '../utils/format'
+import { formatDate, daysAgo, initials } from '../utils/format'
 
 const bandTone: Record<string, BadgeTone> = {
   Healthy: 'green',
   Stable: 'sky',
   Watch: 'amber',
   'At Risk': 'red',
-}
-
-const statusTone: Record<string, BadgeTone> = {
-  Confirmed: 'green',
-  Partial: 'amber',
-  Pending: 'slate',
-  Ready: 'green',
-  'Near Ready': 'sky',
-  'In Progress': 'amber',
-  Early: 'slate',
-  'Not Started': 'slate',
-  Low: 'green',
-  Medium: 'amber',
-  High: 'red',
-  Moderate: 'sky',
 }
 
 export function Relationship360() {
@@ -104,18 +84,17 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity.id])
   const band = healthBand(entity.relationshipHealthScore)
-  const tasks = tasksByEntity(entity.id)
-  const emails = emailsByEntity(entity.id)
-  const teams = teamsByEntity(entity.id)
-  const meetings = meetingsByEntity(entity.id)
-  const metrics = metricsByEntity(entity.id)
-  const insight = insightByEntity(entity.id)
+  const datasets = useDatasets()
+  const dataRef = datasetMetricsFor(datasets.snapshots, entity.name) // imported ¥ metrics for this hotel/seller, if any
 
-  // Overlay: live updates the OAC Assistant made to this relationship.
+  // Overlay: everything captured/synced for this relationship (assistant notes,
+  // synced Outlook mail (in/sent), Teams, reviews, AI updates). All REAL data.
   const overlay = store.entriesByEntity(entity.id) // newest first
   const overlayNext = overlay.find((e) => e.nextBestAction)?.nextBestAction
   const nextBestAction = overlayNext ?? entity.nextBestAction
   const latestUpdate = overlay[0]
+  const commEntries = overlay.filter((e) => e.kind === 'email' || e.kind === 'meeting')
+  const reviewEntries = overlay.filter((e) => e.kind === 'review' || e.kind === 'update')
 
   const tabs: { id: Tab; tKey: string }[] = [
     { id: 'overview', tKey: 'tab.overview' },
@@ -222,16 +201,16 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
         ))}
       </div>
 
-      {tab === 'overview' && <OverviewTab entity={entity} demoAction={demoAction} navigateTo={navigateTo} />}
-      {tab === 'timeline' && <TimelineTab entity={entity} />}
-      {tab === 'communication' && <CommunicationTab emails={emails} teams={teams} meetings={meetings} demoAction={demoAction} />}
-      {tab === 'tasks' && <TasksTab tasks={tasks} demoAction={demoAction} />}
-      {tab === 'data' && <DataTab entity={entity} navigateTo={navigateTo} demoAction={demoAction} />}
-      {tab === 'ai' && insight && <AITab entity={entity} navigateTo={navigateTo} demoAction={demoAction} />}
+      {tab === 'overview' && <OverviewTab />}
+      {tab === 'timeline' && <TimelineTab />}
+      {tab === 'communication' && <CommunicationTab />}
+      {tab === 'tasks' && <TasksTab />}
+      {tab === 'data' && <DataTab />}
+      {tab === 'ai' && <AITab />}
     </div>
   )
 
-  function OverviewTab({ entity, demoAction, navigateTo }: { entity: Entity; demoAction: (l: string) => void; navigateTo: (to: string) => void }) {
+  function OverviewTab() {
     return (
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
@@ -240,44 +219,50 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
             <div className="space-y-3">
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('l.currentFocus')}</div>
-                <p className="text-sm font-medium text-slate-700">{entity.currentFocus}</p>
+                <p className="text-sm font-medium text-slate-700">{entity.currentFocus || L('아직 정리된 포커스가 없습니다.', 'No focus captured yet.')}</p>
               </div>
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('l.opportunity')}</div>
-                <p className="text-sm text-slate-600">{entity.opportunity}</p>
-              </div>
+              {entity.opportunity && (
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('l.opportunity')}</div>
+                  <p className="text-sm text-slate-600">{entity.opportunity}</p>
+                </div>
+              )}
             </div>
           </Card>
           <Card>
             <CardHeader title={t('l.recommendedAction')} subtitle={t('l.oacStrategy')} />
             <p className="text-sm leading-relaxed text-slate-700">{entity.recommendedAction}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" variant="demo" onClick={() => demoAction('Create Task Demo')}>Create Task Demo</Button>
+              <Button size="sm" onClick={() => navigateTo(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${entity.name} 진행상황 어때?` : `What's the status on ${entity.name}?`)}`)}>{t('rel.askAssistant')}</Button>
               <Button size="sm" variant="secondary" onClick={() => navigateTo(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${entity.name}에 보낼 메일 작성해줘` : `Draft an email to ${entity.name}`)}`)}>{t('l.draftTheEmail')}</Button>
             </div>
           </Card>
         </div>
         <div className="space-y-5">
-          <Card>
-            <CardHeader title={t('l.openIssues')} />
-            <ul className="space-y-2">
-              {entity.openIssues.map((i, idx) => (
-                <li key={idx} className="flex gap-2 text-sm text-slate-600"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />{i}</li>
-              ))}
-            </ul>
-          </Card>
-          <Card>
-            <CardHeader title={t('l.risks')} />
-            <ul className="space-y-2">
-              {entity.risks.map((r, idx) => (
-                <li key={idx} className="flex gap-2 text-sm text-slate-600"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />{r}</li>
-              ))}
-            </ul>
-          </Card>
+          {entity.openIssues.length > 0 && (
+            <Card>
+              <CardHeader title={t('l.openIssues')} />
+              <ul className="space-y-2">
+                {entity.openIssues.map((i, idx) => (
+                  <li key={idx} className="flex gap-2 text-sm text-slate-600"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />{i}</li>
+                ))}
+              </ul>
+            </Card>
+          )}
+          {entity.risks.length > 0 && (
+            <Card>
+              <CardHeader title={t('l.risks')} />
+              <ul className="space-y-2">
+                {entity.risks.map((r, idx) => (
+                  <li key={idx} className="flex gap-2 text-sm text-slate-600"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />{r}</li>
+                ))}
+              </ul>
+            </Card>
+          )}
           <Card>
             <CardHeader title={t('l.relatedSources')} />
             <div className="flex flex-wrap gap-1.5">
-              {entity.relatedSources.map((s) => <Badge key={s} tone="slate" dot>{s} Connected Demo</Badge>)}
+              {entity.relatedSources.map((s) => <Badge key={s} tone="slate" dot>{s}</Badge>)}
             </div>
           </Card>
         </div>
@@ -285,241 +270,142 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
     )
   }
 
-  function TimelineTab({ entity }: { entity: Entity }) {
-    const entries: TimelineEntry[] = []
-    for (const m of meetingsByEntity(entity.id)) entries.push({ date: m.date, source: 'Meeting Recorder', title: m.title, detail: m.aiSummary })
-    for (const e of emailsByEntity(entity.id)) entries.push({ date: e.date, source: 'Outlook', title: e.subject, detail: e.summary })
-    for (const t of teamsByEntity(entity.id)) entries.push({ date: t.date, source: 'Teams', title: `${t.channel} · ${t.sender}`, detail: t.messageSummary })
-    for (const t of tasksByEntity(entity.id)) entries.push({ date: t.dueDate, source: 'Internal DB', title: `Task: ${t.title}`, detail: t.aiReason })
-    for (const u of overlay) entries.push({ date: u.date, source: 'OAC Assistant', title: u.timeline.title, detail: u.detail ? `${u.summary}\n${u.detail.split('\n')[0]}` : u.summary })
+  function TimelineTab() {
+    const entries: TimelineEntry[] = overlay.map((u) => ({
+      date: u.date,
+      source: u.detectedContext || 'OAC',
+      title: u.timeline.title,
+      detail: u.detail ? `${u.summary}\n${u.detail.split('\n')[0]}` : u.summary,
+    }))
     entries.sort((a, b) => b.date.localeCompare(a.date))
+    if (!entries.length) return <Card><p className="py-6 text-center text-sm text-slate-400">{L('아직 활동 기록이 없습니다. OAC 어시스턴트에 입력하거나 Microsoft 365를 동기화하세요.', 'No activity yet. Add notes in the assistant or sync Microsoft 365.')}</p></Card>
     return (
       <Card>
-        <CardHeader title="Activity Timeline" subtitle="Unified across meetings, emails, Teams, tasks & reports" />
+        <CardHeader title={L('활동 타임라인', 'Activity Timeline')} subtitle={L('메일·Teams·메모·검수·AI 업데이트 통합', 'Mail · Teams · notes · reviews · AI updates')} />
         <Timeline entries={entries} />
       </Card>
     )
   }
 
-  function CommunicationTab({ emails, teams, meetings, demoAction }: any) {
-    return (
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <Card>
-          <CardHeader title="Outlook" subtitle={`${emails.length} · Connected Demo`} />
-          {emails.length ? emails.map((e: any) => (
-            <div key={e.id} className="mb-2.5 rounded-lg border border-slate-100 p-3 last:mb-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-sm font-medium text-slate-700">{e.subject}</span>
-                {e.followUpNeeded && <Badge tone="brand">Follow-up</Badge>}
-              </div>
-              <div className="mt-0.5 text-[11px] text-slate-400">{e.from} · {formatDate(e.date)}</div>
-              <p className="mt-1.5 text-xs text-slate-500">{e.summary}</p>
-              <p className="mt-1 text-[11px] text-brand-700"><span className="font-semibold">AI intent:</span> {e.aiIntent}</p>
-            </div>
-          )) : <p className="text-sm text-slate-400">No emails.</p>}
-        </Card>
-        <Card>
-          <CardHeader title="Teams" subtitle={`${teams.length} · Connected Demo`} />
-          {teams.length ? teams.map((t: any) => (
-            <div key={t.id} className="mb-3 last:mb-0">
-              <div className="text-xs text-slate-400"><span className="font-semibold text-slate-600">{t.sender}</span> in {t.channel} · {formatDate(t.date)}</div>
-              <div className="mt-1 rounded-lg rounded-tl-sm bg-slate-50 p-2.5 text-sm text-slate-700">{t.messageSummary}</div>
-              <p className="mt-1 text-[11px] text-amber-700"><span className="font-semibold">AI issue:</span> {t.aiExtractedIssue}</p>
-            </div>
-          )) : <p className="text-sm text-slate-400">No Teams messages.</p>}
-          <Button size="sm" variant="demo" className="mt-3 w-full" onClick={() => demoAction('Post to Teams Demo')}>Post to Teams Demo</Button>
-        </Card>
-        <Card>
-          <CardHeader title="Meetings" subtitle={`${meetings.length} · Recorder Demo`} />
-          {meetings.length ? meetings.map((m: any) => (
-            <div key={m.id} className="mb-2.5 rounded-lg border border-slate-100 p-3 last:mb-0">
-              <div className="text-sm font-medium text-slate-700">{m.title}</div>
-              <div className="mt-0.5 text-[11px] text-slate-400">{formatDate(m.date)} · {m.followUps.length} follow-ups</div>
-              <p className="mt-1.5 line-clamp-3 text-xs text-slate-500">{m.aiSummary}</p>
-            </div>
-          )) : <p className="text-sm text-slate-400">No meetings.</p>}
-        </Card>
-      </div>
-    )
-  }
-
-  function TasksTab({ tasks, demoAction }: any) {
-    return (
-      <div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {tasks.map((t: any) => (
-            <Card key={t.id}>
-              <div className="flex items-start justify-between gap-2">
-                <span className="text-sm font-semibold text-slate-800">{t.title}</span>
-                <Badge tone={t.priority === 'High' ? 'red' : t.priority === 'Medium' ? 'amber' : 'slate'}>{t.priority}</Badge>
-              </div>
-              <div className="mt-1 text-[11px] text-slate-400">{t.owner} · due {formatDate(t.dueDate)} · {t.status} · via {t.source}</div>
-              <p className="mt-2 rounded-lg bg-brand-50/60 p-2 text-xs italic text-slate-600">AI reason: {t.aiReason}</p>
-            </Card>
-          ))}
-        </div>
-
-        {/* To-dos created by the OAC Assistant */}
-        {overlay.some((u) => u.todos.length) && (
-          <div className="mt-4">
-            <div className="mb-2 text-xs font-bold uppercase tracking-wide text-violet-700">{t('rel.fromAssistant')}</div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {overlay.flatMap((u) => u.todos.map((td) => ({ ...td, entryId: u.id, date: u.date }))).map((td) => (
-                <Card key={td.id}>
-                  <button onClick={() => store.toggleTodo(td.entryId, td.id)} className="flex w-full items-start gap-2 text-left">
-                    <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${td.done ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300'}`}>{td.done && <span className="text-[9px] text-white">✓</span>}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className={`text-sm font-medium ${td.done ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{td.text}</span>
-                      <span className="mt-1 flex items-center gap-2 text-[11px] text-slate-400"><Badge tone={td.priority === 'High' ? 'red' : td.priority === 'Medium' ? 'amber' : 'slate'}>{td.priority}</Badge> due {formatDate(td.due)}</span>
-                    </span>
-                  </button>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <Button variant="demo" size="sm" className="mt-4" onClick={() => demoAction('Create Task Demo')}>Create Task Demo</Button>
-      </div>
-    )
-  }
-
-  function DataTab({ entity, navigateTo, demoAction }: { entity: Entity; navigateTo: (to: string) => void; demoAction: (l: string) => void }) {
-    const m = metricsByEntity(entity.id)
-    if (!m) return <Card><p className="text-sm text-slate-400">No data connected.</p></Card>
-
-    if (m.kind === 'booking') {
+  function CommunicationTab() {
+    const mails = commEntries.filter((e) => e.kind === 'email')
+    const msgs = commEntries.filter((e) => e.kind === 'meeting')
+    if (!commEntries.length) {
       return (
-        <div className="space-y-5">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <MetricCard label="Bookings / mo" value={formatNumber(m.bookings)} />
-            <MetricCard label="TTV" value={formatUsd(m.ttv)} />
-            <MetricCard label="Net Revenue" value={formatUsd(m.netRevenue)} />
-            <MetricCard label="Avg Booking Value" value={`$${m.averageBookingValue}`} />
-            <MetricCard label="Cancellation Rate" value={formatPct(m.cancellationRate)} deltaTone={m.cancellationRate > 10 ? 'down' : 'neutral'} delta={m.cancellationRate > 10 ? 'High' : 'OK'} />
-            <MetricCard label="Failure Rate" value={formatPct(m.failureRate)} deltaTone={m.failureRate > 5 ? 'down' : 'up'} delta={m.failureRate > 5 ? 'Elevated' : 'Healthy'} />
-            <MetricCard label="Top Destination" value={m.topDestinations[0]?.name ?? '—'} />
-            <MetricCard label="Direct Contract" value={formatPct(m.directContractRatio)} />
-          </div>
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
-              <CardHeader title="6-Month Booking Trend" subtitle="Excel Connected Demo" />
-              <div className="flex justify-center py-4"><Sparkline data={m.monthlyTrend.map((p) => p.bookings)} width={520} height={120} tone={m.failureRate > 5 ? '#e11d48' : '#1f48f0'} /></div>
-            </Card>
-            <Card>
-              <CardHeader title="Direct vs Third-Party" />
-              <div className="flex items-center justify-around py-2">
-                <div className="text-center"><Donut value={m.directContractRatio} label={`${m.directContractRatio}%`} /><div className="mt-1 text-[11px] text-slate-500">Direct</div></div>
-                <div className="text-center"><Donut value={m.thirdPartyInventoryRatio} label={`${m.thirdPartyInventoryRatio}%`} tone="#7c3aed" /><div className="mt-1 text-[11px] text-slate-500">Third-party</div></div>
-              </div>
-            </Card>
-          </div>
-          <InsightBox label="OAC reads the data" title="What does the data mean?">{m.aiComment}</InsightBox>
-          <div className="flex gap-2">
-            <Button variant="demo" size="sm" onClick={() => demoAction('Export Excel Demo')}>Export Excel Demo</Button>
-            <Button variant="secondary" size="sm" onClick={() => navigateTo(`/data?entity=${entity.id}`)}>Open full Data Insight</Button>
-          </div>
-        </div>
+        <Card className="flex flex-col items-center py-10 text-center">
+          <p className="text-sm text-slate-500">{L('동기화된 메일/메시지가 없습니다.', 'No synced mail or messages.')}</p>
+          <Button size="sm" className="mt-3" onClick={() => navigateTo('/settings')}>{L('설정 → Microsoft 365 동기화', 'Settings → Sync Microsoft 365')} →</Button>
+        </Card>
       )
     }
-
-    // operational
+    const Col = ({ title, items, empty }: { title: string; items: typeof mails; empty: string }) => (
+      <Card>
+        <CardHeader title={title} subtitle={`${items.length}`} />
+        {items.length ? items.slice(0, 12).map((e) => (
+          <div key={e.id} className="mb-2.5 rounded-lg border border-slate-100 p-3 last:mb-0 dark:border-white/10">
+            <div className="truncate text-sm font-medium text-slate-700">{e.timeline.title}</div>
+            <div className="mt-0.5 text-[11px] text-slate-400">{e.detectedContext} · {formatDate(e.date)}</div>
+            <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-xs text-slate-500">{e.detail || e.summary}</p>
+          </div>
+        )) : <p className="text-sm text-slate-400">{empty}</p>}
+      </Card>
+    )
     return (
-      <div className="space-y-5">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-          <MetricCard label="Pending Confirmations" value={m.pendingConfirmationCount} />
-          <MetricCard label="Open Issues" value={entity.openIssues.length} />
-          <MetricCard label="Risk Level" value={m.riskLevel} deltaTone={m.riskLevel === 'High' ? 'down' : m.riskLevel === 'Low' ? 'up' : 'neutral'} delta={m.communicationActivity + ' activity'} />
-        </div>
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <Card>
-            <CardHeader title="Operational Readiness" subtitle="Internal DB Connected Demo" />
-            <div className="space-y-4">
-              <div>
-                <div className="mb-1 flex justify-between text-xs"><span className="text-slate-500">Product setup progress</span><span className="font-semibold text-slate-700">{m.productSetupProgress}%</span></div>
-                <GaugeBar value={m.productSetupProgress} />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <StatusChip label="Contract readiness" value={m.contractReadiness} />
-                <StatusChip label="Rate status" value={m.rateStatus} />
-                <StatusChip label="Policy confirmation" value={m.policyConfirmationStatus} />
-                <StatusChip label="Communication" value={m.communicationActivity} />
-                <StatusChip label="Risk level" value={m.riskLevel} />
-              </div>
-            </div>
-          </Card>
-          <InsightBox label="OAC reads the operation" title="Operational status">{m.aiComment}</InsightBox>
-        </div>
-        <Button variant="demo" size="sm" onClick={() => demoAction('Export Excel Demo')}>Export Excel Demo</Button>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <Col title={L('메일 (Outlook)', 'Mail (Outlook)')} items={mails} empty={L('메일 없음', 'No mail')} />
+        <Col title={L('Teams / 미팅', 'Teams / Meetings')} items={msgs} empty={L('메시지 없음', 'No messages')} />
       </div>
     )
   }
 
-  function AITab({ entity, navigateTo, demoAction }: { entity: Entity; navigateTo: (to: string) => void; demoAction: (l: string) => void }) {
-    const insight = insightByEntity(entity.id)!
-    const seed = draftSeedForEntity(entity.id)
-    const ceo = reportByEntityAndType(entity.id, 'CEO Briefing') ?? reportByEntityAndType(entity.id, 'API Integration Review')
-    const internal = teamsByEntity(entity.id)[0]?.aiExtractedIssue
-    const external = emailsByEntity(entity.id)[0]?.aiIntent
+  function TasksTab() {
+    const todos = overlay.flatMap((u) => u.todos.map((td) => ({ ...td, entryId: u.id })))
+    if (!todos.length) return <Card><p className="py-6 text-center text-sm text-slate-400">{L('진행 중 할 일이 없습니다. 어시스턴트에 "다음주까지 법무 검토 필요" 처럼 입력하면 할 일로 잡힙니다.', 'No open to-dos. Tell the assistant a follow-up and it becomes a task.')}</p></Card>
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {todos.map((td) => (
+          <Card key={td.id}>
+            <button onClick={() => store.toggleTodo(td.entryId, td.id)} className="flex w-full items-start gap-2 text-left">
+              <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${td.done ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300'}`}>{td.done && <span className="text-[9px] text-white">✓</span>}</span>
+              <span className="min-w-0 flex-1">
+                <span className={`text-sm font-medium ${td.done ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{td.text}</span>
+                <span className="mt-1 flex items-center gap-2 text-[11px] text-slate-400"><Badge tone={td.priority === 'High' ? 'red' : td.priority === 'Medium' ? 'amber' : 'slate'}>{td.priority}</Badge> {td.due ? `${L('마감', 'due')} ${formatDate(td.due)}` : ''}</span>
+              </span>
+            </button>
+          </Card>
+        ))}
+      </div>
+    )
+  }
 
+  function DataTab() {
+    const yen = (n: number) => '¥' + Math.round(n).toLocaleString()
+    if (!dataRef) {
+      return (
+        <Card className="flex flex-col items-center py-10 text-center">
+          <p className="text-sm text-slate-500">{L('이 관계에 연결된 RawData가 없습니다.', 'No RawData linked to this relationship.')}</p>
+          <Button size="sm" className="mt-3" onClick={() => navigateTo('/data')}>{L('데이터 인사이트 열기', 'Open Data Insight')} →</Button>
+        </Card>
+      )
+    }
+    const { group, snapshot } = dataRef
+    return (
+      <div className="space-y-5">
+        <div className="text-xs text-slate-500">{snapshot.profile === 'booking' ? 'Booking' : 'Check Out'} · {snapshot.periodLabel} · {group.rows.toLocaleString()}{L('건', ' rows')}</div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {snapshot.mapping.metrics.map((m) => (
+            <MetricCard key={m.label} label={m.label} value={m.label.includes('¥') ? yen(group.metrics[m.label] ?? 0) : Math.round(group.metrics[m.label] ?? 0).toLocaleString()} />
+          ))}
+        </div>
+        <Button variant="secondary" size="sm" onClick={() => navigateTo('/data')}>{L('전체 데이터 인사이트 열기', 'Open full Data Insight')} →</Button>
+      </div>
+    )
+  }
+
+  function AITab() {
     return (
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
-          <InsightBox label="Recommended Strategy" title={insight.strategicDirection}>
-            <div className="text-sm">{insight.insightSummary}</div>
+          <InsightBox label={L('OAC 전략', 'OAC strategy')} title={nextBestAction}>
+            <div className="text-sm">{entity.recommendedAction}</div>
           </InsightBox>
-          <Card>
-            <CardHeader title="Immediate Action" />
-            <p className="text-sm font-medium text-brand-700">{insight.nextBestAction}</p>
-            <ul className="mt-2 space-y-1.5">
-              {insight.recommendedActions.map((a, i) => (
-                <li key={i} className="flex gap-2 text-sm text-slate-600"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" />{a}</li>
-              ))}
-            </ul>
-          </Card>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          {reviewEntries.length > 0 ? (
             <Card>
-              <CardHeader title="Internal Alignment Needed" />
-              <p className="text-sm text-slate-600">{internal ?? 'Align owners on the next action and timeline internally.'}</p>
+              <CardHeader title={L('AI 검수 · 업데이트', 'AI reviews · updates')} />
+              <ul className="space-y-2.5">
+                {reviewEntries.slice(0, 6).map((u) => (
+                  <li key={u.id} className="rounded-lg border border-slate-100 p-2.5 dark:border-white/10">
+                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium text-slate-800">{u.timeline.title}</span><span className="text-[11px] text-slate-400">{formatDate(u.date)}</span></div>
+                    <p className="mt-0.5 text-xs text-slate-600">{u.summary}</p>
+                    {u.detail && <p className="mt-1 line-clamp-3 whitespace-pre-line text-[11px] text-slate-500">{u.detail}</p>}
+                  </li>
+                ))}
+              </ul>
             </Card>
-            <Card>
-              <CardHeader title="External Communication Needed" />
-              <p className="text-sm text-slate-600">{external ?? 'Send the partner a clear summary of next steps.'}</p>
-            </Card>
-          </div>
+          ) : (
+            <Card><p className="py-4 text-center text-sm text-slate-400">{L('AI 검수/업데이트가 아직 없습니다. 어시스턴트에 "SLA 검수해줘" 등으로 요청하세요.', 'No AI reviews yet. Ask the assistant, e.g. "review the SLA".')}</p></Card>
+          )}
         </div>
         <div className="space-y-5">
-          <Card className="border-rose-100 bg-rose-50/40">
-            <CardHeader title="Risk Warning" />
-            <ul className="space-y-2">
-              {insight.riskWarnings.map((r, i) => (
-                <li key={i} className="flex gap-2 text-sm text-slate-700"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />{r}</li>
-              ))}
-            </ul>
+          {entity.risks.length > 0 && (
+            <Card className="border-rose-100 bg-rose-50/40">
+              <CardHeader title={t('l.risks')} />
+              <ul className="space-y-2">
+                {entity.risks.map((r, i) => (
+                  <li key={i} className="flex gap-2 text-sm text-slate-700"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />{r}</li>
+                ))}
+              </ul>
+            </Card>
+          )}
+          <Card>
+            <CardHeader title={L('메일 작성', 'Draft email')} />
+            <Button size="sm" variant="secondary" className="w-full" onClick={() => navigateTo(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${entity.name}에 보낼 메일 작성해줘` : `Draft an email to ${entity.name}`)}`)}>{t('cap.draftEmail')}</Button>
           </Card>
           <Card>
-            <CardHeader title="Suggested Email" />
-            <p className="text-sm font-medium text-slate-800">{seed ? seed.subject : `Email for ${entity.name}`}</p>
-            <p className="mt-0.5 text-[11px] text-slate-400">{seed?.to ?? 'partner contact'}</p>
-            <Button size="sm" variant="secondary" className="mt-2 w-full" onClick={() => navigateTo(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${entity.name}에 보낼 메일 작성해줘` : `Draft an email to ${entity.name}`)}`)}>{t('cap.draftEmail')}</Button>
+            <CardHeader title={L('리포트 작성', 'Create report')} />
+            <Button size="sm" variant="secondary" className="w-full" onClick={() => navigateTo(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${entity.name} 리포트 작성해줘` : `Create a report for ${entity.name}`)}`)}>{t('cap.genReport')}</Button>
           </Card>
-          <Card>
-            <CardHeader title="Suggested Report" />
-            <p className="text-sm font-medium text-slate-800">{ceo ? ceo.title : `${entity.name} — Status Report`}</p>
-            <p className="mt-1 line-clamp-2 text-[11px] text-slate-500">{ceo?.sections[0]?.body}</p>
-            <Button size="sm" variant="secondary" className="mt-2 w-full" onClick={() => navigateTo(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${entity.name} 리포트 작성해줘` : `Create a report for ${entity.name}`)}`)}>{t('cap.genReport')}</Button>
-          </Card>
-          <Button variant="demo" className="w-full" onClick={() => demoAction('Post to Teams Demo')}>Post Recommendation to Teams Demo</Button>
         </div>
-      </div>
-    )
-  }
-
-  function StatusChip({ label, value }: { label: string; value: string }) {
-    return (
-      <div className="rounded-lg border border-slate-100 px-2.5 py-1.5">
-        <div className="text-[10px] uppercase tracking-wide text-slate-400">{label}</div>
-        <Badge tone={statusTone[value] ?? 'slate'}>{value}</Badge>
       </div>
     )
   }
