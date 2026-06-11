@@ -40,7 +40,7 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
   return (
     <div ref={wrapRef} className={`relative ${hero ? 'w-full' : 'w-full max-w-xl'}`}>
       <div
-        className={`flex items-center gap-2.5 rounded-xl border bg-white transition ${
+        className={`flex items-center gap-2.5 rounded-xl border bg-white transition dark:bg-white/5 dark:border-white/10 ${
           hero
             ? 'border-slate-200 px-4 py-3 shadow-sm focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-100'
             : 'border-slate-200 px-3 py-2 focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-100'
@@ -59,7 +59,7 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
           onFocus={() => setOpen(true)}
           onKeyDown={(e) => e.key === 'Enter' && submit(query)}
           placeholder={hero ? L('이름으로 검색하거나 OAC에게 물어보세요', 'Search a name or ask OAC') : t('top.search')}
-          className={`w-full bg-transparent text-slate-800 placeholder:text-slate-400 focus:outline-none ${hero ? 'text-base' : 'text-sm'}`}
+          className={`w-full bg-transparent text-slate-800 placeholder:text-slate-400 focus:outline-none dark:text-slate-100 ${hero ? 'text-base' : 'text-sm'}`}
         />
         {query && (
           <kbd className="hidden shrink-0 rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-400 sm:block">Enter</kbd>

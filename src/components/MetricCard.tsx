@@ -23,13 +23,13 @@ export function MetricCard({
         : 'text-slate-500 bg-slate-100'
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/[0.03]">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/[0.03] dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-slate-500">{label}</span>
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</span>
         {icon && <span className="text-slate-400">{icon}</span>}
       </div>
       <div className="mt-2 flex items-end gap-2">
-        <span className="text-2xl font-semibold tracking-tight text-slate-900">{value}</span>
+        <span className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{value}</span>
         {delta && (
           <span className={`mb-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${deltaClass}`}>
             {delta}

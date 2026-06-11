@@ -11,7 +11,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/[0.03] ${
+      className={`rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/[0.03] dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none ${
         padded ? 'p-5' : ''
       } ${className}`}
     >
@@ -35,13 +35,13 @@ export function CardHeader({
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="flex items-start gap-2.5">
         {icon && (
-          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/15">
             {icon}
           </span>
         )}
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-          {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+          {subtitle && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
         </div>
       </div>
       {action}
