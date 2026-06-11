@@ -17,6 +17,7 @@ import { useRelationships } from '../data/useRelationships'
 import { useCaptureStore } from '../data/captureStore'
 import { DataPulse } from '../components/DataPulse'
 import { DueAlerts } from '../components/DueAlerts'
+import { WeeklyReport } from '../components/WeeklyReport'
 import { formatUsd, formatNumber, formatDate, daysAgo, initials } from '../utils/format'
 
 const bandTone: Record<string, BadgeTone> = {
@@ -287,7 +288,7 @@ function RealDashboard({ relationships }: { relationships: Entity[] }) {
 
   return (
     <div className="oac-fade-in space-y-5">
-      <PageHeader title={t('page.dashboard.title')} subtitle={t('page.dashboard.subtitle')} actions={<Button onClick={() => navigate('/assistant')} icon={<SparkIcon />}>{t('common.askOAC')}</Button>} />
+      <PageHeader title={t('page.dashboard.title')} subtitle={t('page.dashboard.subtitle')} actions={<div className="flex items-center gap-2"><WeeklyReport /><Button onClick={() => navigate('/assistant')} icon={<SparkIcon />}>{t('common.askOAC')}</Button></div>} />
 
       {/* Auto RawData summary — shown without asking */}
       <DataPulse />
