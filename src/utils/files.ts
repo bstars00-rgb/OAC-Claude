@@ -58,15 +58,20 @@ export const readAttachment = async (file: File): Promise<Attachment> => {
     kind,
     mediaType: file.type || 'application/octet-stream',
   }
-  // Excel → parse to a text table so the assistant can actually read it.
+  // Excel → parse EVERY sheet to a text table so the assistant reads the whole file.
   if (isSheet) {
     try {
-      const { parseFile } = await import('./dataImport')
-      const p = await parseFile(file)
-      const head = p.headers
-      const rows = p.rows.slice(0, 40)
-      const table = [head.join(' | '), ...rows.map((r) => head.map((h) => String(r[h] ?? '')).join(' | '))].join('\n')
-      base.text = `[Excel "${file.name}"] ${p.rows.length} rows · columns: ${head.join(', ')}\n\n${table}`.slice(0, 20000)
+      const { parseAllSheets } = await import('./dataImport')
+      const sheets = await parseAllSheets(file)
+      const parts = sheets.map((s) => {
+        if (!s.rows.length) return `# 시트 "${s.sheet}" (빈 시트)`
+        const head = s.headers
+        const rows = s.rows.slice(0, 60)
+        const table = [head.join(' | '), ...rows.map((r) => head.map((h) => String(r[h] ?? '')).join(' | '))].join('\n')
+        const more = s.rows.length > rows.length ? `\n…(+${s.rows.length - rows.length} rows)` : ''
+        return `# 시트 "${s.sheet}" — ${s.rows.length} rows · columns: ${head.join(', ')}\n${table}${more}`
+      })
+      base.text = `[Excel "${file.name}" · ${sheets.length} sheets: ${sheets.map((s) => s.sheet).join(', ')}]\n\n${parts.join('\n\n')}`.slice(0, 40000)
     } catch {
       base.kind = 'other'
     }

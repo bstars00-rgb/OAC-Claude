@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as XLSX from 'xlsx'
-import { parseArrayBuffer, aggregate, toNum, inferNumericHeaders, buildSnapshot, buildSnapshotsByPeriod, suggestMapping, derivePeriodLabel } from './dataImport'
+import { parseArrayBuffer, aggregate, toNum, inferNumericHeaders, buildSnapshot, buildSnapshotsByPeriod, suggestMapping, derivePeriodLabel, parseAllSheets } from './dataImport'
 
 // Build a small RawData-like workbook in memory (no file system).
 function makeBook(): ArrayBuffer {
@@ -22,6 +22,21 @@ describe('dataImport', () => {
     expect(toNum('12.5%')).toBe(12.5)
     expect(toNum(300)).toBe(300)
     expect(toNum('n/a')).toBe(0)
+  })
+
+  it('parses EVERY sheet of a multi-tab workbook (not just the first)', async () => {
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['README'], ['cover sheet']]), 'README')
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{ Account: 'Klook', Country: 'KR' }, { Account: 'Agoda', Country: 'TH' }]), 'CRM_Accounts')
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{ Task: 'Call vendor', Due: '2026-06-20' }]), 'To_Do')
+    const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
+    const file = { name: 'crm.xlsx', type: '', arrayBuffer: async () => buf } as unknown as File
+    const sheets = await parseAllSheets(file)
+    expect(sheets.map((s) => s.sheet)).toEqual(['README', 'CRM_Accounts', 'To_Do'])
+    const accounts = sheets.find((s) => s.sheet === 'CRM_Accounts')!
+    expect(accounts.rows).toHaveLength(2)
+    expect(accounts.headers).toContain('Account')
+    expect(sheets.find((s) => s.sheet === 'To_Do')!.rows[0].Task).toBe('Call vendor')
   })
 
   it('parses an .xlsx array buffer into headers + rows', async () => {

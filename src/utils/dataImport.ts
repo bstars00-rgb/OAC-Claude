@@ -65,6 +65,26 @@ export async function parseFile(file: File): Promise<ParsedSheet> {
   return readWorkbook({ type: 'array', data: await file.arrayBuffer() })
 }
 
+export interface SheetData {
+  sheet: string
+  headers: string[]
+  rows: Record<string, unknown>[]
+}
+
+/** Parse EVERY sheet of a workbook (multi-tab files) — for reading the whole file. */
+export async function parseAllSheets(file: File): Promise<SheetData[]> {
+  const isCsv = /\.csv$/i.test(file.name) || file.type.includes('csv')
+  const XLSX = await import('xlsx')
+  const wb = isCsv
+    ? XLSX.read(await file.text(), { type: 'string', codepage: 65001 })
+    : XLSX.read(await file.arrayBuffer(), { type: 'array', codepage: 65001 })
+  return wb.SheetNames.map((name) => {
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[name], { defval: '' })
+    const headers = rows.length ? Object.keys(rows[0]) : []
+    return { sheet: name, headers, rows }
+  })
+}
+
 // ── numbers ──────────────────────────────────────────────────────────────────
 export function toNum(v: unknown): number {
   if (typeof v === 'number') return isFinite(v) ? v : 0
