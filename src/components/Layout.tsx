@@ -9,7 +9,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
         <main className="flex-1 overflow-auto">
-          <div className="mx-auto w-full max-w-[1200px] px-6 py-6">{children}</div>
+          <div className="mx-auto w-full max-w-[1760px] px-6 py-6">{children}</div>
         </main>
       </div>
     </div>
