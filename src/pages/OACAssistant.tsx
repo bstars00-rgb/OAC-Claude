@@ -320,7 +320,7 @@ export function OACAssistant() {
               </div>
             )}
           </div>
-          <Composer onSubmit={submit} t={t} />
+          <Composer onSubmit={submit} t={t} lang={lang} />
         </div>
 
         {/* Right: live CRM panel — what OAC extracted from your chats */}
@@ -516,22 +516,32 @@ export function OACAssistant() {
 }
 
 // ── Composer (isolated state so typing doesn't re-render the thread) ─────────
-function Composer({ onSubmit, t }: { onSubmit: (text: string, atts: Attachment[]) => void; t: (k: string) => string }) {
+function Composer({ onSubmit, t, lang }: { onSubmit: (text: string, atts: Attachment[]) => void; t: (k: string) => string; lang: 'en' | 'ko' }) {
   const [input, setInput] = useState('')
   const [atts, setAtts] = useState<Attachment[]>([])
   const [busy, setBusy] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
   const imgRef = useRef<HTMLInputElement>(null)
   const docRef = useRef<HTMLInputElement>(null)
 
-  const addFiles = async (files: FileList | null) => {
-    if (!files) return
+  const addFiles = async (files: FileList | File[] | null) => {
+    if (!files || (files as FileList).length === 0) return
     setBusy(true)
     try {
-      const read = await Promise.all([...files].slice(0, 5).map(readAttachment))
+      const read = await Promise.all([...(files as File[])].slice(0, 5).map(readAttachment))
       setAtts((a) => [...a, ...read].slice(0, 6))
     } finally {
       setBusy(false)
     }
+  }
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setDragOver(false)
+    if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files)
+  }
+  const onPaste = (e: React.ClipboardEvent) => {
+    const files = [...(e.clipboardData?.items ?? [])].filter((i) => i.kind === 'file').map((i) => i.getAsFile()).filter(Boolean) as File[]
+    if (files.length) { e.preventDefault(); addFiles(files) }
   }
 
   const go = () => {
@@ -542,7 +552,17 @@ function Composer({ onSubmit, t }: { onSubmit: (text: string, atts: Attachment[]
   }
 
   return (
-    <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+    <div
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+      onDragLeave={(e) => { e.preventDefault(); setDragOver(false) }}
+      onDrop={onDrop}
+      className={`relative mt-3 rounded-2xl border bg-white p-2 shadow-sm transition ${dragOver ? 'border-brand-400 ring-2 ring-brand-200' : 'border-slate-200'}`}
+    >
+      {dragOver && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-brand-50/80 text-sm font-semibold text-brand-700">
+          {lang === 'ko' ? '여기에 파일을 놓으세요 (이미지·PDF·엑셀·텍스트)' : 'Drop files here (image · PDF · Excel · text)'}
+        </div>
+      )}
       {atts.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1.5 px-1">
           {atts.map((a) => (
@@ -555,13 +575,14 @@ function Composer({ onSubmit, t }: { onSubmit: (text: string, atts: Attachment[]
       )}
       <div className="flex items-end gap-2">
         <input ref={imgRef} type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
-        <input ref={docRef} type="file" accept=".pdf,.txt,.md,.markdown,.csv,.tsv,.json,.log,.yml,.yaml,text/*,application/pdf" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
+        <input ref={docRef} type="file" accept=".pdf,.txt,.md,.markdown,.csv,.tsv,.json,.log,.yml,.yaml,.xlsx,.xls,.docx,.doc,.pptx,text/*,application/pdf" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
         <button onClick={() => imgRef.current?.click()} title={t('asst.image')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50"><ImageIcon /></button>
         <button onClick={() => docRef.current?.click()} title={t('asst.doc')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50"><DocIcon /></button>
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go() } }}
+          onPaste={onPaste}
           rows={1}
           placeholder={t('asst.placeholder')}
           className="max-h-32 min-h-[40px] flex-1 resize-none bg-transparent px-2 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
