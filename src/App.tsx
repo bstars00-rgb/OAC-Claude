@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -9,18 +10,30 @@ import { LanguageProvider } from './i18n'
 import { CaptureProvider } from './data/captureStore'
 import { DatasetProvider } from './data/datasetStore'
 import { AiSettingsProvider } from './utils/aiSettings'
-import { Dashboard } from './pages/Dashboard'
-import { OACAssistant } from './pages/OACAssistant'
-import { Relationship360 } from './pages/Relationship360'
-import { DataInsight } from './pages/DataInsight'
-import { Central } from './pages/Central'
-import { Settings } from './pages/Settings'
+
+// Code-split each route into its own chunk (loaded on navigation) so the initial
+// bundle stays small. Pages use named exports → map to default for React.lazy.
+const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })))
+const OACAssistant = lazy(() => import('./pages/OACAssistant').then((m) => ({ default: m.OACAssistant })))
+const Relationship360 = lazy(() => import('./pages/Relationship360').then((m) => ({ default: m.Relationship360 })))
+const DataInsight = lazy(() => import('./pages/DataInsight').then((m) => ({ default: m.DataInsight })))
+const Central = lazy(() => import('./pages/Central').then((m) => ({ default: m.Central })))
+const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })))
+
+function PageLoading() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <span className="h-7 w-7 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600" />
+    </div>
+  )
+}
 
 function AppRoutes() {
   // Key the boundary by path so navigating to another screen clears a crashed one.
   const location = useLocation()
   return (
     <ErrorBoundary key={location.pathname}>
+      <Suspense fallback={<PageLoading />}>
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/assistant" element={<OACAssistant />} />
@@ -39,6 +52,7 @@ function AppRoutes() {
         <Route path="/integrations" element={<Settings />} />
         <Route path="*" element={<Dashboard />} />
       </Routes>
+      </Suspense>
     </ErrorBoundary>
   )
 }
