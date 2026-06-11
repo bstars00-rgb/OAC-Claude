@@ -686,8 +686,8 @@ function Composer({ onSubmit, t, lang }: { onSubmit: (text: string, atts: Attach
       <div className="flex items-end gap-2">
         <input ref={imgRef} type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
         <input ref={docRef} type="file" accept=".pdf,.txt,.md,.markdown,.csv,.tsv,.json,.log,.yml,.yaml,.xlsx,.xls,.docx,.doc,.pptx,text/*,application/pdf" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
-        <button onClick={() => imgRef.current?.click()} title={t('asst.image')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50"><ImageIcon /></button>
-        <button onClick={() => docRef.current?.click()} title={t('asst.doc')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50"><DocIcon /></button>
+        <button onClick={() => imgRef.current?.click()} title={t('asst.image')} aria-label={t('asst.image')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50"><ImageIcon /></button>
+        <button onClick={() => docRef.current?.click()} title={t('asst.doc')} aria-label={t('asst.doc')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50"><DocIcon /></button>
         <textarea
           ref={taRef}
           value={input}
@@ -708,10 +708,10 @@ function SettingsModal({ onClose, t }: { onClose: () => void; t: (k: string) => 
   const ai = useAiSettings()
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label={t('set.title')} className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-bold text-slate-900">{t('set.title')}</h3>
-          <button onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100">✕</button>
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{t('set.title')}</h3>
+          <button onClick={onClose} aria-label="Close" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10">✕</button>
         </div>
 
         <div className="space-y-2">

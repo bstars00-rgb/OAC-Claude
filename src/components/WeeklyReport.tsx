@@ -152,10 +152,10 @@ export function WeeklyReport() {
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)} icon={<DocIcon />}>{L('주간 리포트', 'Weekly report')}</Button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 px-4 py-[8vh] backdrop-blur-sm" onMouseDown={() => setOpen(false)}>
-          <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900" onMouseDown={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label={L('주간 자동 리포트', 'Weekly auto report')} className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900" onMouseDown={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-white/5">
               <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100"><DocIcon /> {L('주간 자동 리포트', 'Weekly auto report')}</span>
-              <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+              <button onClick={() => setOpen(false)} aria-label={L('닫기', 'Close')} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
             <div className="max-h-[60vh] overflow-auto px-5 py-4">
               <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-slate-700 dark:text-slate-200">{aiText || text}</pre>

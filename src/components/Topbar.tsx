@@ -67,6 +67,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {}) {
         <button
           onClick={toggleTheme}
           title={theme === 'dark' ? t('top.theme.light') : t('top.theme.dark')}
+          aria-label={theme === 'dark' ? t('top.theme.light') : t('top.theme.dark')}
           className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
         >
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
