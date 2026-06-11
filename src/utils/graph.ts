@@ -28,6 +28,7 @@ export interface MsConnection {
 }
 
 export interface NormalizedItem {
+  id?: string // stable Graph id — used to de-duplicate across repeated/auto syncs
   source: 'outlook' | 'teams'
   direction?: 'in' | 'out' // received vs sent (회신)
   personName: string
@@ -197,6 +198,7 @@ const clean = (html?: string) =>
 
 // ── Outlook ──────────────────────────────────────────────────────────────────
 interface MailMsg {
+  id?: string
   subject?: string
   bodyPreview?: string
   body?: { contentType?: string; content?: string }
@@ -215,12 +217,13 @@ export async function fetchOutlook(conn: MsConnection, opts: { sinceDays?: numbe
   const filter = encodeURIComponent(`receivedDateTime ge ${sinceIso(sinceDays)}`)
   const data = await graphGet<{ value: MailMsg[] }>(
     conn,
-    `/me/messages?$top=${top}&$select=subject,from,receivedDateTime,bodyPreview,body,webLink&$filter=${filter}&$orderby=receivedDateTime%20desc`,
+    `/me/messages?$top=${top}&$select=id,subject,from,receivedDateTime,bodyPreview,body,webLink&$filter=${filter}&$orderby=receivedDateTime%20desc`,
   )
   return (data.value ?? []).map((m) => {
     const email = m.from?.emailAddress?.address
     const name = m.from?.emailAddress?.name || email || 'Unknown sender'
     return {
+      id: m.id,
       source: 'outlook' as const,
       personName: name,
       personEmail: email,
@@ -242,13 +245,14 @@ export async function fetchSent(conn: MsConnection, opts: { sinceDays?: number; 
   const filter = encodeURIComponent(`sentDateTime ge ${sinceIso(sinceDays)}`)
   const data = await graphGet<{ value: MailMsg[] }>(
     conn,
-    `/me/mailFolders/sentitems/messages?$top=${top}&$select=subject,toRecipients,sentDateTime,bodyPreview,body,webLink&$filter=${filter}&$orderby=sentDateTime%20desc`,
+    `/me/mailFolders/sentitems/messages?$top=${top}&$select=id,subject,toRecipients,sentDateTime,bodyPreview,body,webLink&$filter=${filter}&$orderby=sentDateTime%20desc`,
   )
   return (data.value ?? []).map((m) => {
     const to = m.toRecipients?.[0]?.emailAddress
     const email = to?.address
     const name = to?.name || email || 'Recipient'
     return {
+      id: m.id,
       source: 'outlook' as const,
       direction: 'out' as const,
       personName: name,
@@ -304,6 +308,8 @@ export async function fetchTeams(conn: MsConnection, opts: { sinceDays?: number;
       'Teams chat'
     const email = others.find((m) => m.email)?.email
     items.push({
+      // chat id + last-message timestamp → stable until a new message arrives
+      id: `${c.id ?? counterpart}|${preview.createdDateTime ?? ''}`,
       source: 'teams',
       personName: counterpart,
       personEmail: email,

@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { CloudAutoSync } from './components/CloudAutoSync'
+import { MsAutoSync } from './components/MsAutoSync'
 import { ToastProvider } from './components/Toast'
 import { ThemeProvider } from './theme'
 import { LanguageProvider } from './i18n'
@@ -23,6 +24,7 @@ export default function App() {
     <AiSettingsProvider>
     <ToastProvider>
       <CloudAutoSync />
+      <MsAutoSync />
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />

@@ -33,15 +33,10 @@ import {
   connect as msConnect,
   disconnect as msDisconnect,
   restore as msRestore,
-  fetchOutlook,
-  fetchSent,
-  fetchTeams,
-  itemToCapture,
-  matchRelationship,
   redirectUri,
   GRAPH_SCOPES,
 } from '../utils/graph'
-import { summarizeCompanyEmails } from '../utils/aiClient'
+import { syncMicrosoft } from '../utils/msSync'
 
 export function Settings() {
   const { t, lang } = useT()
@@ -606,75 +601,29 @@ function MicrosoftCard() {
     setError('')
     setBusy('sync')
     try {
-      // Fetch both, but SURFACE failures (don't silently show 0) so permission/auth
-      // problems are visible instead of looking like "no change".
-      const [mr, sr, tr] = await Promise.allSettled([
-        fetchOutlook(conn, { sinceDays: 7 }),
-        fetchSent(conn, { sinceDays: 7 }),
-        fetchTeams(conn, { sinceDays: 7 }),
-      ])
-      const inbox = mr.status === 'fulfilled' ? mr.value : []
-      const sent = sr.status === 'fulfilled' ? sr.value : []
-      const mail = [...inbox, ...sent]
-      const teams = tr.status === 'fulfilled' ? tr.value : []
-      const fetchErr = mr.status === 'rejected' ? String(mr.reason?.message ?? mr.reason) : tr.status === 'rejected' ? String(tr.reason?.message ?? tr.reason) : ''
-      if (fetchErr && mail.length === 0 && teams.length === 0) {
-        setError(L(`동기화 실패: ${fetchErr}\n→ 메일 읽기 권한(Mail.Read) 관리자 동의가 필요할 수 있어요. 또는 설정에서 연결 해제 후 다시 로그인해 보세요.`, `Sync failed: ${fetchErr}\n→ Mail.Read admin consent may be required, or disconnect & sign in again.`))
+      // Manual sync: pull last 7 days, de-dup against already-imported items, and
+      // (live) AI-summarize each company. Shared with the periodic auto-sync.
+      const r = await syncMicrosoft({
+        conn,
+        lang,
+        relList: rel.list.map((e) => ({ id: e.id, name: e.name })),
+        addEntry: store.addEntry,
+        live: ai.isLive ? { provider: ai.provider, apiKey: ai.activeKey, model: ai.model } : undefined,
+        summarize: ai.isLive,
+      })
+      if (r.fatal) {
+        setError(L(`동기화 실패: ${r.error}\n→ 메일 읽기 권한(Mail.Read) 관리자 동의가 필요할 수 있어요. 또는 설정에서 연결 해제 후 다시 로그인해 보세요.`, `Sync failed: ${r.error}\n→ Mail.Read admin consent may be required, or disconnect & sign in again.`))
         return
       }
-      if (mail.length === 0 && teams.length === 0) {
-        toast.notify(L('동기화 완료 · 변화 없음', 'Sync complete · no changes'), L('최근 7일 새 메일/메시지가 없거나, 권한을 확인하세요', 'No mail/messages in the last 7 days, or check permissions'))
+      if (r.added === 0) {
+        toast.notify(L('동기화 완료 · 새 항목 없음', 'Sync complete · no new items'), L(`최근 7일 받은 ${r.inbox} · 보낸 ${r.sent} · Teams ${r.teams} (이미 모두 가져옴)`, `Last 7 days: ${r.inbox} in · ${r.sent} sent · ${r.teams} Teams (all already imported)`))
         return
       }
-      const items = [...mail, ...teams]
-      const relList = rel.list.map((e) => ({ id: e.id, name: e.name }))
-
-      // group by company so we can (optionally) AI-summarize each
-      const byCompany = new Map<string, { name: string; match?: { accountId: string; accountName: string }; mails: typeof items }>()
-      for (const it of items) {
-        const match = matchRelationship(it, relList)
-        const cap = itemToCapture(it, lang, match)
-        store.addEntry(cap, `${it.title}\n${it.preview}`)
-        const key = cap.accountId
-        const g = byCompany.get(key) ?? { name: cap.accountName, match, mails: [] }
-        g.mails.push(it)
-        byCompany.set(key, g)
-      }
-
-      // Live AI: one-line, action-oriented summary per company from the full bodies.
-      let summarized = 0
-      if (ai.isLive) {
-        for (const [accountId, g] of [...byCompany.entries()].slice(0, 12)) {
-          try {
-            const summary = await summarizeCompanyEmails(
-              { provider: ai.provider, apiKey: ai.activeKey, model: ai.model, lang },
-              g.name,
-              g.mails.map((m) => ({ subject: m.title, body: m.body || m.preview, date: m.date })),
-            )
-            if (summary) {
-              store.addEntry(
-                {
-                  accountName: g.name, accountId, isExisting: !!g.match, category: 'General',
-                  detectedContext: lang === 'ko' ? 'AI 요약 · Outlook' : 'AI summary · Outlook', contextConfidence: 0.9,
-                  summary, timeline: { date: TODAY, title: lang === 'ko' ? 'AI 메일 요약' : 'AI mail summary', detail: summary },
-                  todos: [], risks: [], report: { title: '', sections: [] }, email: { subject: '', body: '' },
-                  kind: 'update', detail: summary, nextBestAction: summary,
-                },
-                summary,
-              )
-              summarized++
-            }
-          } catch {
-            /* skip this company's summary */
-          }
-        }
-      }
-
       toast.notify(
         L('동기화 완료 · 지난 7일', 'Sync complete · last 7 days'),
         ai.isLive
-          ? L(`받은 ${inbox.length} · 보낸 ${sent.length} · Teams ${teams.length} → 업체 ${byCompany.size}곳 · AI 요약 ${summarized}`, `${inbox.length} in · ${sent.length} sent · ${teams.length} Teams → ${byCompany.size} companies · ${summarized} AI summaries`)
-          : L(`받은 ${inbox.length} · 보낸 ${sent.length} · Teams ${teams.length} → 업체 ${byCompany.size}곳 업데이트`, `${inbox.length} in · ${sent.length} sent · ${teams.length} Teams → updated ${byCompany.size} companies`),
+          ? L(`새 항목 ${r.added}건 → 업체 ${r.companies}곳 · AI 요약 ${r.summarized}`, `${r.added} new → ${r.companies} companies · ${r.summarized} AI summaries`)
+          : L(`새 항목 ${r.added}건 → 업체 ${r.companies}곳 업데이트`, `${r.added} new → updated ${r.companies} companies`),
       )
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -749,6 +698,29 @@ function MicrosoftCard() {
               {busy === 'sync' ? L('가져오는 중…', 'Importing…') : L('지난 7일 동기화 (업체별 업데이트)', 'Sync last 7 days (update by company)')}
             </Button>
             <Button variant="secondary" size="sm" onClick={doDisconnect}>{L('연결 해제', 'Disconnect')}</Button>
+          </div>
+
+          {/* Periodic auto-sync (option B) */}
+          <div className="rounded-lg border border-slate-200 p-2.5 dark:border-white/10">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{L('자동 동기화', 'Auto-sync')}</span>
+              <div className="inline-flex overflow-hidden rounded-lg border border-slate-200 text-[11px] font-semibold dark:border-white/10">
+                {[{ v: 0, ko: '끔', en: 'Off' }, { v: 15, ko: '15분', en: '15m' }, { v: 30, ko: '30분', en: '30m' }, { v: 60, ko: '60분', en: '60m' }].map((o) => (
+                  <button
+                    key={o.v}
+                    onClick={() => ai.setMsAutoSyncMin(o.v)}
+                    className={`px-2.5 py-1 transition ${ai.msAutoSyncMin === o.v ? 'bg-brand-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50 dark:bg-transparent dark:text-slate-400'}`}
+                  >
+                    {L(o.ko, o.en)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
+              {ai.msAutoSyncMin > 0
+                ? L(`앱이 열려 있는 동안 ${ai.msAutoSyncMin}분마다 새 메일·Teams를 자동으로 가져옵니다(중복 제외). API 비용이 드는 AI 요약은 자동 동기화에서 실행하지 않습니다 — 요약은 위 수동 버튼에서.`, `While the app is open, new mail/Teams import every ${ai.msAutoSyncMin} min (deduplicated). The API-costing AI summary does NOT run on auto-sync — use the manual button above for that.`)
+                : L('자동 동기화가 꺼져 있습니다. 간격을 선택하면 앱이 열려 있는 동안 주기적으로 가져옵니다.', 'Auto-sync is off. Pick an interval to import periodically while the app is open.')}
+            </p>
           </div>
         </div>
       )}
