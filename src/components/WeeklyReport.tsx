@@ -7,6 +7,7 @@ import { useAiSettings } from '../utils/aiSettings'
 import { callText } from '../utils/aiClient'
 import { useToast } from './Toast'
 import { formatDate } from '../utils/format'
+import { exportTextAsWord, exportTextAsPdf, exportExcel } from '../utils/exportFile'
 
 // B-7: a weekly digest compiled from the last 7 days of captured activity plus
 // the latest imported data. Deterministic by default; AI narrative on demand.
@@ -99,6 +100,19 @@ export function WeeklyReport() {
     }
   }
 
+  const stamp = new Date().toISOString().slice(0, 10)
+  const exportWord = () => { exportTextAsWord(L('주간 리포트', 'Weekly report'), aiText || text, `OAC-weekly-${stamp}`); toast.notify(L('Word(.doc) 파일을 저장했습니다.', 'Saved Word (.doc).')) }
+  const exportPdf = () => { if (!exportTextAsPdf(L('주간 리포트', 'Weekly report'), aiText || text)) toast.notify(L('팝업이 차단되었습니다. 허용 후 다시 시도하세요.', 'Popup blocked — allow popups and retry.')) }
+  const exportXlsx = async () => {
+    const sheets = [
+      { name: L('활동', 'Activity'), rows: report.recent.map((e) => ({ [L('날짜', 'Date')]: e.date, [L('고객사', 'Account')]: e.accountName, [L('유형', 'Kind')]: e.kind ?? 'note', [L('내용', 'Title')]: e.timeline.title, [L('요약', 'Summary')]: e.summary })) },
+      { name: L('할일', 'To-dos'), rows: report.openTodos.map((t) => ({ [L('할 일', 'To-do')]: t.text, [L('마감', 'Due')]: t.due, [L('우선순위', 'Priority')]: t.priority })) },
+      { name: L('리스크', 'Risks'), rows: report.newRisks.map((x) => ({ [L('고객사', 'Account')]: x.account, [L('리스크', 'Risk')]: x.r })) },
+    ]
+    await exportExcel(sheets, `OAC-weekly-${stamp}`)
+    toast.notify(L('Excel(.xlsx) 파일을 저장했습니다.', 'Saved Excel (.xlsx).'))
+  }
+
   const hasData = store.entries.length > 0 || ds.snapshots.length > 0
   if (!hasData) return null
 
@@ -119,7 +133,12 @@ export function WeeklyReport() {
             <div className="flex items-center gap-2 border-t border-slate-100 px-5 py-3 dark:border-white/5">
               {ai.isLive && <Button size="sm" variant="secondary" onClick={askAi} disabled={busy}>{busy ? L('AI 분석 중…', 'Analyzing…') : aiText ? L('다시 생성', 'Regenerate') : L('✨ AI 요약', '✨ AI summary')}</Button>}
               <Button size="sm" variant="secondary" onClick={copy}>{L('복사', 'Copy')}</Button>
-              <span className="ml-auto text-[11px] text-slate-400">{L('내보내기(Excel/Word/PDF)는 곧 추가됩니다', 'File export coming soon')}</span>
+              <span className="ml-auto flex items-center gap-1.5">
+                <span className="text-[11px] text-slate-400">{L('내보내기', 'Export')}:</span>
+                <button onClick={exportWord} className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-brand-300 hover:text-brand-700">Word</button>
+                <button onClick={exportPdf} className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-brand-300 hover:text-brand-700">PDF</button>
+                <button onClick={exportXlsx} className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-brand-300 hover:text-brand-700">Excel</button>
+              </span>
             </div>
           </div>
         </div>
