@@ -1,6 +1,6 @@
 import { Card, CardHeader } from './Card'
 import { Badge } from './Badge'
-import { Sparkline } from './DemoChart'
+import { Sparkline, BarChart } from './DemoChart'
 import { useT } from '../i18n'
 import { useDatasets } from '../data/datasetStore'
 import type { DatasetSnapshot, ImportProfile } from '../utils/dataImport'
@@ -16,8 +16,9 @@ function ProfileTrends({ profile, snaps, lang }: { profile: ImportProfile; snaps
   const labels = latest.mapping.metrics.map((m) => m.label)
   const title = profile === 'booking' ? L('부킹 추세 (주간)', 'Booking trend (weekly)') : L('체크아웃 추세 (월간)', 'Check Out trend (monthly)')
 
-  // top groups in the latest snapshot by the first metric
+  // primary metric across periods → a prominent column chart
   const primary = labels[0]
+  const periodSeries = primary ? asc.map((s) => ({ label: s.periodLabel.replace(/^\d{4}-/, ''), value: s.totals[primary] ?? 0 })) : []
   const topGroups = primary ? [...latest.groups].sort((a, b) => (b.metrics[primary] ?? 0) - (a.metrics[primary] ?? 0)).slice(0, 6) : []
   const topMax = topGroups.length ? Math.max(...topGroups.map((g) => g.metrics[primary] ?? 0), 1) : 1
 
@@ -56,6 +57,14 @@ function ProfileTrends({ profile, snaps, lang }: { profile: ImportProfile; snaps
           )
         })}
       </div>
+
+      {/* primary metric over periods — column chart */}
+      {periodSeries.length > 1 && (
+        <div className="mt-3 rounded-xl border border-slate-200 p-3 dark:border-white/10">
+          <div className="mb-2 text-[11px] font-semibold text-slate-500">{primary} · {L('기간별', 'by period')}</div>
+          <BarChart data={periodSeries} height={150} tone={profile === 'booking' ? '#7c3aed' : '#0ea5e9'} unit={isYen(primary) ? 'yen' : ''} />
+        </div>
+      )}
 
       {/* top groups */}
       {topGroups.length > 0 && (

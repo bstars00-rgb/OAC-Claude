@@ -5,6 +5,7 @@ import { Card, CardHeader } from '../components/Card'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { DatasetInsights } from '../components/DatasetInsights'
+import { PieChart, BarChart } from '../components/DemoChart'
 import { useT } from '../i18n'
 import { useDatasets } from '../data/datasetStore'
 import { useAiSettings } from '../utils/aiSettings'
@@ -182,6 +183,8 @@ function AiInsightBoard({ L }: { L: (ko: string, en: string) => string }) {
 
 function SparkIcon() { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 4.6L18.5 9 14 11l-2 5-2-5L5.5 9l4.6-1.4L12 3z" /></svg> }
 
+type ChartView = 'bar' | 'donut' | 'column'
+
 function DimensionExplorer({ L }: { L: (ko: string, en: string) => string }) {
   const ds = useDatasets()
   const snap = ds.snapshots[0]
@@ -189,42 +192,76 @@ function DimensionExplorer({ L }: { L: (ko: string, en: string) => string }) {
   const metrics = snap?.mapping.metrics ?? []
   const [dim, setDim] = useState(dims[0] ?? '')
   const [metricLabel, setMetricLabel] = useState(metrics[0]?.label ?? '')
+  const [view, setView] = useState<ChartView>('bar')
   if (!snap || !dims.length) return null
 
   const activeDim = dims.includes(dim) ? dim : dims[0]
   const activeMetric = metrics.find((m) => m.label === metricLabel)?.label ?? metrics[0]?.label ?? ''
   const yen = activeMetric.includes('¥')
   const groups = (snap.byDimension?.[activeDim] ?? snap.groups)
-  const top = [...groups].sort((a, b) => (b.metrics[activeMetric] ?? 0) - (a.metrics[activeMetric] ?? 0)).slice(0, 10)
+  const sorted = [...groups].sort((a, b) => (b.metrics[activeMetric] ?? 0) - (a.metrics[activeMetric] ?? 0))
+  const top = sorted.slice(0, 10)
   const max = Math.max(...top.map((g) => g.metrics[activeMetric] ?? 0), 1)
   const total = groups.reduce((s, g) => s + (g.metrics[activeMetric] ?? 0), 0)
   const fmt = (n: number) => (yen ? '¥' : '') + Math.round(n).toLocaleString()
+
+  // composition: top 6 + an "others" bucket so the donut stays readable
+  const topN = sorted.slice(0, 6)
+  const othersVal = sorted.slice(6).reduce((s, g) => s + (g.metrics[activeMetric] ?? 0), 0)
+  const pieData = [
+    ...topN.map((g) => ({ label: g.key, value: g.metrics[activeMetric] ?? 0 })),
+    ...(othersVal > 0 ? [{ label: L('기타', 'Others'), value: othersVal }] : []),
+  ]
+  const columnData = top.slice(0, 8).map((g) => ({ label: g.key, value: g.metrics[activeMetric] ?? 0 }))
+
+  const views: { id: ChartView; ko: string; en: string }[] = [
+    { id: 'bar', ko: '막대', en: 'Bars' },
+    { id: 'column', ko: '세로막대', en: 'Columns' },
+    { id: 'donut', ko: '도넛', en: 'Donut' },
+  ]
 
   return (
     <Card className="mb-5">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <CardHeader title={L('차원별 분석', 'Breakdown')} subtitle={`${snap.periodLabel} · ${snap.profile === 'booking' ? 'Booking' : 'Check Out'}`} />
         <div className="flex flex-wrap gap-2">
-          <select value={activeDim} onChange={(e) => setDim(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs focus:border-brand-400 focus:outline-none">
+          <div className="inline-flex overflow-hidden rounded-lg border border-slate-200 text-[11px] font-semibold dark:border-white/10">
+            {views.map((v) => (
+              <button key={v.id} onClick={() => setView(v.id)} className={`px-2.5 py-1.5 transition ${view === v.id ? 'bg-brand-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50 dark:bg-transparent dark:text-slate-400'}`}>{L(v.ko, v.en)}</button>
+            ))}
+          </div>
+          <select value={activeDim} onChange={(e) => setDim(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs focus:border-brand-400 focus:outline-none dark:border-white/10 dark:bg-transparent">
             {dims.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
-          <select value={activeMetric} onChange={(e) => setMetricLabel(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs focus:border-brand-400 focus:outline-none">
+          <select value={activeMetric} onChange={(e) => setMetricLabel(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs focus:border-brand-400 focus:outline-none dark:border-white/10 dark:bg-transparent">
             {metrics.map((m) => <option key={m.label} value={m.label}>{m.label}</option>)}
           </select>
         </div>
       </div>
-      <div className="mb-2 text-xs text-slate-500">{L('합계', 'Total')}: <span className="font-bold text-slate-800">{fmt(total)}</span> · {groups.length} {activeDim}</div>
-      <div className="space-y-1.5">
-        {top.map((g) => (
-          <div key={g.key} className="flex items-center gap-2">
-            <span className="w-32 shrink-0 truncate text-[11px] font-medium text-slate-600" title={g.key}>{g.key}</span>
-            <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
-              <div className="h-full rounded-full bg-gradient-to-r from-brand-600 to-violet-600" style={{ width: `${Math.max(2, ((g.metrics[activeMetric] ?? 0) / max) * 100)}%` }} />
-            </div>
-            <span className="w-24 shrink-0 text-right text-[11px] font-semibold text-slate-700">{fmt(g.metrics[activeMetric] ?? 0)}</span>
-          </div>
-        ))}
-      </div>
+      <div className="mb-3 text-xs text-slate-500">{L('합계', 'Total')}: <span className="font-bold text-slate-800 dark:text-slate-200">{fmt(total)}</span> · {groups.length} {activeDim}</div>
+
+      {view === 'donut' && <PieChart data={pieData} unit={yen ? 'yen' : ''} />}
+
+      {view === 'column' && <BarChart data={columnData} height={180} tone={snap.profile === 'booking' ? '#7c3aed' : '#0ea5e9'} unit={yen ? 'yen' : ''} />}
+
+      {view === 'bar' && (
+        <div className="space-y-1.5">
+          {top.map((g) => {
+            const v = g.metrics[activeMetric] ?? 0
+            const pct = total ? (v / total) * 100 : 0
+            return (
+              <div key={g.key} className="flex items-center gap-2">
+                <span className="w-32 shrink-0 truncate text-[11px] font-medium text-slate-600 dark:text-slate-300" title={g.key}>{g.key}</span>
+                <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                  <div className="h-full rounded-full bg-gradient-to-r from-brand-600 to-violet-600" style={{ width: `${Math.max(2, (v / max) * 100)}%` }} />
+                </div>
+                <span className="w-10 shrink-0 text-right text-[10px] text-slate-400">{pct.toFixed(0)}%</span>
+                <span className="w-24 shrink-0 text-right text-[11px] font-semibold text-slate-700 dark:text-slate-200">{fmt(v)}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </Card>
   )
 }

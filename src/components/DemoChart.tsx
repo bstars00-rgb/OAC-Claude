@@ -1,5 +1,60 @@
 // Tiny dependency-free SVG charts for the executive-demo look.
 
+// Shared categorical palette for multi-series charts (pie / grouped bars).
+export const CHART_COLORS = ['#1f48f0', '#7c3aed', '#0ea5e9', '#10b981', '#f59e0b', '#f43f5e', '#64748b', '#14b8a6']
+
+// Multi-segment donut (composition / share) with an optional legend.
+export function PieChart({
+  data,
+  size = 180,
+  thickness = 26,
+  unit = '',
+}: {
+  data: { label: string; value: number }[]
+  size?: number
+  thickness?: number
+  unit?: string
+}) {
+  const total = data.reduce((s, d) => s + Math.max(0, d.value), 0) || 1
+  const r = (size - thickness) / 2
+  const c = size / 2
+  const fmt = (n: number) => (unit === 'yen' ? '¥' : '') + Math.round(n).toLocaleString()
+  let acc = 0
+  const segs = data.map((d, i) => {
+    const start = (acc / total) * 2 * Math.PI
+    acc += Math.max(0, d.value)
+    const end = (acc / total) * 2 * Math.PI
+    const large = end - start > Math.PI ? 1 : 0
+    const x1 = c + r * Math.cos(start - Math.PI / 2)
+    const y1 = c + r * Math.sin(start - Math.PI / 2)
+    const x2 = c + r * Math.cos(end - Math.PI / 2)
+    const y2 = c + r * Math.sin(end - Math.PI / 2)
+    return { label: d.label, value: d.value, color: CHART_COLORS[i % CHART_COLORS.length], path: `M${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large} 1 ${x2.toFixed(2)},${y2.toFixed(2)}`, pct: (d.value / total) * 100 }
+  })
+  return (
+    <div className="flex flex-wrap items-center gap-4">
+      <svg width={size} height={size} className="shrink-0">
+        <circle cx={c} cy={c} r={r} fill="none" stroke="#eef2f7" strokeWidth={thickness} className="dark:opacity-20" />
+        {segs.map((s) => (
+          <path key={s.label} d={s.path} fill="none" stroke={s.color} strokeWidth={thickness} transform={`rotate(0 ${c} ${c})`} />
+        ))}
+        <text x={c} y={c - 4} textAnchor="middle" className="fill-slate-500 text-[10px]">{unit === 'yen' ? 'JPY' : 'Total'}</text>
+        <text x={c} y={c + 12} textAnchor="middle" className="fill-slate-800 text-xs font-bold dark:fill-slate-100">{fmt(total)}</text>
+      </svg>
+      <ul className="min-w-[140px] flex-1 space-y-1">
+        {segs.map((s) => (
+          <li key={s.label} className="flex items-center gap-2 text-[11px]">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: s.color }} />
+            <span className="min-w-0 flex-1 truncate text-slate-600 dark:text-slate-300" title={s.label}>{s.label}</span>
+            <span className="shrink-0 font-semibold text-slate-700 dark:text-slate-200">{s.pct.toFixed(0)}%</span>
+            <span className="w-20 shrink-0 text-right text-slate-400">{fmt(s.value)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export function Sparkline({
   data,
   width = 120,
@@ -46,25 +101,24 @@ export function BarChart({
   data,
   height = 160,
   tone = '#1f48f0',
+  unit = '',
 }: {
   data: { label: string; value: number }[]
   height?: number
   tone?: string
+  unit?: 'yen' | ''
 }) {
   const max = Math.max(...data.map((d) => d.value), 1)
+  const sym = unit === 'yen' ? '¥' : ''
+  const abbr = (v: number) =>
+    v >= 1_000_000 ? `${sym}${(v / 1_000_000).toFixed(1)}M` : v >= 1000 ? `${sym}${(v / 1000).toFixed(0)}k` : `${sym}${Math.round(v)}`
   return (
     <div className="flex items-end gap-3" style={{ height }}>
       {data.map((d) => {
         const h = (d.value / max) * (height - 28)
         return (
           <div key={d.label} className="flex flex-1 flex-col items-center justify-end gap-1.5">
-            <span className="text-[10px] font-semibold text-slate-500">
-              {d.value >= 1_000_000
-                ? `$${(d.value / 1_000_000).toFixed(1)}M`
-                : d.value >= 1000
-                  ? `${(d.value / 1000).toFixed(0)}k`
-                  : d.value}
-            </span>
+            <span className="text-[10px] font-semibold text-slate-500">{abbr(d.value)}</span>
             <div
               className="w-full max-w-[42px] rounded-t-md transition-all"
               style={{ height: Math.max(h, 3), background: `linear-gradient(to top, ${tone}, ${tone}bb)` }}
