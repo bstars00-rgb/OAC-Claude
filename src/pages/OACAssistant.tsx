@@ -121,6 +121,7 @@ export function OACAssistant() {
   const [chat, setChat] = useState<ChatState>(() => loadChats(lang))
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [rightTab, setRightTab] = useState<'accounts' | 'todos' | 'risks' | 'captures'>('accounts')
+  const [convQuery, setConvQuery] = useState('') // D-12: search conversations
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { saveChats(chat) }, [chat])
@@ -303,8 +304,13 @@ export function OACAssistant() {
         {/* Projects sidebar (ChatGPT-style; your own units — country, region, deal…) */}
         <aside className="hidden h-[calc(100vh-12rem)] flex-col overflow-auto rounded-xl border border-slate-200 bg-white p-2 lg:flex dark:bg-white/5">
           <button onClick={addProject} className="mb-1 flex items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 px-2 py-1.5 text-xs font-semibold text-slate-500 transition hover:border-brand-400 hover:text-brand-600">+ {lang === 'ko' ? '프로젝트' : 'Project'}</button>
+          {/* D-12: conversation search */}
+          <input value={convQuery} onChange={(e) => setConvQuery(e.target.value)} placeholder={lang === 'ko' ? '대화 검색…' : 'Search chats…'} className="mb-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs focus:border-brand-400 focus:bg-white focus:outline-none dark:bg-white/5" />
           {chat.projects.map((p) => {
-            const convs = chat.conversations.filter((c) => c.projectId === p.id).sort((a, b) => b.updatedAt - a.updatedAt)
+            const q = convQuery.trim().toLowerCase()
+            let convs = chat.conversations.filter((c) => c.projectId === p.id).sort((a, b) => b.updatedAt - a.updatedAt)
+            if (q) convs = convs.filter((c) => (c.title || '').toLowerCase().includes(q) || c.messages.some((m) => (m.text || '').toLowerCase().includes(q)))
+            if (q && convs.length === 0) return null // hide empty projects while searching
             return (
               <div key={p.id} className="mt-2">
                 <div className="group flex items-center gap-1 px-1.5 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
