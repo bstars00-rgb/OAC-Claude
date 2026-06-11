@@ -7,6 +7,14 @@
 
 import type { Attachment } from './files'
 import type { Lang } from '../i18n'
+import { recordUsage } from './usage'
+
+// Pull token counts from an Anthropic or OpenAI response and record them.
+function track(model: string, data: { usage?: { input_tokens?: number; output_tokens?: number; prompt_tokens?: number; completion_tokens?: number } }) {
+  const u = data?.usage
+  if (!u) return
+  recordUsage(model, u.input_tokens ?? u.prompt_tokens ?? 0, u.output_tokens ?? u.completion_tokens ?? 0)
+}
 
 const ENDPOINT = 'https://api.anthropic.com/v1/messages'
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions'
@@ -128,6 +136,7 @@ async function callAnthropic(opts: CallOpts): Promise<string> {
   }
 
   const data = await res.json()
+  track(opts.model, data)
   const text: string = (data.content ?? [])
     .filter((b: { type: string }) => b.type === 'text')
     .map((b: { text: string }) => b.text)
@@ -146,6 +155,7 @@ export async function callText(opts: { provider: AiProvider; apiKey: string; mod
     })
     if (!res.ok) throw new Error(`OpenAI ${res.status}`)
     const data = await res.json()
+    track(opts.model, data)
     return String(data.choices?.[0]?.message?.content ?? '').trim()
   }
   const res = await fetch(ENDPOINT, {
@@ -155,6 +165,7 @@ export async function callText(opts: { provider: AiProvider; apiKey: string; mod
   })
   if (!res.ok) throw new Error(`Anthropic ${res.status}`)
   const data = await res.json()
+  track(opts.model, data)
   return ((data.content ?? []).filter((b: { type: string }) => b.type === 'text').map((b: { text: string }) => b.text).join('\n')).trim()
 }
 
@@ -232,5 +243,6 @@ async function callOpenAI(opts: CallOpts): Promise<string> {
   }
 
   const data = await res.json()
+  track(opts.model, data)
   return String(data.choices?.[0]?.message?.content ?? '').trim()
 }

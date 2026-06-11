@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom'
 import { IntegrationsContent } from './Integrations'
 import { DataImportPanel } from '../components/DataImportPanel'
 import { AccountCleanup } from '../components/AccountCleanup'
+import { UsageCard } from '../components/UsageCard'
 import { listMcpTools, callMcpTool, type McpTool } from '../utils/mcpClient'
 import {
   connect as msConnect,
@@ -93,6 +94,9 @@ export function Settings() {
           {t('set.autosaved')}
         </div>
       </Card>
+
+      {/* API token usage & cost */}
+      <UsageCard />
 
       {/* Cloud sync (Supabase) */}
       <CloudSyncCard />
