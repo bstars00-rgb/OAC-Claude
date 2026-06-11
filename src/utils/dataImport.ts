@@ -255,7 +255,7 @@ export function buildSnapshotsByPeriod(input: {
     if (arr) arr.push(r)
     else byPeriod.set(period, [r])
   }
-  const cap = input.maxPeriods ?? 24
+  const cap = input.maxPeriods ?? 60 // keep up to 5 years of monthly periods
   const periods = [...byPeriod.keys()].sort().slice(-cap) // keep the most recent N periods
   return periods.map((periodLabel) =>
     buildSnapshot({ profile: input.profile, periodLabel, fileName: input.fileName, importedAt: input.importedAt, rows: byPeriod.get(periodLabel)!, mapping: input.mapping }),

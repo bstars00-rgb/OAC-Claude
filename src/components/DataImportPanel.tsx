@@ -421,6 +421,17 @@ export function DataImportPanel() {
       {/* snapshots */}
       {snapshots.length > 0 && (
         <div className="mt-4 space-y-3">
+          {(() => {
+            const bytes = (() => { try { return new Blob([localStorage.getItem('oac-datasets-v1') || '']).size } catch { return 0 } })()
+            const mb = bytes / 1_048_576
+            const near = mb > 3.5 // localStorage is ~5MB
+            return (
+              <div className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[11px] ${near ? 'bg-amber-50 text-amber-700' : 'text-slate-400'}`}>
+                <span>{snapshots.length} {L('스냅샷', 'snapshots')} · {mb < 1 ? `${Math.round(bytes / 1024)}KB` : `${mb.toFixed(1)}MB`} / ~5MB</span>
+                {near && <span>⚠️ {L('용량 한계 근접 — 오래된 스냅샷을 삭제하거나 클라우드 동기화를 켜세요', 'Near limit — delete old snapshots or enable cloud sync')}</span>}
+              </div>
+            )
+          })()}
           {snapshots.slice(0, 6).map((s) => (
             <div key={s.id} className="rounded-xl border border-slate-200 p-3 dark:border-white/10">
               <div className="flex flex-wrap items-center gap-2">
