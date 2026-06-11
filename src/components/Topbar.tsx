@@ -16,12 +16,16 @@ const connections: Connection[] = [
   { label: 'Meeting Recorder', tone: 'bg-brand-500' },
 ]
 
-export function Topbar() {
+export function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {}) {
   const { theme, toggleTheme } = useTheme()
   const { lang, setLang, t } = useT()
 
   return (
-    <header className="z-10 flex items-center gap-4 border-b border-slate-200 bg-white/80 px-6 py-3 backdrop-blur">
+    <header className="z-10 flex items-center gap-3 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur sm:gap-4 sm:px-6">
+      {/* D-11: mobile menu toggle */}
+      <button onClick={onMenuClick} aria-label="Open menu" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 lg:hidden">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+      </button>
       <SearchBar />
 
       <div className="ml-auto flex items-center gap-3">
