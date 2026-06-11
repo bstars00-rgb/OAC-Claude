@@ -18,6 +18,7 @@ export const GRAPH_SCOPES = ['User.Read', 'Mail.Read', 'Chat.Read']
 // Send is requested INCREMENTALLY — only when the user actually sends an email —
 // so the more sensitive Mail.Send permission never blocks login/read/sync.
 export const SEND_SCOPES = ['Mail.Send']
+export const TEAMS_SEND_SCOPES = ['Chat.ReadWrite']
 // File read (OneDrive / SharePoint) — incremental, only when importing from the cloud drive.
 export const FILES_SCOPES = ['Files.Read.All']
 
@@ -274,6 +275,7 @@ interface ChatMsgPreview {
   from?: { user?: { displayName?: string } }
 }
 interface Chat {
+  id?: string
   topic?: string
   chatType?: string
   members?: ChatMember[]
@@ -313,6 +315,32 @@ export async function fetchTeams(conn: MsConnection, opts: { sinceDays?: number;
     })
   }
   return items
+}
+
+// ── Teams: post a message (C-9) ──────────────────────────────────────────────
+export interface TeamsChat {
+  id: string
+  name: string
+}
+
+/** The user's recent Teams chats, for picking a post target. */
+export async function listChats(conn: MsConnection, top = 25): Promise<TeamsChat[]> {
+  const data = await graphGet<{ value: Chat[] }>(
+    conn,
+    `/me/chats?$top=${top}&$expand=members&$orderby=lastMessagePreview/createdDateTime desc`,
+    TEAMS_SEND_SCOPES,
+  )
+  return (data.value ?? []).map((c) => {
+    const others = (c.members ?? []).filter((m) => m.displayName).map((m) => m.displayName).filter(Boolean)
+    return { id: c.id ?? '', name: c.topic || others.slice(0, 3).join(', ') || 'Teams chat' }
+  }).filter((c) => c.id)
+}
+
+/** Post a plain-text message to a Teams chat (requires Chat.ReadWrite). */
+export async function postToChat(conn: MsConnection, chatId: string, text: string): Promise<void> {
+  // Newlines → <br> so the message keeps its shape in the Teams client.
+  const html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
+  await graphPost(conn, `/chats/${chatId}/messages`, { body: { contentType: 'html', content: html } }, TEAMS_SEND_SCOPES)
 }
 
 // ── OneDrive / SharePoint files ──────────────────────────────────────────────

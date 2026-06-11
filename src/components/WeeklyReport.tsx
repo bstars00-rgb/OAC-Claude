@@ -8,6 +8,7 @@ import { callText } from '../utils/aiClient'
 import { useToast } from './Toast'
 import { formatDate } from '../utils/format'
 import { exportTextAsWord, exportTextAsPdf, exportExcel } from '../utils/exportFile'
+import { listChats, postToChat, type TeamsChat } from '../utils/graph'
 
 // B-7: a weekly digest compiled from the last 7 days of captured activity plus
 // the latest imported data. Deterministic by default; AI narrative on demand.
@@ -29,6 +30,9 @@ export function WeeklyReport() {
   const [open, setOpen] = useState(false)
   const [aiText, setAiText] = useState('')
   const [busy, setBusy] = useState(false)
+  // C-9: Teams share flow
+  const [chats, setChats] = useState<TeamsChat[] | null>(null)
+  const [teamsBusy, setTeamsBusy] = useState(false)
 
   const since = daysBack(7)
   const report = useMemo(() => {
@@ -113,6 +117,33 @@ export function WeeklyReport() {
     toast.notify(L('Excel(.xlsx) 파일을 저장했습니다.', 'Saved Excel (.xlsx).'))
   }
 
+  // C-9: load the user's Teams chats, then post the report to the chosen one.
+  const conn = { clientId: ai.msClientId, tenant: ai.msTenant }
+  const loadChats = async () => {
+    setTeamsBusy(true)
+    try {
+      setChats(await listChats(conn))
+    } catch {
+      toast.notify(L('Teams 채팅을 불러오지 못했습니다. Microsoft 365 연결을 확인하세요.', 'Could not load Teams chats — check the Microsoft 365 connection.'))
+      setChats(null)
+    } finally {
+      setTeamsBusy(false)
+    }
+  }
+  const postToTeams = async (chat: TeamsChat) => {
+    if (!window.confirm(L(`"${chat.name}" 채팅에 주간 리포트를 게시할까요?`, `Post the weekly report to "${chat.name}"?`))) return
+    setTeamsBusy(true)
+    try {
+      await postToChat(conn, chat.id, aiText || text)
+      toast.notify(L(`Teams "${chat.name}"에 게시했습니다.`, `Posted to Teams "${chat.name}".`))
+      setChats(null)
+    } catch {
+      toast.notify(L('Teams 게시에 실패했습니다.', 'Failed to post to Teams.'))
+    } finally {
+      setTeamsBusy(false)
+    }
+  }
+
   const hasData = store.entries.length > 0 || ds.snapshots.length > 0
   if (!hasData) return null
 
@@ -129,10 +160,25 @@ export function WeeklyReport() {
             <div className="max-h-[60vh] overflow-auto px-5 py-4">
               <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-slate-700 dark:text-slate-200">{aiText || text}</pre>
               {aiText && <span className="mt-2 block text-[10px] uppercase tracking-wide text-brand-400">{L('AI 생성', 'AI generated')} · {ai.model.replace('claude-', '')}</span>}
+              {chats && (
+                <div className="mt-3 rounded-lg border border-slate-200 p-2 dark:border-white/10">
+                  <div className="mb-1 px-1 text-[11px] font-semibold text-slate-500">{L('게시할 Teams 채팅 선택', 'Pick a Teams chat to post to')}</div>
+                  {chats.length === 0 ? <p className="px-1 py-2 text-xs text-slate-400">{L('최근 채팅이 없습니다.', 'No recent chats.')}</p> : (
+                    <div className="max-h-40 space-y-0.5 overflow-auto">
+                      {chats.map((c) => (
+                        <button key={c.id} onClick={() => postToTeams(c)} disabled={teamsBusy} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-slate-700 transition hover:bg-brand-50 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-white/5">
+                          <TeamsIcon /> <span className="truncate">{c.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2 border-t border-slate-100 px-5 py-3 dark:border-white/5">
               {ai.isLive && <Button size="sm" variant="secondary" onClick={askAi} disabled={busy}>{busy ? L('AI 분석 중…', 'Analyzing…') : aiText ? L('다시 생성', 'Regenerate') : L('✨ AI 요약', '✨ AI summary')}</Button>}
               <Button size="sm" variant="secondary" onClick={copy}>{L('복사', 'Copy')}</Button>
+              {ai.msClientId && <Button size="sm" variant="secondary" onClick={loadChats} disabled={teamsBusy}>{teamsBusy ? L('Teams…', 'Teams…') : L('Teams 공유', 'Share to Teams')}</Button>}
               <span className="ml-auto flex items-center gap-1.5">
                 <span className="text-[11px] text-slate-400">{L('내보내기', 'Export')}:</span>
                 <button onClick={exportWord} className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-brand-300 hover:text-brand-700">Word</button>
@@ -149,4 +195,8 @@ export function WeeklyReport() {
 
 function DocIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3v5h5M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-5zM8 13h8M8 17h6" /></svg>
+}
+
+function TeamsIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-brand-500"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg>
 }
