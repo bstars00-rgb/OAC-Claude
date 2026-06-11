@@ -58,7 +58,7 @@ const catLabel: Record<Category, { en: string; ko: string }> = {
 let msgSeq = Date.now()
 
 // ── projects + conversations (ChatGPT-style, fully persisted) ────────────────
-interface Project { id: string; name: string }
+interface Project { id: string; name: string; accountId?: string; accountName?: string }
 interface Conversation { id: string; projectId: string; title: string; messages: ChatMsg[]; updatedAt: number }
 interface ChatState { projects: Project[]; conversations: Conversation[]; activeId: string }
 
@@ -168,6 +168,26 @@ export function OACAssistant() {
     if (!name) return
     setChat((prev) => ({ ...prev, projects: prev.projects.map((p) => (p.id === pid ? { ...p, name } : p)) }))
   }
+  // A-4: link a project to a relationship/account so its chats carry that focus.
+  const linkProject = (pid: string) => {
+    const opts = [...new Map([...rel.list.map((r) => [r.id, r.name] as const), ...store.accounts.map((a) => [a.accountId, a.accountName] as const)]).entries()]
+      .map(([id, name]) => ({ id, name }))
+    const typed = window.prompt(
+      lang === 'ko'
+        ? `이 프로젝트를 연결할 고객사 이름 (비우면 해제)\n\n예: ${opts.slice(0, 8).map((o) => o.name).join(', ')}`
+        : `Relationship to link this project to (blank to unlink)\n\ne.g. ${opts.slice(0, 8).map((o) => o.name).join(', ')}`,
+    )
+    if (typed === null) return
+    const term = typed.trim().toLowerCase()
+    if (!term) {
+      setChat((prev) => ({ ...prev, projects: prev.projects.map((p) => (p.id === pid ? { id: p.id, name: p.name } : p)) }))
+      return
+    }
+    const hit = opts.find((o) => o.name.toLowerCase() === term) ?? opts.find((o) => o.name.toLowerCase().includes(term))
+    if (!hit) { window.alert(lang === 'ko' ? '일치하는 고객사가 없습니다.' : 'No matching relationship.'); return }
+    setChat((prev) => ({ ...prev, projects: prev.projects.map((p) => (p.id === pid ? { ...p, accountId: hit.id, accountName: hit.name } : p)) }))
+  }
+  const linkedAccount = chat.projects.find((p) => p.id === active?.projectId)?.accountName
 
   const submit = async (text: string, attachments: Attachment[]) => {
     const clean = text.trim()
@@ -204,6 +224,7 @@ export function OACAssistant() {
       totalAccounts: store.stats.accounts,
       totalOpenTodos: store.stats.openTodos,
       totalRisks: store.stats.risks,
+      focusAccount: linkedAccount, // A-4: project is pinned to this relationship
     }
 
     const reply = await runAssistant({
@@ -288,9 +309,15 @@ export function OACAssistant() {
               <div key={p.id} className="mt-2">
                 <div className="group flex items-center gap-1 px-1.5 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                   <span className="flex-1 cursor-pointer truncate hover:text-slate-600" onDoubleClick={() => renameProject(p.id, p.name)} title={lang === 'ko' ? `${p.name} (더블클릭=이름변경)` : `${p.name} (double-click to rename)`}>{p.name}</span>
+                  <button onClick={() => linkProject(p.id)} title={lang === 'ko' ? '고객사 연결' : 'Link relationship'} className={`text-[11px] transition ${p.accountId ? 'text-brand-500' : 'text-slate-300 opacity-0 hover:text-brand-600 group-hover:opacity-100'}`}>🔗</button>
                   <button onClick={() => addChat(p.id)} title={lang === 'ko' ? '새 대화' : 'New chat'} className="text-sm text-slate-400 hover:text-brand-600">+</button>
                   {chat.projects.length > 1 && <button onClick={() => deleteProject(p.id)} className="text-slate-300 opacity-0 transition hover:text-rose-500 group-hover:opacity-100">×</button>}
                 </div>
+                {p.accountName && (
+                  <button onClick={() => p.accountId && navigate(`/relationship/${p.accountId}`)} className="mx-1.5 mb-0.5 flex w-[calc(100%-0.75rem)] items-center gap-1 truncate rounded-md bg-brand-50 px-1.5 py-0.5 text-left text-[10px] font-semibold text-brand-600 transition hover:bg-brand-100 dark:bg-brand-500/10" title={lang === 'ko' ? `${p.accountName} 관계로 이동` : `Open ${p.accountName}`}>
+                    <span className="truncate">↳ {p.accountName}</span>
+                  </button>
+                )}
                 <div className="space-y-0.5">
                   {convs.map((c) => (
                     <div key={c.id} className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm transition ${c.id === chat.activeId ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 dark:hover:bg-white/5'}`}>
@@ -367,7 +394,7 @@ export function OACAssistant() {
                   <div key={a.accountId} className="px-5 py-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-semibold text-slate-800">{a.accountName}</span>
-                      <Badge tone={catTone[a.category]}>{catLabel[a.category][lang]}</Badge>
+                      <Badge tone={catTone[a.category] ?? 'slate'}>{catLabel[a.category]?.[lang] ?? a.category}</Badge>
                     </div>
                     <div className="mt-1"><ContextBadge context={a.detectedContext} size="sm" /></div>
                     <div className="mt-1.5 flex items-center gap-3 text-[11px] text-slate-400">
@@ -487,7 +514,7 @@ export function OACAssistant() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><CheckIcon /> {t('asst.saved')}</span>
           <button onClick={() => s.isExisting ? navigate(`/relationship/${s.accountId}`) : undefined} className={`text-sm font-bold text-slate-900 ${s.isExisting ? 'hover:text-brand-700' : ''}`}>{s.accountName}</button>
-          <Badge tone={catTone[s.category]}>{catLabel[s.category][lang]}</Badge>
+          <Badge tone={catTone[s.category] ?? 'slate'}>{catLabel[s.category]?.[lang] ?? s.category}</Badge>
           <span className="text-[11px] text-slate-400">{openTodos} {t('cap.todosShort')}{entry.risks.length > 0 ? ` · ${entry.risks.length} ${t('cap.risk')}` : ''}</span>
           <button onClick={() => setMsg({ showDetails: !msg.showDetails })} className="ml-auto text-[11px] font-medium text-brand-600 hover:text-brand-700">{msg.showDetails ? t('asst.hide') : t('asst.details')}</button>
         </div>

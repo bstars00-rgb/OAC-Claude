@@ -40,6 +40,7 @@ export interface AssistantMemory {
   totalAccounts: number
   totalOpenTodos: number
   totalRisks: number
+  focusAccount?: string // A-4: active project is pinned to this relationship
 }
 
 interface RunOpts {
@@ -301,7 +302,10 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
         : ''
       const ctx = opts.relationships.length ? buildContext(opts.relationships) : (opts.lang === 'ko' ? '(아직 등록된 관계 없음)' : '(no relationships yet)')
       const dataCtx = opts.datasets?.length ? '\n' + buildDatasetContext(opts.datasets) : ''
-      const crmContext = `${ctx}\n${captures}${activity}${dataCtx}`.trim()
+      const focus = opts.memory.focusAccount
+        ? `\nACTIVE PROJECT FOCUS: this conversation belongs to a project pinned to "${opts.memory.focusAccount}". Assume questions are about ${opts.memory.focusAccount} unless another relationship is named, and prioritize its context.`
+        : ''
+      const crmContext = `${ctx}\n${captures}${activity}${dataCtx}${focus}`.trim()
       const raw = await callAssistant({
         provider: opts.provider ?? 'anthropic',
         apiKey: opts.apiKey,
