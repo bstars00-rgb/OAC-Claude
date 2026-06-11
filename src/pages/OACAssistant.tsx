@@ -120,6 +120,7 @@ export function OACAssistant() {
   // Projects + conversations — persisted, synced via backup/cloud.
   const [chat, setChat] = useState<ChatState>(() => loadChats(lang))
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [rightTab, setRightTab] = useState<'accounts' | 'todos' | 'risks' | 'captures'>('accounts')
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { saveChats(chat) }, [chat])
@@ -336,25 +337,33 @@ export function OACAssistant() {
             </div>
           </Card>
 
+          {/* clickable metric cards → drill into the real items below */}
           <div className="grid grid-cols-2 gap-3">
-            <MetricCard label={t('cap.accounts')} value={store.stats.accounts} />
-            <MetricCard label={t('cap.openTodos')} value={store.stats.openTodos} />
-            <MetricCard label={t('cap.risks')} value={store.stats.risks} deltaTone={store.stats.risks ? 'down' : 'neutral'} />
-            <MetricCard label={t('cap.captures')} value={store.stats.entries} />
+            {([
+              { tab: 'accounts', label: t('cap.accounts'), value: store.stats.accounts },
+              { tab: 'todos', label: t('cap.openTodos'), value: store.stats.openTodos },
+              { tab: 'risks', label: t('cap.risks'), value: store.stats.risks },
+              { tab: 'captures', label: t('cap.captures'), value: store.stats.entries },
+            ] as const).map((m) => (
+              <button key={m.tab} onClick={() => setRightTab(m.tab)} className={`rounded-xl border p-3 text-left transition ${rightTab === m.tab ? 'border-brand-300 bg-brand-50/60 dark:bg-brand-500/10' : 'border-slate-200 hover:bg-slate-50 dark:bg-white/5'}`}>
+                <div className="text-[11px] text-slate-400">{m.label}</div>
+                <div className="text-xl font-bold tracking-tight text-slate-800">{m.value}</div>
+              </button>
+            ))}
           </div>
 
           <Card padded={false}>
             <div className="flex items-center justify-between px-5 pt-5">
-              <CardHeader title={t('cap.recentAccounts')} subtitle={t('cap.liveStructured')} />
+              <CardHeader title={rightTab === 'accounts' ? t('cap.recentAccounts') : rightTab === 'todos' ? t('cap.openTodos') : rightTab === 'risks' ? t('cap.risks') : t('cap.captures')} subtitle={t('cap.liveStructured')} />
               {store.entries.length > 0 && (
-                <button onClick={store.clearAll} className="mb-4 text-[11px] font-medium text-slate-400 hover:text-rose-600">{t('cap.clear')}</button>
+                <button onClick={() => { if (window.confirm(lang === 'ko' ? '워크스페이스 데이터를 모두 지울까요?' : 'Clear all workspace data?')) store.clearAll() }} className="mb-4 text-[11px] font-medium text-slate-400 hover:text-rose-600">{t('cap.clear')}</button>
               )}
             </div>
-            {store.accounts.length === 0 ? (
+            {store.entries.length === 0 ? (
               <p className="px-5 pb-5 text-sm text-slate-400">{t('cap.noAccounts')}</p>
             ) : (
-              <div className="max-h-[320px] divide-y divide-slate-100 overflow-auto">
-                {store.accounts.map((a) => (
+              <div className="max-h-[360px] divide-y divide-slate-100 overflow-auto dark:divide-white/5">
+                {rightTab === 'accounts' && store.accounts.map((a) => (
                   <div key={a.accountId} className="px-5 py-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-semibold text-slate-800">{a.accountName}</span>
@@ -366,10 +375,46 @@ export function OACAssistant() {
                       {a.riskCount > 0 && <span className="text-rose-600">{a.riskCount} {t('cap.risks')}</span>}
                       <span className="ml-auto">{daysAgo(a.lastDate)}</span>
                     </div>
-                    {a.isExisting && (
-                      <button onClick={() => navigate(`/relationship/${a.accountId}`)} className="mt-1.5 text-[11px] font-medium text-brand-600 hover:text-brand-700">{t('cap.viewRel')} →</button>
-                    )}
+                    <button onClick={() => navigate(`/relationship/${a.accountId}`)} className="mt-1.5 text-[11px] font-medium text-brand-600 hover:text-brand-700">{t('cap.viewRel')} →</button>
                   </div>
+                ))}
+
+                {rightTab === 'todos' && (() => {
+                  const todos = store.entries.flatMap((e) => e.todos.filter((td) => !td.done).map((td) => ({ ...td, accountName: e.accountName, accountId: e.accountId, entryId: e.id })))
+                  if (!todos.length) return <p className="px-5 pb-5 pt-1 text-sm text-slate-400">{t('dash.noTodos')}</p>
+                  return todos.map((td) => (
+                    <button key={td.id} onClick={() => store.toggleTodo(td.entryId, td.id)} className="flex w-full items-start gap-2 px-5 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-white/5">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-slate-300" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm text-slate-700">{td.text}</span>
+                        <span className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400"><span className="font-medium text-brand-600">{td.accountName}</span><Badge tone={td.priority === 'High' ? 'red' : td.priority === 'Medium' ? 'amber' : 'slate'}>{td.priority}</Badge>{td.due && <span>{t('cap.due')} {formatDate(td.due)}</span>}</span>
+                      </span>
+                    </button>
+                  ))
+                })()}
+
+                {rightTab === 'risks' && (() => {
+                  const risks = store.entries.flatMap((e) => e.risks.map((r, i) => ({ id: `${e.id}-${i}`, risk: r, accountName: e.accountName, accountId: e.accountId })))
+                  if (!risks.length) return <p className="px-5 pb-5 pt-1 text-sm text-slate-400">{lang === 'ko' ? '리스크가 없습니다.' : 'No risks.'}</p>
+                  return risks.map((r) => (
+                    <button key={r.id} onClick={() => navigate(`/relationship/${r.accountId}`)} className="flex w-full items-start gap-2 px-5 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-white/5">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm text-slate-700">{r.risk}</span>
+                        <span className="text-[11px] font-medium text-brand-600">{r.accountName}</span>
+                      </span>
+                    </button>
+                  ))
+                })()}
+
+                {rightTab === 'captures' && store.entries.slice(0, 50).map((e) => (
+                  <button key={e.id} onClick={() => navigate(`/relationship/${e.accountId}`)} className="block w-full px-5 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-white/5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-sm font-medium text-slate-700">{e.timeline?.title || e.summary}</span>
+                      <span className="shrink-0 text-[11px] text-slate-400">{daysAgo(e.date)}</span>
+                    </div>
+                    <span className="text-[11px] text-slate-400">{e.accountName} · {e.detectedContext}</span>
+                  </button>
                 ))}
               </div>
             )}
