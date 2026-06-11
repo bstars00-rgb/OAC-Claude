@@ -1,5 +1,6 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { CloudAutoSync } from './components/CloudAutoSync'
 import { MsAutoSync } from './components/MsAutoSync'
 import { ToastProvider } from './components/Toast'
@@ -15,8 +16,36 @@ import { DataInsight } from './pages/DataInsight'
 import { Central } from './pages/Central'
 import { Settings } from './pages/Settings'
 
+function AppRoutes() {
+  // Key the boundary by path so navigating to another screen clears a crashed one.
+  const location = useLocation()
+  return (
+    <ErrorBoundary key={location.pathname}>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/assistant" element={<OACAssistant />} />
+        <Route path="/relationship" element={<Relationship360 />} />
+        <Route path="/relationship/:id" element={<Relationship360 />} />
+        <Route path="/data" element={<DataInsight />} />
+        <Route path="/central" element={<Central />} />
+        <Route path="/settings" element={<Settings />} />
+        {/* Legacy paths — Ask OAC, AI Capture, Email, Report, Meeting are now
+            all handled inside the OAC Assistant; Integrations live in Settings. */}
+        <Route path="/ask" element={<OACAssistant />} />
+        <Route path="/capture" element={<OACAssistant />} />
+        <Route path="/email" element={<OACAssistant />} />
+        <Route path="/report" element={<OACAssistant />} />
+        <Route path="/meeting" element={<OACAssistant />} />
+        <Route path="/integrations" element={<Settings />} />
+        <Route path="*" element={<Dashboard />} />
+      </Routes>
+    </ErrorBoundary>
+  )
+}
+
 export default function App() {
   return (
+    <ErrorBoundary>
     <ThemeProvider>
     <LanguageProvider>
     <CaptureProvider>
@@ -26,24 +55,7 @@ export default function App() {
       <CloudAutoSync />
       <MsAutoSync />
       <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/assistant" element={<OACAssistant />} />
-          <Route path="/relationship" element={<Relationship360 />} />
-          <Route path="/relationship/:id" element={<Relationship360 />} />
-          <Route path="/data" element={<DataInsight />} />
-          <Route path="/central" element={<Central />} />
-          <Route path="/settings" element={<Settings />} />
-          {/* Legacy paths — Ask OAC, AI Capture, Email, Report, Meeting are now
-              all handled inside the OAC Assistant; Integrations live in Settings. */}
-          <Route path="/ask" element={<OACAssistant />} />
-          <Route path="/capture" element={<OACAssistant />} />
-          <Route path="/email" element={<OACAssistant />} />
-          <Route path="/report" element={<OACAssistant />} />
-          <Route path="/meeting" element={<OACAssistant />} />
-          <Route path="/integrations" element={<Settings />} />
-          <Route path="*" element={<Dashboard />} />
-        </Routes>
+        <AppRoutes />
       </Layout>
     </ToastProvider>
     </AiSettingsProvider>
@@ -51,5 +63,6 @@ export default function App() {
     </CaptureProvider>
     </LanguageProvider>
     </ThemeProvider>
+    </ErrorBoundary>
   )
 }
