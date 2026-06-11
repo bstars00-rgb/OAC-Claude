@@ -1,8 +1,35 @@
 import { describe, it, expect } from 'vitest'
-import { runAssistant, extractEmailBlock, type AssistantMemory } from './assistantEngine'
+import { runAssistant, extractEmailBlock, classifyLiveError, liveErrorHint, type AssistantMemory } from './assistantEngine'
 import { getEntities } from '../data/entities'
 
 const emptyMemory: AssistantMemory = { accounts: [], updates: [], totalAccounts: 0, totalOpenTodos: 0, totalRisks: 0 }
+
+describe('live error classification', () => {
+  // the exact message the user hit on Anthropic Opus 4.8
+  const anthropicRateLimit = "Anthropic API 429: This request would exceed your organization's rate limit of 10,000 input tokens per minute (org: 5b27..., model: claude-opus-4-8)."
+  const openaiQuota = 'OpenAI API 429: You exceeded your current quota, please check your plan and billing details. (insufficient_quota)'
+
+  it('treats an Anthropic per-minute 429 as a rate limit, NOT a credit problem', () => {
+    expect(classifyLiveError(anthropicRateLimit)).toBe('rateLimit')
+    const hint = liveErrorHint(anthropicRateLimit, 'en', 'anthropic')
+    expect(hint).toMatch(/rate limit/i)
+    expect(hint).not.toMatch(/no available credit|ChatGPT Plus|openai/i)
+  })
+
+  it('treats insufficient_quota / billing as a quota problem, provider-aware', () => {
+    expect(classifyLiveError(openaiQuota)).toBe('quota')
+    expect(liveErrorHint(openaiQuota, 'en', 'openai')).toMatch(/platform\.openai\.com/i)
+    // an Anthropic quota error points at the Anthropic console, not OpenAI
+    const anthropicQuota = 'Anthropic API 400: Your credit balance is too low to access the API.'
+    expect(classifyLiveError(anthropicQuota)).toBe('quota')
+    expect(liveErrorHint(anthropicQuota, 'en', 'anthropic')).toMatch(/console\.anthropic\.com/i)
+  })
+
+  it('classifies auth and generic errors', () => {
+    expect(classifyLiveError('401 invalid x-api-key')).toBe('auth')
+    expect(classifyLiveError('network timeout')).toBe('generic')
+  })
+})
 
 const base = {
   isLive: false as const,

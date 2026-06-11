@@ -59,6 +59,45 @@ interface RunOpts {
   assistantMode?: 'oac' | 'chatgpt'
 }
 
+export type LiveErrorKind = 'rateLimit' | 'quota' | 'auth' | 'generic'
+
+// Classify a live-call failure. A 429 is ambiguous: a per-minute RATE LIMIT
+// (throttling — wait/retry, not money) vs an INSUFFICIENT QUOTA / credit balance
+// (billing). They need opposite advice, so keep them apart.
+export function classifyLiveError(msg: string): LiveErrorKind {
+  if (/insufficient_quota|exceeded your current quota|credit balance|no available credit|billing/i.test(msg)) return 'quota'
+  if (/too many requests|rate limit|tokens per minute|requests per minute|per minute|\b429\b/i.test(msg)) return 'rateLimit'
+  if (/\b401\b|invalid x-api-key|invalid.*key|authentication|unauthorized/i.test(msg)) return 'auth'
+  return 'generic'
+}
+
+// Actionable, provider-aware hint appended to the raw error text.
+export function liveErrorHint(msg: string, lang: Lang, provider: 'anthropic' | 'openai'): string {
+  const ko = lang === 'ko'
+  switch (classifyLiveError(msg)) {
+    case 'rateLimit':
+      return ko
+        ? '\n\n→ 분당 요청 한도(rate limit)에 걸렸습니다. 크레딧 문제가 아니라 일시적인 속도 제한이에요. 잠시(약 1분) 기다렸다가 다시 시도하거나, 설정에서 더 가벼운 모델(Haiku·Sonnet)로 바꾸면 분당 토큰 한도에 덜 걸립니다. 데이터가 많은 질문일수록 입력 토큰이 커져 한도를 넘기 쉽습니다.'
+        : '\n\n→ You hit a per-minute rate limit — throttling, not a credit problem. Wait ~1 minute and retry, or switch to a lighter model (Haiku/Sonnet) in Settings to stay under the per-minute token cap. Data-heavy questions use more input tokens and trip the limit sooner.'
+    case 'quota':
+      return provider === 'openai'
+        ? (ko
+            ? '\n\n→ OpenAI API 계정에 사용 가능한 크레딧이 없습니다. ChatGPT Plus 구독과 API 크레딧은 별개예요 — platform.openai.com/settings/organization/billing 에서 결제수단·크레딧을 추가하세요. (또는 모델을 Claude로 바꾸거나 데모 모드로 전환하세요.)'
+            : '\n\n→ Your OpenAI API account has no available credit. ChatGPT Plus ≠ API credit — add a payment method / credits at platform.openai.com billing. (Or switch the model to Claude, or use Demo mode.)')
+        : (ko
+            ? '\n\n→ Anthropic(Claude) API 계정에 사용 가능한 크레딧이 없습니다. console.anthropic.com/settings/billing 에서 크레딧을 충전하세요. (또는 데모 모드로 전환하세요.)'
+            : '\n\n→ Your Anthropic (Claude) API account has no available credit. Add credits at console.anthropic.com/settings/billing. (Or use Demo mode.)')
+    case 'auth':
+      return ko
+        ? '\n\n→ API 키가 올바르지 않습니다. 설정에서 키를 다시 확인하세요(OpenAI는 sk-..., Anthropic은 sk-ant-...).'
+        : '\n\n→ The API key looks invalid. Re-check it in Settings (OpenAI sk-…, Anthropic sk-ant-…).'
+    default:
+      return ko
+        ? '\n\n설정에서 API 키와 모델을 확인하세요. (데모 모드로 전환하면 키 없이 동작합니다.)'
+        : '\n\nCheck your API key and model in Settings. (Switch to Demo mode to run without a key.)'
+  }
+}
+
 const CATEGORIES: Category[] = ['Customer', 'Supplier', 'Partner', 'Project', 'Recruiting', 'Legal', 'Operations', 'Finance', 'General']
 const PRIORITIES: Priority[] = ['High', 'Medium', 'Low']
 
@@ -339,20 +378,8 @@ export async function runAssistant(opts: RunOpts): Promise<AssistantReply> {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       const ko = opts.lang === 'ko'
-      let hint = ko
-        ? '\n\n설정에서 API 키와 모델을 확인하세요. (데모 모드로 전환하면 키 없이 동작합니다.)'
-        : '\n\nCheck your API key and model in Settings. (Switch to Demo mode to run without a key.)'
-      if (/429|quota|insufficient_quota|billing/i.test(msg)) {
-        hint = ko
-          ? '\n\n→ API 계정에 사용 가능한 크레딧이 없습니다. ChatGPT Plus 구독과 API 크레딧은 별개예요. OpenAI는 platform.openai.com/settings/organization/billing 에서 결제수단 추가·크레딧 충전이 필요합니다. (또는 설정에서 모델을 Claude로 바꾸거나 데모 모드로 전환하세요.)'
-          : '\n\n→ Your API account has no available credit. ChatGPT Plus ≠ API credit — add a payment method / credits at platform.openai.com billing. (Or switch the model to Claude in Settings, or use Demo mode.)'
-      } else if (/401|invalid|authentication|x-api-key/i.test(msg)) {
-        hint = ko
-          ? '\n\n→ API 키가 올바르지 않습니다. 설정에서 키를 다시 확인하세요(OpenAI는 sk-..., Anthropic은 sk-ant-...).'
-          : '\n\n→ The API key looks invalid. Re-check it in Settings (OpenAI sk-…, Anthropic sk-ant-…).'
-      }
       return {
-        text: (ko ? `실제 AI 호출에 실패했습니다: ${msg}` : `Live AI call failed: ${msg}`) + hint,
+        text: (ko ? `실제 AI 호출에 실패했습니다: ${msg}` : `Live AI call failed: ${msg}`) + liveErrorHint(msg, opts.lang, opts.provider ?? 'anthropic'),
         error: msg,
       }
     }
