@@ -123,6 +123,7 @@ export function OACAssistant() {
   const [rightTab, setRightTab] = useState<'accounts' | 'todos' | 'risks' | 'captures'>('accounts')
   const [convQuery, setConvQuery] = useState('') // D-12: search conversations
   const scrollRef = useRef<HTMLDivElement>(null)
+  const lastConvId = useRef<string | undefined>(undefined)
 
   useEffect(() => { saveChats(chat) }, [chat])
 
@@ -270,8 +271,15 @@ export function OACAssistant() {
   }, [])
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [messages])
+    const el = scrollRef.current
+    if (!el) return
+    // Entering the assistant or switching conversations → jump to the bottom
+    // instantly (no scroll-down animation over old content). Only a NEW message
+    // in the SAME conversation gets the smooth scroll.
+    const switched = lastConvId.current !== active?.id
+    lastConvId.current = active?.id
+    el.scrollTo({ top: el.scrollHeight, behavior: switched ? 'auto' : 'smooth' })
+  }, [messages, active?.id])
 
   return (
     <div className="oac-fade-in">
