@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ComponentType } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -13,12 +13,35 @@ import { AiSettingsProvider } from './utils/aiSettings'
 
 // Code-split each route into its own chunk (loaded on navigation) so the initial
 // bundle stays small. Pages use named exports → map to default for React.lazy.
-const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })))
-const OACAssistant = lazy(() => import('./pages/OACAssistant').then((m) => ({ default: m.OACAssistant })))
-const Relationship360 = lazy(() => import('./pages/Relationship360').then((m) => ({ default: m.Relationship360 })))
-const DataInsight = lazy(() => import('./pages/DataInsight').then((m) => ({ default: m.DataInsight })))
-const Central = lazy(() => import('./pages/Central').then((m) => ({ default: m.Central })))
-const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })))
+//
+// After a new deploy the chunk filenames change; a stale tab/cache may request an
+// old hash that GitHub Pages no longer has → "Failed to fetch dynamically imported
+// module". lazyRoute() recovers by force-reloading ONCE to pick up the fresh
+// manifest; if it still fails, the error propagates to the ErrorBoundary.
+const RELOAD_KEY = 'oac-chunk-reload'
+function lazyRoute<T extends { default: ComponentType<unknown> }>(factory: () => Promise<T>) {
+  return lazy(async () => {
+    try {
+      const mod = await factory()
+      sessionStorage.removeItem(RELOAD_KEY)
+      return mod
+    } catch (err) {
+      if (!sessionStorage.getItem(RELOAD_KEY)) {
+        sessionStorage.setItem(RELOAD_KEY, '1')
+        window.location.reload()
+        return new Promise<T>(() => {}) // never resolves; the page is reloading
+      }
+      throw err
+    }
+  })
+}
+
+const Dashboard = lazyRoute(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })))
+const OACAssistant = lazyRoute(() => import('./pages/OACAssistant').then((m) => ({ default: m.OACAssistant })))
+const Relationship360 = lazyRoute(() => import('./pages/Relationship360').then((m) => ({ default: m.Relationship360 })))
+const DataInsight = lazyRoute(() => import('./pages/DataInsight').then((m) => ({ default: m.DataInsight })))
+const Central = lazyRoute(() => import('./pages/Central').then((m) => ({ default: m.Central })))
+const Settings = lazyRoute(() => import('./pages/Settings').then((m) => ({ default: m.Settings })))
 
 function PageLoading() {
   return (
