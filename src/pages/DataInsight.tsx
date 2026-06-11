@@ -88,16 +88,15 @@ function MiniChart({ chart }: { chart: ChartData }) {
   const fmt = (n: number) => (chart.unit === 'yen' ? '¥' : '') + Math.round(n).toLocaleString()
   const max = Math.max(...chart.points.map((p) => p.value), 1)
   return (
-    // Cap the width so the bars stay compact instead of stretching across the
-    // full (now wide) card. Bar track is fixed-width, not flex-1.
-    <div className="mt-2 max-w-lg space-y-1">
+    // Bars fill their column (the insight card lays text + chart side-by-side).
+    <div className="space-y-1.5">
       {chart.points.map((p) => (
         <div key={p.label} className="flex items-center gap-2">
-          <span className="w-40 shrink-0 truncate text-[11px] font-medium text-slate-600 dark:text-slate-300" title={p.label}>{p.label}</span>
-          <div className="h-2 w-32 shrink-0 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10 sm:w-40">
+          <span className="w-32 shrink-0 truncate text-[11px] font-medium text-slate-600 dark:text-slate-300" title={p.label}>{p.label}</span>
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
             <div className="h-full rounded-full bg-gradient-to-r from-brand-600 to-violet-600" style={{ width: `${Math.max(2, (p.value / max) * 100)}%` }} />
           </div>
-          <span className="shrink-0 text-right text-[11px] font-semibold text-slate-700 dark:text-slate-200">{fmt(p.value)}</span>
+          <span className="w-24 shrink-0 text-right text-[11px] font-semibold text-slate-700 dark:text-slate-200">{fmt(p.value)}</span>
         </div>
       ))}
     </div>
@@ -173,8 +172,15 @@ function AiInsightBoard({ L }: { L: (ko: string, en: string) => string }) {
                 <span className="text-xs font-bold text-brand-700">{it.question}</span>
                 <button onClick={() => setInsights((prev) => prev.filter((x) => x.id !== it.id))} className="shrink-0 text-[11px] text-slate-400 hover:text-rose-500">{L('삭제', 'Delete')}</button>
               </div>
-              <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-slate-700">{it.text}</p>
-              {it.chart && <MiniChart chart={it.chart} />}
+              {it.chart ? (
+                // split the row in half: narrative on the left, chart on the right
+                <div className="mt-1 grid gap-x-6 gap-y-3 lg:grid-cols-2 lg:items-center">
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-200">{it.text}</p>
+                  <MiniChart chart={it.chart} />
+                </div>
+              ) : (
+                <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-200">{it.text}</p>
+              )}
             </div>
           ))}
         </div>
