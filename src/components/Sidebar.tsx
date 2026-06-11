@@ -19,6 +19,7 @@ const navItems: NavItem[] = [
   { to: '/assistant', tKey: 'nav.assistant', icon: I(<><path d="M12 3l1.9 4.6L18.5 9 14 11l-2 5-2-5L5.5 9l4.6-1.4L12 3z" /></>) },
   { to: '/relationship', tKey: 'nav.relationship', icon: I(<><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></>) },
   { to: '/data', tKey: 'nav.data', icon: I(<><path d="M3 3v18h18" /><path d="M7 14l3-4 3 3 4-6" /></>) },
+  { to: '/central', tKey: 'nav.central', icon: I(<><circle cx="12" cy="7" r="3" /><circle cx="5" cy="17" r="2.5" /><circle cx="19" cy="17" r="2.5" /><path d="M12 10v3M9.5 15l-2 1M14.5 15l2 1" /></>) },
   { to: '/settings', tKey: 'nav.settings', icon: I(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.74.66 1.65 1.65 0 0 0-1.51 1H12a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 7 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 2.6 14a1.65 1.65 0 0 0-1-1.51V12a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 7" /></>) },
 ]
 
@@ -65,10 +66,10 @@ export function Sidebar() {
             <span className="flex h-5 w-5 items-center justify-center rounded-md bg-brand-600 text-white">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 4.6L18.5 9 14 11l-2 5-2-5L5.5 9l4.6-1.4L12 3z" /></svg>
             </span>
-            <span className="text-[11px] font-bold uppercase tracking-wide text-brand-700">AI Engine Demo</span>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-brand-700">OAC</span>
           </div>
           <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
-            검색만 하세요. 분류와 정리는 OAC가 합니다.
+            {t('top.tagline')}
           </p>
         </div>
       </div>

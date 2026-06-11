@@ -117,6 +117,55 @@ export async function pushState(c: SbConfig, stampedAt: string, opts?: { ifNewer
   return { pushed: true }
 }
 
+// ── Team / org (RBAC): shared read within an org, write only your own row ─────
+export type OrgRole = 'admin' | 'member'
+export interface OrgMembership { orgId: string; role: OrgRole; name?: string }
+export interface OrgMemberData {
+  userId: string
+  name: string
+  email?: string
+  role: OrgRole
+  updatedAt: string
+  data: unknown // that member's Backup JSON (captures/datasets/insights, secrets already stripped)
+}
+
+/** Join/refresh your org membership and publish your current data to the shared org table. */
+export async function joinOrg(c: SbConfig, m: OrgMembership & { name: string }, stampedAt: string): Promise<void> {
+  const sb = await getClient(c)
+  const { data: u } = await sb.auth.getUser()
+  if (!u.user) throw new Error('not-signed-in')
+  const backup = JSON.parse(exportBackup(stampedAt))
+  const { error } = await sb.from('oac_shared').upsert(
+    { user_id: u.user.id, org_id: m.orgId.trim(), role: m.role, name: m.name, email: u.user.email, data: backup, updated_at: stampedAt },
+    { onConflict: 'user_id' },
+  )
+  if (error) throw new Error(error.message)
+}
+
+/** Your current org membership, or null if you haven't joined one. */
+export async function myOrg(c: SbConfig): Promise<OrgMembership | null> {
+  const sb = await getClient(c)
+  const { data: u } = await sb.auth.getUser()
+  if (!u.user) return null
+  const { data } = await sb.from('oac_shared').select('org_id,role,name').eq('user_id', u.user.id).maybeSingle()
+  return data ? { orgId: data.org_id as string, role: (data.role as OrgRole) ?? 'member', name: data.name as string } : null
+}
+
+export async function leaveOrg(c: SbConfig): Promise<void> {
+  const sb = await getClient(c)
+  const { data: u } = await sb.auth.getUser()
+  if (!u.user) return
+  await sb.from('oac_shared').delete().eq('user_id', u.user.id)
+}
+
+/** All members of your org (RLS returns only same-org rows) — for the central view. */
+export async function listOrgMembers(c: SbConfig): Promise<OrgMemberData[]> {
+  const sb = await getClient(c)
+  const { data, error } = await sb.from('oac_shared').select('user_id,name,email,role,updated_at,data').order('updated_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data ?? []).map((r) => ({ userId: r.user_id as string, name: (r.name as string) ?? '(unknown)', email: r.email as string | undefined, role: (r.role as OrgRole) ?? 'member', updatedAt: r.updated_at as string, data: r.data }))
+}
+
 /** Pull the cloud state into localStorage. Returns false if the cloud is empty. */
 export async function pullState(c: SbConfig): Promise<boolean> {
   const sb = await getClient(c)

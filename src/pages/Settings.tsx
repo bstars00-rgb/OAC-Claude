@@ -20,7 +20,11 @@ import {
   pushState as sbPush,
   pullState as sbPull,
   getCloudUpdatedAt as sbCloudAt,
+  myOrg as sbMyOrg,
+  joinOrg as sbJoinOrg,
+  leaveOrg as sbLeaveOrg,
 } from '../utils/supabaseClient'
+import { useNavigate } from 'react-router-dom'
 import { IntegrationsContent } from './Integrations'
 import { DataImportPanel } from '../components/DataImportPanel'
 import {
@@ -96,6 +100,9 @@ export function Settings() {
       {/* Cloud sync (Supabase) */}
       <CloudSyncCard />
 
+      {/* Team / org (RBAC) */}
+      <TeamCard />
+
       {/* Backup & Restore */}
       <BackupCard />
 
@@ -151,6 +158,110 @@ Mobile: +84-938-098216  Email: cb.park@ohmyhotel.com`
 
 function SignIcon() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17c3-1 4-9 7-9 2 0 1 5 3 5s3-3 5-3" /><path d="M3 21h18" /></svg>
+}
+
+function TeamCard() {
+  const { lang } = useT()
+  const ai = useAiSettings()
+  const toast = useToast()
+  const navigate = useNavigate()
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
+  const cfg = { url: ai.supabaseUrl, anonKey: ai.supabaseAnonKey }
+  const configured = sbConfigured(cfg)
+
+  const [org, setOrg] = useState<{ orgId: string; role: 'admin' | 'member'; name?: string } | null>(null)
+  const [orgIdInput, setOrgIdInput] = useState('')
+  const [nameInput, setNameInput] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [showHelp, setShowHelp] = useState(false)
+
+  useEffect(() => {
+    if (configured) sbMyOrg(cfg).then((m) => { setOrg(m); if (m?.name) setNameInput(m.name) }).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ai.supabaseUrl, ai.supabaseAnonKey])
+
+  const join = async (role: 'admin' | 'member', orgId: string) => {
+    if (!orgId.trim()) { setError(L('조직 ID를 입력하세요', 'Enter an org ID')); return }
+    if (!nameInput.trim()) { setError(L('이름을 입력하세요', 'Enter your name')); return }
+    setError(''); setBusy(true)
+    try {
+      await sbJoinOrg(cfg, { orgId: orgId.trim(), role, name: nameInput.trim() }, new Date().toISOString())
+      setOrg({ orgId: orgId.trim(), role, name: nameInput.trim() })
+      toast.notify(L('조직 참여 완료', 'Joined org'), orgId.trim())
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setBusy(false) }
+  }
+  const leave = async () => { try { await sbLeaveOrg(cfg) } catch { /* ignore */ } setOrg(null) }
+  const newOrgId = () => 'omh-' + Math.abs([...nameInput].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, Date.parse(new Date().toISOString().slice(0, 10)) % 100000)).toString(36).slice(0, 6)
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between">
+        <CardHeader title={L('팀 / 조직 (전사 공유)', 'Team / Org (central sharing)')} subtitle={L('세일즈 각자 CRM을 쓰고, 중앙에서 전사 관계·히스토리를 모아 봅니다 (신입 교육·인수인계)', 'Each rep keeps their CRM; the org sees all relationships & history centrally (onboarding & handover)')} icon={<UsersIcon />} />
+        {org && <Badge tone={org.role === 'admin' ? 'brand' : 'green'} dot>{org.role === 'admin' ? L('관리자', 'admin') : L('멤버', 'member')}</Badge>}
+      </div>
+
+      {!configured ? (
+        <p className="text-[11px] text-amber-600">{L('먼저 위 클라우드 동기화(Supabase)를 구성하고 로그인하세요.', 'Set up Cloud Sync (Supabase) above and sign in first.')}</p>
+      ) : org ? (
+        <div className="mt-1 space-y-2">
+          <div className="text-sm text-slate-700">{L('조직', 'Org')}: <span className="font-mono font-medium">{org.orgId}</span> · {org.name}</div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => navigate('/central')}>{L('전사 히스토리 열기', 'Open Central')} →</Button>
+            <Button size="sm" variant="secondary" onClick={() => join(org.role, org.orgId)} disabled={busy}>{busy ? L('동기화 중…', 'Syncing…') : L('내 데이터 전사 공유 갱신', 'Publish my data to org')}</Button>
+            <Button size="sm" variant="secondary" onClick={leave}>{L('조직 나가기', 'Leave org')}</Button>
+          </div>
+          <p className="text-[11px] text-slate-400">{L('팀원에게 이 조직 ID를 알려주고 "조직 참여"하게 하면 전사 화면에 모입니다.', 'Share this org ID with teammates to join — everyone’s data aggregates in Central.')}</p>
+        </div>
+      ) : (
+        <div className="mt-1 space-y-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">{L('내 이름 (표시용)', 'Your name')}</label>
+            <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="Aiden Park" className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">{L('조직 ID (팀에서 공유하는 값)', 'Org ID (shared by your team)')}</label>
+            <input value={orgIdInput} onChange={(e) => setOrgIdInput(e.target.value)} placeholder="omh-sales" className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs focus:border-brand-400 focus:outline-none" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => join('member', orgIdInput)} disabled={busy}>{L('조직 참여 (멤버)', 'Join org (member)')}</Button>
+            <Button size="sm" variant="secondary" onClick={() => { const id = orgIdInput.trim() || newOrgId(); setOrgIdInput(id); join('admin', id) }} disabled={busy}>{L('새 조직 만들기 (관리자)', 'Create org (admin)')}</Button>
+          </div>
+        </div>
+      )}
+
+      {error && <div className="mt-2 max-w-md rounded-lg border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-700">{error}</div>}
+
+      <button onClick={() => setShowHelp((v) => !v)} className="mt-3 text-[11px] font-medium text-brand-600 hover:text-brand-700">{showHelp ? L('설정 방법 닫기', 'Hide setup') : L('처음이신가요? 설정 방법 (SQL)', 'First time? Setup (SQL)')} {showHelp ? '▲' : '▼'}</button>
+      {showHelp && (
+        <div className="mt-2 max-w-2xl space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-600">
+          <p>{L('Supabase SQL Editor에서 한 번 실행 (조직 공유 테이블 + 같은 조직만 읽기):', 'Run once in Supabase SQL Editor (org-shared table + read-within-org):')}</p>
+          <pre className="overflow-x-auto rounded bg-white p-2 font-mono text-[10px] leading-relaxed text-slate-700 dark:bg-black/30">{`create table if not exists public.oac_shared (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  org_id text not null,
+  role text not null default 'member',
+  name text, email text,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.oac_shared enable row level security;
+-- helper avoids RLS recursion
+create or replace function public.oac_my_org() returns text language sql security definer stable as $$
+  select org_id from public.oac_shared where user_id = auth.uid()
+$$;
+create policy "shared_read_org" on public.oac_shared for select using (org_id = public.oac_my_org());
+create policy "shared_write_self" on public.oac_shared for insert with check (auth.uid() = user_id);
+create policy "shared_update_self" on public.oac_shared for update using (auth.uid() = user_id);
+create policy "shared_delete_self" on public.oac_shared for delete using (auth.uid() = user_id);`}</pre>
+          <p className="text-amber-700">⚠️ {L('전사 공유 데이터에는 API 키가 포함되지 않습니다(백업과 동일하게 제외).', 'Shared data excludes API keys (same as backup).')}</p>
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function UsersIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0M16 6a3 3 0 0 1 0 6M21 20a6 6 0 0 0-4-5.7" /></svg>
 }
 
 function CloudSyncCard() {

@@ -11,6 +11,7 @@ import { Dashboard } from './pages/Dashboard'
 import { OACAssistant } from './pages/OACAssistant'
 import { Relationship360 } from './pages/Relationship360'
 import { DataInsight } from './pages/DataInsight'
+import { Central } from './pages/Central'
 import { Settings } from './pages/Settings'
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/relationship" element={<Relationship360 />} />
           <Route path="/relationship/:id" element={<Relationship360 />} />
           <Route path="/data" element={<DataInsight />} />
+          <Route path="/central" element={<Central />} />
           <Route path="/settings" element={<Settings />} />
           {/* Legacy paths — Ask OAC, AI Capture, Email, Report, Meeting are now
               all handled inside the OAC Assistant; Integrations live in Settings. */}

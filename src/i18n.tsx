@@ -20,6 +20,8 @@ const DICT: Record<string, Entry> = {
   'nav.email': { en: 'Email Assistant', ko: '이메일 어시스턴트' },
   'nav.report': { en: 'Report Generator', ko: '리포트 생성기' },
   'nav.data': { en: 'Data Insight', ko: '데이터 인사이트' },
+  'nav.central': { en: 'Central', ko: '전사 히스토리' },
+  'top.tagline': { en: 'Search the name. OAC finds the context.', ko: '검색만 하세요. 분류와 정리는 OAC가 합니다.' },
   'nav.integrations': { en: 'Integrations', ko: '연동' },
 
   // Topbar
