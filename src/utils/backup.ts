@@ -13,7 +13,8 @@ interface StorageLike {
 export const BACKUP_KEYS = [
   'oac-captures-v1', // assistant captures / relationships
   'oac-datasets-v1', // imported RawData snapshots
-  'oac-chat-v1', // full assistant conversation log
+  'oac-chats-v2', // assistant projects + conversations
+  'oac-chat-v1', // legacy single conversation (migration)
   'oac-insights-v1', // saved AI insights
   'oac-recent-rel-v1', // recent searches
   'oac-ai-settings-v1', // mode/model/demoData/tenant (secrets stripped)

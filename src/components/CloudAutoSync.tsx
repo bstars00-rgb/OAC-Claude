@@ -28,10 +28,11 @@ export function CloudAutoSync() {
       try {
         const caps = JSON.parse(localStorage.getItem('oac-captures-v1') || '[]')
         const ds = JSON.parse(localStorage.getItem('oac-datasets-v1') || '[]')
-        const chat = JSON.parse(localStorage.getItem('oac-chat-v1') || '[]')
+        const chats = JSON.parse(localStorage.getItem('oac-chats-v2') || '{}')
+        const hasChat = (chats?.conversations || []).some((c: { messages?: unknown[] }) => c.messages?.length)
         // treat as empty only if there are no captures, datasets, AND no chat —
         // otherwise an auto-pull could overwrite a chat-only device's local data.
-        return !caps?.length && !ds?.length && !chat?.length
+        return !caps?.length && !ds?.length && !hasChat
       } catch {
         return true
       }

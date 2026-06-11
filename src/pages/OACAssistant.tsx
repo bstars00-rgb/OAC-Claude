@@ -57,21 +57,52 @@ const catLabel: Record<Category, { en: string; ko: string }> = {
 // collide new message ids with ones already in React state.
 let msgSeq = Date.now()
 
-// ── conversation persistence (전체 자동 기록) ────────────────────────────────
-const CHAT_KEY = 'oac-chat-v1'
-function loadChat(): ChatMsg[] {
+// ── projects + conversations (ChatGPT-style, fully persisted) ────────────────
+interface Project { id: string; name: string }
+interface Conversation { id: string; projectId: string; title: string; messages: ChatMsg[]; updatedAt: number }
+interface ChatState { projects: Project[]; conversations: Conversation[]; activeId: string }
+
+const CHATS_KEY = 'oac-chats-v2'
+let idSeq = 0
+const newId = (p: string) => `${p}-${Date.now().toString(36)}-${(idSeq++).toString(36)}`
+const defaultTitle = (lang: 'en' | 'ko') => (lang === 'ko' ? '새 대화' : 'New chat')
+
+function defaultState(lang: 'en' | 'ko'): ChatState {
+  const pid = 'p-default'
+  const cid = newId('c')
+  return { projects: [{ id: pid, name: lang === 'ko' ? '일반' : 'General' }], conversations: [{ id: cid, projectId: pid, title: defaultTitle(lang), messages: [], updatedAt: Date.now() }], activeId: cid }
+}
+
+function loadChats(lang: 'en' | 'ko'): ChatState {
   try {
-    const raw = localStorage.getItem(CHAT_KEY)
-    if (raw) return (JSON.parse(raw) as ChatMsg[]).filter((m) => !m.thinking)
+    const raw = localStorage.getItem(CHATS_KEY)
+    if (raw) {
+      const s = JSON.parse(raw) as ChatState
+      if (s.conversations?.length && s.projects?.length) return s
+    }
+    // migrate the old single conversation (oac-chat-v1) into a default project
+    const old = localStorage.getItem('oac-chat-v1')
+    if (old) {
+      const msgs = (JSON.parse(old) as ChatMsg[]).filter((m) => !m.thinking)
+      const st = defaultState(lang)
+      st.conversations[0].messages = msgs
+      const firstUser = msgs.find((m) => m.role === 'user')?.text
+      if (firstUser) st.conversations[0].title = firstUser.slice(0, 40)
+      return st
+    }
   } catch {
     /* ignore */
   }
-  return []
+  return defaultState(lang)
 }
-function saveChat(messages: ChatMsg[]): void {
+
+function saveChats(s: ChatState): void {
   try {
-    // keep the last 120 turns, drop in-flight "thinking" placeholders
-    localStorage.setItem(CHAT_KEY, JSON.stringify(messages.filter((m) => !m.thinking).slice(-120)))
+    const trimmed: ChatState = {
+      ...s,
+      conversations: s.conversations.slice(0, 60).map((c) => ({ ...c, messages: c.messages.filter((m) => !m.thinking).slice(-120) })),
+    }
+    localStorage.setItem(CHATS_KEY, JSON.stringify(trimmed))
   } catch {
     /* quota — ignore */
   }
@@ -86,12 +117,56 @@ export function OACAssistant() {
   const store = useCaptureStore()
   const datasets = useDatasets()
   const rel = useRelationships()
-  // Conversation is persisted (전체 자동 기록) — survives reloads and syncs via backup/cloud.
-  const [messages, setMessages] = useState<ChatMsg[]>(loadChat)
+  // Projects + conversations — persisted, synced via backup/cloud.
+  const [chat, setChat] = useState<ChatState>(() => loadChats(lang))
   const [settingsOpen, setSettingsOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { saveChat(messages) }, [messages])
+  useEffect(() => { saveChats(chat) }, [chat])
+
+  const active = chat.conversations.find((c) => c.id === chat.activeId) ?? chat.conversations[0]
+  const messages = active?.messages ?? []
+
+  // update the ACTIVE conversation's messages (and auto-title from the first user turn)
+  const setMessages = (updater: ChatMsg[] | ((m: ChatMsg[]) => ChatMsg[])) => {
+    setChat((prev) => {
+      const cur = prev.conversations.find((c) => c.id === prev.activeId)
+      if (!cur) return prev
+      const next = typeof updater === 'function' ? (updater as (m: ChatMsg[]) => ChatMsg[])(cur.messages) : updater
+      const firstUser = next.find((m) => m.role === 'user')?.text
+      const title = cur.title === defaultTitle(lang) && firstUser ? firstUser.slice(0, 40) : cur.title
+      return { ...prev, conversations: prev.conversations.map((c) => (c.id === prev.activeId ? { ...c, messages: next, title, updatedAt: Date.now() } : c)) }
+    })
+  }
+
+  const addProject = () => {
+    const name = window.prompt(lang === 'ko' ? '새 프로젝트 이름' : 'New project name')?.trim()
+    if (!name) return
+    const pid = newId('p'); const cid = newId('c')
+    setChat((prev) => ({ projects: [...prev.projects, { id: pid, name }], conversations: [{ id: cid, projectId: pid, title: defaultTitle(lang), messages: [], updatedAt: Date.now() }, ...prev.conversations], activeId: cid }))
+  }
+  const addChat = (projectId: string) => {
+    const cid = newId('c')
+    setChat((prev) => ({ ...prev, conversations: [{ id: cid, projectId, title: defaultTitle(lang), messages: [], updatedAt: Date.now() }, ...prev.conversations], activeId: cid }))
+  }
+  const selectChat = (id: string) => setChat((prev) => ({ ...prev, activeId: id }))
+  const deleteChat = (id: string) => setChat((prev) => {
+    const conversations = prev.conversations.filter((c) => c.id !== id)
+    if (!conversations.length) return defaultState(lang)
+    return { ...prev, conversations, activeId: prev.activeId === id ? conversations[0].id : prev.activeId }
+  })
+  const deleteProject = (pid: string) => setChat((prev) => {
+    if (prev.projects.length <= 1) return prev
+    const projects = prev.projects.filter((p) => p.id !== pid)
+    const conversations = prev.conversations.filter((c) => c.projectId !== pid)
+    if (!conversations.length) return defaultState(lang)
+    return { projects, conversations, activeId: conversations.some((c) => c.id === prev.activeId) ? prev.activeId : conversations[0].id }
+  })
+  const renameProject = (pid: string, cur: string) => {
+    const name = window.prompt(lang === 'ko' ? '프로젝트 이름 변경' : 'Rename project', cur)?.trim()
+    if (!name) return
+    setChat((prev) => ({ ...prev, projects: prev.projects.map((p) => (p.id === pid ? { ...p, name } : p)) }))
+  }
 
   const submit = async (text: string, attachments: Attachment[]) => {
     const clean = text.trim()
@@ -190,11 +265,9 @@ export function OACAssistant() {
                 </button>
               ))}
             </div>
-            {messages.length > 0 && (
-              <button onClick={() => { if (window.confirm(lang === 'ko' ? '대화를 비우시겠어요? (백업/클라우드에 저장된 기록은 유지)' : 'Clear this conversation?')) setMessages([]) }} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-50">
-                {lang === 'ko' ? '새 대화' : 'New chat'}
-              </button>
-            )}
+            <button onClick={() => addChat(active?.projectId ?? 'p-default')} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-50">
+              + {lang === 'ko' ? '새 대화' : 'New chat'}
+            </button>
             <button onClick={() => setSettingsOpen(true)} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${ai.isLive ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${ai.isLive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
               {ai.isLive ? `${t('asst.liveMode')} · ${ai.model.replace('claude-', '')}` : t('asst.demoMode')}
@@ -204,9 +277,34 @@ export function OACAssistant() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[12rem_1fr_17rem]">
+        {/* Projects sidebar (ChatGPT-style; your own units — country, region, deal…) */}
+        <aside className="hidden h-[calc(100vh-12rem)] flex-col overflow-auto rounded-xl border border-slate-200 bg-white p-2 lg:flex dark:bg-white/5">
+          <button onClick={addProject} className="mb-1 flex items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 px-2 py-1.5 text-xs font-semibold text-slate-500 transition hover:border-brand-400 hover:text-brand-600">+ {lang === 'ko' ? '프로젝트' : 'Project'}</button>
+          {chat.projects.map((p) => {
+            const convs = chat.conversations.filter((c) => c.projectId === p.id).sort((a, b) => b.updatedAt - a.updatedAt)
+            return (
+              <div key={p.id} className="mt-2">
+                <div className="group flex items-center gap-1 px-1.5 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                  <span className="flex-1 cursor-pointer truncate hover:text-slate-600" onDoubleClick={() => renameProject(p.id, p.name)} title={lang === 'ko' ? `${p.name} (더블클릭=이름변경)` : `${p.name} (double-click to rename)`}>{p.name}</span>
+                  <button onClick={() => addChat(p.id)} title={lang === 'ko' ? '새 대화' : 'New chat'} className="text-sm text-slate-400 hover:text-brand-600">+</button>
+                  {chat.projects.length > 1 && <button onClick={() => deleteProject(p.id)} className="text-slate-300 opacity-0 transition hover:text-rose-500 group-hover:opacity-100">×</button>}
+                </div>
+                <div className="space-y-0.5">
+                  {convs.map((c) => (
+                    <div key={c.id} className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm transition ${c.id === chat.activeId ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 dark:hover:bg-white/5'}`}>
+                      <button onClick={() => selectChat(c.id)} className="min-w-0 flex-1 truncate text-left" title={c.title}>{c.title || defaultTitle(lang)}</button>
+                      <button onClick={() => deleteChat(c.id)} className="text-slate-300 opacity-0 transition hover:text-rose-500 group-hover:opacity-100">×</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </aside>
+
         {/* Chat */}
-        <div className="flex h-[calc(100vh-12rem)] flex-col lg:col-span-2">
+        <div className="flex h-[calc(100vh-12rem)] flex-col">
           <div ref={scrollRef} className="flex-1 overflow-auto">
             {messages.length === 0 ? (
               <EmptyState onPick={(q) => submit(q, [])} lang={lang} t={t} />
@@ -225,8 +323,8 @@ export function OACAssistant() {
           <Composer onSubmit={submit} t={t} />
         </div>
 
-        {/* Right: AI Engine + Workspace */}
-        <div className="space-y-4 lg:col-span-1">
+        {/* Right: live CRM panel — what OAC extracted from your chats */}
+        <div className="space-y-4">
           <Card>
             <div className="flex items-center justify-between">
               <CardHeader title={t('asst.engine')} subtitle={ai.isLive ? `${t('set.connected')} · ${ai.model.replace('claude-', '')}` : t('asst.demoMode')} icon={<SparkIcon />} />
