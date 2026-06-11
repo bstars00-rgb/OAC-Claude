@@ -88,14 +88,16 @@ function MiniChart({ chart }: { chart: ChartData }) {
   const fmt = (n: number) => (chart.unit === 'yen' ? '¥' : '') + Math.round(n).toLocaleString()
   const max = Math.max(...chart.points.map((p) => p.value), 1)
   return (
-    <div className="mt-2 space-y-1.5">
+    // Cap the width so the bars stay compact instead of stretching across the
+    // full (now wide) card. Bar track is fixed-width, not flex-1.
+    <div className="mt-2 max-w-lg space-y-1">
       {chart.points.map((p) => (
         <div key={p.label} className="flex items-center gap-2">
-          <span className="w-28 shrink-0 truncate text-[11px] font-medium text-slate-600" title={p.label}>{p.label}</span>
-          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+          <span className="w-40 shrink-0 truncate text-[11px] font-medium text-slate-600 dark:text-slate-300" title={p.label}>{p.label}</span>
+          <div className="h-2 w-32 shrink-0 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10 sm:w-40">
             <div className="h-full rounded-full bg-gradient-to-r from-brand-600 to-violet-600" style={{ width: `${Math.max(2, (p.value / max) * 100)}%` }} />
           </div>
-          <span className="w-24 shrink-0 text-right text-[11px] font-semibold text-slate-700">{fmt(p.value)}</span>
+          <span className="shrink-0 text-right text-[11px] font-semibold text-slate-700 dark:text-slate-200">{fmt(p.value)}</span>
         </div>
       ))}
     </div>
