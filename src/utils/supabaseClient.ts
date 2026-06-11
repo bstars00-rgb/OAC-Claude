@@ -86,16 +86,35 @@ export async function signOut(c: SbConfig): Promise<void> {
   await sb.auth.signOut()
 }
 
-/** Upload the local OAC state (Backup JSON, secrets stripped) to the cloud. */
-export async function pushState(c: SbConfig, stampedAt: string): Promise<void> {
+/** The cloud row's last-updated timestamp (for conflict detection), or null. */
+export async function getCloudUpdatedAt(c: SbConfig): Promise<string | null> {
+  const sb = await getClient(c)
+  const { data: u } = await sb.auth.getUser()
+  if (!u.user) return null
+  const { data } = await sb.from('oac_state').select('updated_at').eq('user_id', u.user.id).maybeSingle()
+  return (data?.updated_at as string | undefined) ?? null
+}
+
+/**
+ * Upload the local OAC state (Backup JSON, secrets stripped) to the cloud.
+ * If `ifNewerThan` is given and the cloud row is newer than it, the push is
+ * SKIPPED (another device wrote newer data — don't clobber it). Returns whether
+ * it actually pushed, plus the cloud timestamp when skipped.
+ */
+export async function pushState(c: SbConfig, stampedAt: string, opts?: { ifNewerThan?: string }): Promise<{ pushed: boolean; cloudUpdatedAt?: string }> {
   const sb = await getClient(c)
   const { data: u } = await sb.auth.getUser()
   if (!u.user) throw new Error('not-signed-in')
+  if (opts?.ifNewerThan) {
+    const cloudAt = await getCloudUpdatedAt(c)
+    if (cloudAt && cloudAt > opts.ifNewerThan) return { pushed: false, cloudUpdatedAt: cloudAt }
+  }
   const backup = JSON.parse(exportBackup(stampedAt))
   const { error } = await sb
     .from('oac_state')
     .upsert({ user_id: u.user.id, data: backup, updated_at: stampedAt }, { onConflict: 'user_id' })
   if (error) throw new Error(error.message)
+  return { pushed: true }
 }
 
 /** Pull the cloud state into localStorage. Returns false if the cloud is empty. */

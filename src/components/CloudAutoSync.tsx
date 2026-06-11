@@ -1,7 +1,11 @@
 import { useEffect } from 'react'
 import { useAiSettings } from '../utils/aiSettings'
 import { exportBackup } from '../utils/backup'
-import { isConfigured, getSession, onAuthChange, pullState, pushState } from '../utils/supabaseClient'
+import { isConfigured, getSession, onAuthChange, pullState, pushState, getCloudUpdatedAt } from '../utils/supabaseClient'
+
+const SYNCED_AT_KEY = 'oac-cloud-synced-at'
+const lastSyncedAt = () => localStorage.getItem(SYNCED_AT_KEY) || ''
+const setSyncedAt = (v: string) => { try { localStorage.setItem(SYNCED_AT_KEY, v) } catch { /* ignore */ } }
 
 // Runs app-wide (mounted once in App). When the user has configured Supabase and
 // is signed in:
@@ -41,8 +45,16 @@ export function CloudAutoSync() {
         try {
           const sig = stateSig()
           if (sig === lastPushed) return
-          await pushState(cfg, new Date().toISOString())
-          lastPushed = sig
+          const now = new Date().toISOString()
+          // don't clobber a newer cloud write from another device
+          const res = await pushState(cfg, now, { ifNewerThan: lastSyncedAt() || undefined })
+          if (res.pushed) {
+            setSyncedAt(now)
+            lastPushed = sig
+          } else {
+            // cloud is newer — back off (avoid spamming); user can resolve via Settings
+            lastPushed = sig
+          }
         } catch {
           /* offline / transient — try again next tick */
         }
@@ -55,10 +67,16 @@ export function CloudAutoSync() {
         if (localEmpty() && !sessionStorage.getItem('oac-cloud-pulled')) {
           sessionStorage.setItem('oac-cloud-pulled', '1')
           const applied = await pullState(cfg)
+          const cloudAt = await getCloudUpdatedAt(cfg).catch(() => null)
+          if (cloudAt) setSyncedAt(cloudAt)
           if (applied && !cancelled) {
             window.location.reload()
             return
           }
+        } else {
+          // remember the cloud's current timestamp so auto-push can detect conflicts
+          const cloudAt = await getCloudUpdatedAt(cfg).catch(() => null)
+          if (cloudAt && !lastSyncedAt()) setSyncedAt(cloudAt)
         }
         startPush()
       } catch {

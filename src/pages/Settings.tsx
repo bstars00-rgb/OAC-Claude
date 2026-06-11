@@ -19,6 +19,7 @@ import {
   signOut as sbSignOut,
   pushState as sbPush,
   pullState as sbPull,
+  getCloudUpdatedAt as sbCloudAt,
 } from '../utils/supabaseClient'
 import { IntegrationsContent } from './Integrations'
 import { DataImportPanel } from '../components/DataImportPanel'
@@ -188,7 +189,9 @@ function CloudSyncCard() {
   const doPush = async () => {
     setError(''); setBusy('push')
     try {
-      await sbPush(cfg, new Date().toISOString())
+      const stamp = new Date().toISOString()
+      await sbPush(cfg, stamp) // manual upload = explicit intent, force overwrite
+      try { localStorage.setItem('oac-cloud-synced-at', stamp) } catch { /* ignore */ }
       setLastSync(new Date().toLocaleTimeString())
       toast.notify(L('클라우드에 저장됨', 'Saved to cloud'), L('내 데이터를 업로드했어요', 'Your data was uploaded'))
     } catch (e) {
@@ -201,6 +204,8 @@ function CloudSyncCard() {
     setError(''); setBusy('pull')
     try {
       const applied = await sbPull(cfg)
+      const cloudAt = await sbCloudAt(cfg).catch(() => null)
+      if (cloudAt) { try { localStorage.setItem('oac-cloud-synced-at', cloudAt) } catch { /* ignore */ } }
       if (applied) { toast.notify(L('내려받기 완료', 'Downloaded'), L('새로고침합니다', 'Reloading')); setTimeout(() => window.location.reload(), 700) }
       else toast.notify(L('클라우드가 비어 있음', 'Cloud is empty'), L('먼저 업로드하세요', 'Upload first'))
     } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setBusy(null) }
