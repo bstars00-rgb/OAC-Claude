@@ -1,11 +1,13 @@
 import { defineConfig } from 'vitest/config'
 
-// Unit tests cover the pure logic (no DOM, no network, no API key needed):
-// capture structuring, context detection, the mock AI router, formatting, and
-// the demo assistant engine.
+// Tests cover both the pure logic (capture structuring, context detection, the
+// mock AI router, formatting, the demo assistant engine, MS sync de-dup) and
+// React component integration (rendering with the app providers). jsdom provides
+// the DOM; the setup file registers @testing-library matchers.
 export default defineConfig({
   test: {
-    environment: 'node',
-    include: ['src/**/*.test.ts'],
+    environment: 'jsdom',
+    include: ['src/**/*.test.{ts,tsx}'],
+    setupFiles: ['./src/test/setup.ts'],
   },
 })
