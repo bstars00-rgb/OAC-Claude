@@ -47,6 +47,10 @@ interface AiSettings {
   userSignature: string
   // Assistant persona: 'oac' (CRM-focused) or 'chatgpt' (general, ChatGPT-style).
   assistantMode: AssistantMode
+  // Ohmyhotel internal DB via MCP-over-HTTP (experimental). Endpoint is a URL;
+  // the token is a SECRET (excluded from backup & cloud sync, like the API keys).
+  mcpEndpoint: string
+  mcpToken: string
 }
 
 interface AiSettingsCtx extends AiSettings {
@@ -61,6 +65,8 @@ interface AiSettingsCtx extends AiSettings {
   setSupabaseAnonKey: (v: string) => void
   setUserSignature: (v: string) => void
   setAssistantMode: (v: AssistantMode) => void
+  setMcpEndpoint: (v: string) => void
+  setMcpToken: (v: string) => void
   provider: AiProvider // derived from the selected model
   activeKey: string // the key for the active provider
   isLive: boolean
@@ -85,13 +91,15 @@ const read = (): AiSettings => {
         supabaseAnonKey: typeof p.supabaseAnonKey === 'string' ? p.supabaseAnonKey : '',
         userSignature: typeof p.userSignature === 'string' ? p.userSignature : '',
         assistantMode: p.assistantMode === 'chatgpt' ? 'chatgpt' : 'oac',
+        mcpEndpoint: typeof p.mcpEndpoint === 'string' ? p.mcpEndpoint : '',
+        mcpToken: typeof p.mcpToken === 'string' ? p.mcpToken : '',
       }
     }
   } catch {
     /* ignore */
   }
   // Default to REAL mode (no demo data) — the user is starting to use OAC for real.
-  return { mode: 'demo', apiKey: '', openaiKey: '', model: AI_MODELS[0].id, demoData: false, msClientId: '', msTenant: 'common', supabaseUrl: '', supabaseAnonKey: '', userSignature: '', assistantMode: 'oac' }
+  return { mode: 'demo', apiKey: '', openaiKey: '', model: AI_MODELS[0].id, demoData: false, msClientId: '', msTenant: 'common', supabaseUrl: '', supabaseAnonKey: '', userSignature: '', assistantMode: 'oac', mcpEndpoint: '', mcpToken: '' }
 }
 
 const Ctx = createContext<AiSettingsCtx | null>(null)
@@ -118,13 +126,15 @@ export function AiSettingsProvider({ children }: { children: ReactNode }) {
   const setSupabaseAnonKey = (supabaseAnonKey: string) => setSettings((s) => ({ ...s, supabaseAnonKey }))
   const setUserSignature = (userSignature: string) => setSettings((s) => ({ ...s, userSignature }))
   const setAssistantMode = (assistantMode: AssistantMode) => setSettings((s) => ({ ...s, assistantMode }))
+  const setMcpEndpoint = (mcpEndpoint: string) => setSettings((s) => ({ ...s, mcpEndpoint }))
+  const setMcpToken = (mcpToken: string) => setSettings((s) => ({ ...s, mcpToken }))
 
   const provider = providerForModel(settings.model)
   const activeKey = provider === 'openai' ? settings.openaiKey : settings.apiKey
   const isLive = settings.mode === 'live' && activeKey.trim().length > 0
 
   return (
-    <Ctx.Provider value={{ ...settings, setMode, setApiKey, setOpenaiKey, setModel, setDemoData, setMsClientId, setMsTenant, setSupabaseUrl, setSupabaseAnonKey, setUserSignature, setAssistantMode, provider, activeKey, isLive }}>
+    <Ctx.Provider value={{ ...settings, setMode, setApiKey, setOpenaiKey, setModel, setDemoData, setMsClientId, setMsTenant, setSupabaseUrl, setSupabaseAnonKey, setUserSignature, setAssistantMode, setMcpEndpoint, setMcpToken, provider, activeKey, isLive }}>
       {children}
     </Ctx.Provider>
   )

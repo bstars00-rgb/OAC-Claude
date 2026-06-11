@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom'
 import { IntegrationsContent } from './Integrations'
 import { DataImportPanel } from '../components/DataImportPanel'
 import { AccountCleanup } from '../components/AccountCleanup'
+import { listMcpTools, callMcpTool, type McpTool } from '../utils/mcpClient'
 import {
   connect as msConnect,
   disconnect as msDisconnect,
@@ -124,6 +125,9 @@ export function Settings() {
 
       {/* Data import (RawData .xlsx → datasets) */}
       <DataImportPanel />
+
+      {/* Ohmyhotel internal DB via MCP (experimental) */}
+      <McpCard />
 
       {/* Integrations */}
       <IntegrationsContent />
@@ -472,6 +476,81 @@ function BackupCard() {
 
 function SaveIcon() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8M7 3v5h8" /></svg>
+}
+
+// C-10: connect the Ohmyhotel internal DB through an MCP-over-HTTP server.
+function McpCard() {
+  const { lang } = useT()
+  const ai = useAiSettings()
+  const toast = useToast()
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
+  const [tools, setTools] = useState<McpTool[] | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState('')
+
+  const test = async () => {
+    setBusy(true); setResult('')
+    try {
+      const list = await listMcpTools(ai.mcpEndpoint, ai.mcpToken)
+      setTools(list)
+      toast.notify(L(`MCP 연결 성공 · 도구 ${list.length}개`, `MCP connected · ${list.length} tool(s)`))
+    } catch (err) {
+      setTools(null)
+      toast.notify(L('MCP 연결 실패. 엔드포인트/토큰을 확인하세요.', 'MCP connection failed — check the endpoint/token.'))
+      setResult(String(err instanceof Error ? err.message : err))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const run = async (name: string) => {
+    setBusy(true); setResult('')
+    try {
+      setResult(await callMcpTool(ai.mcpEndpoint, ai.mcpToken, name) || L('(빈 응답)', '(empty response)'))
+    } catch (err) {
+      setResult(String(err instanceof Error ? err.message : err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader
+        title={L('Ohmyhotel 내부 DB · MCP', 'Ohmyhotel internal DB · MCP')}
+        subtitle={L('MCP 서버(HTTP)에 직접 연결해 DB 도구를 호출합니다. 실험적 기능.', 'Connect directly to an MCP server (HTTP) and call its DB tools. Experimental.')}
+        icon={<DbIcon />}
+      />
+      <div className="space-y-2.5">
+        <label className="block">
+          <span className="text-[11px] font-semibold text-slate-500">{L('MCP 엔드포인트 URL', 'MCP endpoint URL')}</span>
+          <input value={ai.mcpEndpoint} onChange={(e) => ai.setMcpEndpoint(e.target.value)} placeholder="https://mcp.ohmyhotel.example/rpc" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none" />
+        </label>
+        <label className="block">
+          <span className="text-[11px] font-semibold text-slate-500">{L('토큰 (선택) — 이 브라우저에만 저장, 백업·동기화 제외', 'Token (optional) — stored in this browser only, excluded from backup/sync')}</span>
+          <input type="password" value={ai.mcpToken} onChange={(e) => ai.setMcpToken(e.target.value)} placeholder="••••••••" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none" />
+        </label>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="secondary" onClick={test} disabled={busy || !ai.mcpEndpoint.trim()}>{busy ? L('확인 중…', 'Testing…') : L('연결 테스트 / 도구 목록', 'Test / list tools')}</Button>
+          {tools && <Badge tone="green">{tools.length} {L('도구', 'tools')}</Badge>}
+        </div>
+        {tools && tools.length > 0 && (
+          <div className="rounded-lg border border-slate-200 p-2 dark:border-white/10">
+            {tools.map((tl) => (
+              <div key={tl.name} className="flex items-center justify-between gap-2 px-1 py-1.5">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-slate-700">{tl.name}</div>
+                  {tl.description && <div className="truncate text-[11px] text-slate-400">{tl.description}</div>}
+                </div>
+                <button onClick={() => run(tl.name)} disabled={busy} className="shrink-0 rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 disabled:opacity-50">{L('호출', 'Call')}</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {result && <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2.5 text-[11px] text-slate-600 dark:bg-white/5 dark:text-slate-300">{result}</pre>}
+        <p className="text-[11px] text-slate-400">{L('MCP 서버가 준비되면 엔드포인트만 입력하면 됩니다. 토큰은 API 키와 동일하게 이 브라우저에만 보관됩니다.', 'Once an MCP server is ready, just enter its endpoint. The token, like the API keys, never leaves this browser.')}</p>
+      </div>
+    </Card>
+  )
 }
 
 function MicrosoftCard() {

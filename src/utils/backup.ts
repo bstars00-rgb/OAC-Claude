@@ -22,7 +22,7 @@ export const BACKUP_KEYS = [
   'oac-lang',
 ]
 
-const SECRET_FIELDS = ['apiKey', 'openaiKey']
+const SECRET_FIELDS = ['apiKey', 'openaiKey', 'mcpToken']
 
 export interface BackupFile {
   app: 'OAC'
