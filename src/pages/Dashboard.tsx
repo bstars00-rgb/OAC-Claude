@@ -16,6 +16,7 @@ import { portfolioTotals } from '../data/salesData'
 import { useRelationships } from '../data/useRelationships'
 import { useCaptureStore } from '../data/captureStore'
 import { DataPulse } from '../components/DataPulse'
+import { DueAlerts } from '../components/DueAlerts'
 import { formatUsd, formatNumber, formatDate, daysAgo, initials } from '../utils/format'
 
 const bandTone: Record<string, BadgeTone> = {
@@ -290,6 +291,9 @@ function RealDashboard({ relationships }: { relationships: Entity[] }) {
 
       {/* Auto RawData summary — shown without asking */}
       <DataPulse />
+
+      {/* A-2: due / overdue task alerts */}
+      <DueAlerts />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard label={t('cap.accounts')} value={store.stats.accounts} icon={<UsersIcon />} />
