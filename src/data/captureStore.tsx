@@ -54,6 +54,9 @@ interface StoreValue {
   addEntry: (s: StructuredCapture, rawText: string) => CaptureEntry
   toggleTodo: (entryId: string, todoId: string) => void
   clearAll: () => void
+  deleteAccount: (accountId: string) => void
+  deleteAccounts: (accountIds: string[]) => void
+  mergeAccounts: (fromIds: string[], toId: string, toName: string) => void
   accounts: CaptureAccount[]
   entriesByEntity: (accountId: string) => CaptureEntry[]
   stats: { accounts: number; openTodos: number; risks: number; entries: number }
@@ -120,6 +123,18 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
 
   const clearAll = useCallback(() => setEntries([]), [])
 
+  const deleteAccount = useCallback((accountId: string) => {
+    setEntries((prev) => prev.filter((e) => e.accountId !== accountId))
+  }, [])
+  const deleteAccounts = useCallback((accountIds: string[]) => {
+    const set = new Set(accountIds)
+    setEntries((prev) => prev.filter((e) => !set.has(e.accountId)))
+  }, [])
+  const mergeAccounts = useCallback((fromIds: string[], toId: string, toName: string) => {
+    const set = new Set(fromIds.filter((id) => id !== toId))
+    setEntries((prev) => prev.map((e) => (set.has(e.accountId) ? { ...e, accountId: toId, accountName: toName, isExisting: true } : e)))
+  }, [])
+
   const accounts = useMemo<CaptureAccount[]>(() => {
     const map = new Map<string, CaptureAccount>()
     for (const e of entries) {
@@ -161,7 +176,7 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
   )
 
   return (
-    <Ctx.Provider value={{ entries, addEntry, toggleTodo, clearAll, accounts, entriesByEntity, stats }}>
+    <Ctx.Provider value={{ entries, addEntry, toggleTodo, clearAll, deleteAccount, deleteAccounts, mergeAccounts, accounts, entriesByEntity, stats }}>
       {children}
     </Ctx.Provider>
   )

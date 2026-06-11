@@ -27,6 +27,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { IntegrationsContent } from './Integrations'
 import { DataImportPanel } from '../components/DataImportPanel'
+import { AccountCleanup } from '../components/AccountCleanup'
 import {
   connect as msConnect,
   disconnect as msDisconnect,
@@ -106,10 +107,13 @@ export function Settings() {
       {/* Backup & Restore */}
       <BackupCard />
 
+      {/* Account cleanup / merge */}
+      <AccountCleanup />
+
       {/* Workspace */}
       <Card>
         <CardHeader title={t('set.workspace')} subtitle={`${store.stats.accounts} accounts · ${store.stats.entries} captures · ${store.stats.openTodos} open to-dos`} icon={<DbIcon />} />
-        <Button variant="secondary" size="sm" onClick={store.clearAll}>{t('set.clearWorkspace')}</Button>
+        <Button variant="secondary" size="sm" onClick={() => { if (window.confirm(lang === 'ko' ? '워크스페이스 데이터를 모두 지울까요?' : 'Clear all workspace data?')) store.clearAll() }}>{t('set.clearWorkspace')}</Button>
       </Card>
 
       {/* Email signature */}
