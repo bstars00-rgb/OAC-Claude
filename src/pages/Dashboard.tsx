@@ -15,6 +15,7 @@ import { draftEmails } from '../data/emails'
 import { portfolioTotals } from '../data/salesData'
 import { useRelationships } from '../data/useRelationships'
 import { useCaptureStore } from '../data/captureStore'
+import { DataPulse } from '../components/DataPulse'
 import { formatUsd, formatNumber, formatDate, daysAgo, initials } from '../utils/format'
 
 const bandTone: Record<string, BadgeTone> = {
@@ -286,6 +287,9 @@ function RealDashboard({ relationships }: { relationships: Entity[] }) {
   return (
     <div className="oac-fade-in space-y-5">
       <PageHeader title={t('page.dashboard.title')} subtitle={t('page.dashboard.subtitle')} actions={<Button onClick={() => navigate('/assistant')} icon={<SparkIcon />}>{t('common.askOAC')}</Button>} />
+
+      {/* Auto RawData summary — shown without asking */}
+      <DataPulse />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard label={t('cap.accounts')} value={store.stats.accounts} icon={<UsersIcon />} />
