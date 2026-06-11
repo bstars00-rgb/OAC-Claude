@@ -609,6 +609,16 @@ function Composer({ onSubmit, t, lang }: { onSubmit: (text: string, atts: Attach
   const [dragOver, setDragOver] = useState(false)
   const imgRef = useRef<HTMLInputElement>(null)
   const docRef = useRef<HTMLInputElement>(null)
+  const taRef = useRef<HTMLTextAreaElement>(null)
+
+  // Auto-grow the textarea with its content (ChatGPT-style), capped so it scrolls
+  // once it gets tall. Runs on every input change (incl. clearing after send).
+  useEffect(() => {
+    const el = taRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 240)}px`
+  }, [input])
 
   const addFiles = async (files: FileList | File[] | null) => {
     if (!files || (files as FileList).length === 0) return
@@ -679,13 +689,14 @@ function Composer({ onSubmit, t, lang }: { onSubmit: (text: string, atts: Attach
         <button onClick={() => imgRef.current?.click()} title={t('asst.image')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50"><ImageIcon /></button>
         <button onClick={() => docRef.current?.click()} title={t('asst.doc')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50"><DocIcon /></button>
         <textarea
+          ref={taRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go() } }}
           onPaste={onPaste}
           rows={1}
           placeholder={t('asst.placeholder')}
-          className="max-h-32 min-h-[40px] flex-1 resize-none bg-transparent px-2 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+          className="min-h-[40px] max-h-[240px] flex-1 resize-none overflow-y-auto bg-transparent px-2 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none dark:text-slate-100"
         />
         <Button onClick={go} disabled={busy || (!input.trim() && atts.length === 0)} icon={<SendIcon />}>{t('asst.send')}</Button>
       </div>
