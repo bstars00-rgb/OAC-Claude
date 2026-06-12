@@ -106,7 +106,14 @@ export function WeeklyReport() {
 
   const stamp = new Date().toISOString().slice(0, 10)
   const exportWord = () => { exportTextAsWord(L('주간 리포트', 'Weekly report'), aiText || text, `OAC-weekly-${stamp}`); toast.notify(L('Word(.doc) 파일을 저장했습니다.', 'Saved Word (.doc).')) }
-  const exportPdf = () => { if (!exportTextAsPdf(L('주간 리포트', 'Weekly report'), aiText || text)) toast.notify(L('팝업이 차단되었습니다. 허용 후 다시 시도하세요.', 'Popup blocked — allow popups and retry.')) }
+  const exportPdf = async () => {
+    try {
+      await exportTextAsPdf(L('주간 리포트', 'Weekly report'), aiText || text, `OAC-weekly-${stamp}`)
+      toast.notify(L('PDF 파일을 저장했습니다.', 'Saved PDF.'))
+    } catch {
+      toast.notify(L('PDF 생성에 실패했습니다.', 'Could not generate the PDF.'))
+    }
+  }
   const exportXlsx = async () => {
     const sheets = [
       { name: L('활동', 'Activity'), rows: report.recent.map((e) => ({ [L('날짜', 'Date')]: e.date, [L('고객사', 'Account')]: e.accountName, [L('유형', 'Kind')]: e.kind ?? 'note', [L('내용', 'Title')]: e.timeline.title, [L('요약', 'Summary')]: e.summary })) },

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '../components/Layout'
 import { Card, CardHeader } from '../components/Card'
@@ -6,6 +6,7 @@ import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { DatasetInsights } from '../components/DatasetInsights'
 import { PieChart, BarChart } from '../components/DemoChart'
+import { exportExcel, exportSvgAsPng } from '../utils/exportFile'
 import { useT } from '../i18n'
 import { useDatasets } from '../data/datasetStore'
 import { useAiSettings } from '../utils/aiSettings'
@@ -201,6 +202,7 @@ function DimensionExplorer({ L }: { L: (ko: string, en: string) => string }) {
   const [dim, setDim] = useState(dims[0] ?? '')
   const [metricLabel, setMetricLabel] = useState(metrics[0]?.label ?? '')
   const [view, setView] = useState<ChartView>('bar')
+  const chartRef = useRef<HTMLDivElement>(null)
   if (!snap || !dims.length) return null
 
   const activeDim = dims.includes(dim) ? dim : dims[0]
@@ -246,8 +248,23 @@ function DimensionExplorer({ L }: { L: (ko: string, en: string) => string }) {
           </select>
         </div>
       </div>
-      <div className="mb-3 text-xs text-slate-500">{L('합계', 'Total')}: <span className="font-bold text-slate-800 dark:text-slate-200">{fmt(total)}</span> · {groups.length} {activeDim}</div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+        <span>{L('합계', 'Total')}: <span className="font-bold text-slate-800 dark:text-slate-200">{fmt(total)}</span> · {groups.length} {activeDim}</span>
+        <span className="flex items-center gap-1.5">
+          <button
+            onClick={() => exportExcel([{ name: activeDim, rows: sorted.map((g) => ({ [activeDim]: g.key, ...Object.fromEntries(metrics.map((m) => [m.label, Math.round(g.metrics[m.label] ?? 0)])) })) }], `OAC-${snap.periodLabel}-${activeDim}`)}
+            className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-brand-300 hover:text-brand-700 dark:border-white/10 dark:text-slate-300"
+          >Excel</button>
+          {view === 'donut' && (
+            <button
+              onClick={() => { const svg = chartRef.current?.querySelector('svg'); if (svg) exportSvgAsPng(svg as SVGSVGElement, `OAC-${snap.periodLabel}-${activeDim}-${activeMetric}`) }}
+              className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-brand-300 hover:text-brand-700 dark:border-white/10 dark:text-slate-300"
+            >PNG</button>
+          )}
+        </span>
+      </div>
 
+      <div ref={chartRef}>
       {view === 'donut' && <PieChart data={pieData} unit={yen ? 'yen' : ''} />}
 
       {view === 'column' && <BarChart data={columnData} height={180} tone={snap.profile === 'booking' ? '#7c3aed' : '#0ea5e9'} unit={yen ? 'yen' : ''} />}
@@ -270,6 +287,7 @@ function DimensionExplorer({ L }: { L: (ko: string, en: string) => string }) {
           })}
         </div>
       )}
+      </div>
     </Card>
   )
 }
