@@ -37,7 +37,7 @@ import {
   redirectUri,
   GRAPH_SCOPES,
 } from '../utils/graph'
-import { syncMicrosoft } from '../utils/msSync'
+import { syncMicrosoft, LAST_SYNC_KEY } from '../utils/msSync'
 
 export function Settings() {
   const { t, lang } = useT()
@@ -477,6 +477,22 @@ function SaveIcon() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8M7 3v5h8" /></svg>
 }
 
+// Shows when the Microsoft sync last ran, refreshing live.
+function LastSync({ L }: { L: (ko: string, en: string) => string }) {
+  const [, force] = useState(0)
+  useEffect(() => {
+    const on = () => force((n) => n + 1)
+    window.addEventListener('oac-ms-synced', on)
+    const t = window.setInterval(on, 30_000) // keep the relative time fresh
+    return () => { window.removeEventListener('oac-ms-synced', on); clearInterval(t) }
+  }, [])
+  const ts = Number(localStorage.getItem(LAST_SYNC_KEY) || 0)
+  if (!ts) return null
+  const mins = Math.floor((Date.now() - ts) / 60_000)
+  const rel = mins < 1 ? L('방금', 'just now') : mins < 60 ? L(`${mins}분 전`, `${mins}m ago`) : L(`${Math.floor(mins / 60)}시간 전`, `${Math.floor(mins / 60)}h ago`)
+  return <p className="mt-1 text-[10px] text-slate-400">{L('마지막 동기화', 'Last synced')}: {rel}</p>
+}
+
 // C-10: connect the Ohmyhotel internal DB through an MCP-over-HTTP server.
 function McpCard() {
   const { lang } = useT()
@@ -722,9 +738,10 @@ function MicrosoftCard() {
             </div>
             <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
               {ai.msAutoSyncMin > 0
-                ? L(`앱이 열려 있는 동안 ${ai.msAutoSyncMin}분마다 새 메일·Teams를 자동으로 가져옵니다(중복 제외). API 비용이 드는 AI 요약은 자동 동기화에서 실행하지 않습니다 — 요약은 위 수동 버튼에서.`, `While the app is open, new mail/Teams import every ${ai.msAutoSyncMin} min (deduplicated). The API-costing AI summary does NOT run on auto-sync — use the manual button above for that.`)
-                : L('자동 동기화가 꺼져 있습니다. 간격을 선택하면 앱이 열려 있는 동안 주기적으로 가져옵니다.', 'Auto-sync is off. Pick an interval to import periodically while the app is open.')}
+                ? L(`${ai.msAutoSyncMin}분마다, 그리고 탭으로 돌아오거나 인터넷이 재연결될 때 자동으로 새 메일·Teams를 가져옵니다(중복 제외). 탭을 닫았다 다시 열면 즉시 따라잡습니다. API 비용이 드는 AI 요약은 자동 동기화에서 실행하지 않습니다 — 요약은 위 수동 버튼에서.`, `Syncs every ${ai.msAutoSyncMin} min, plus instantly when you return to the tab or reconnect. Reopening the tab catches up immediately. The API-costing AI summary does NOT run on auto-sync — use the manual button.`)
+                : L('자동 동기화가 꺼져 있습니다. 간격을 선택하면 주기적으로 + 탭 복귀/재연결 시 자동으로 가져옵니다.', 'Auto-sync is off. Pick an interval to import periodically, and on tab-return / reconnect.')}
             </p>
+            <LastSync L={L} />
           </div>
         </div>
       )}

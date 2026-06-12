@@ -20,6 +20,13 @@ import { TODAY } from './format'
 
 const SEEN_KEY = 'oac-ms-synced-v1'
 const SEEN_CAP = 4000 // keep the newest N ids; older ones fall off (7-day window anyway)
+export const LAST_SYNC_KEY = 'oac-ms-last-sync' // epoch ms of the last successful sync
+
+/** ms since the last successful sync (Infinity if never). */
+export function msSinceLastSync(): number {
+  const v = Number(localStorage.getItem(LAST_SYNC_KEY) || 0)
+  return v ? Date.now() - v : Infinity
+}
 
 // A stable identity for an item: the Graph id when present, else a content key.
 export const itemKey = (it: NormalizedItem): string =>
@@ -137,6 +144,14 @@ export async function syncMicrosoft(deps: MsSyncDeps): Promise<MsSyncResult> {
         /* skip this company's summary */
       }
     }
+  }
+
+  // mark freshness so the UI can show "last synced" and focus-catchup can debounce
+  try {
+    localStorage.setItem(LAST_SYNC_KEY, String(Date.now()))
+    window.dispatchEvent(new CustomEvent('oac-ms-synced'))
+  } catch {
+    /* ignore */
   }
 
   return { inbox: inbox.length, sent: sent.length, teams: teams.length, added: fresh.length, companies: byCompany.size, summarized, error: firstErr || undefined, fatal: false }

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { itemKey, freshItems } from './msSync'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { itemKey, freshItems, msSinceLastSync, LAST_SYNC_KEY } from './msSync'
 import type { NormalizedItem } from './graph'
 
 const mk = (over: Partial<NormalizedItem>): NormalizedItem => ({
@@ -32,5 +32,23 @@ describe('msSync de-duplication', () => {
     expect(firstRun).toHaveLength(2)
     firstRun.forEach((i) => seen.add(itemKey(i)))
     expect(freshItems(items, seen)).toHaveLength(0) // same fetch, nothing new
+  })
+})
+
+describe('sync freshness (focus/online catch-up gate)', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('reports Infinity when never synced', () => {
+    expect(msSinceLastSync()).toBe(Infinity)
+  })
+
+  it('reports a small elapsed time right after a sync stamp', () => {
+    localStorage.setItem(LAST_SYNC_KEY, String(Date.now()))
+    expect(msSinceLastSync()).toBeLessThan(2000)
+  })
+
+  it('reports a large elapsed time for an old stamp (would trigger catch-up)', () => {
+    localStorage.setItem(LAST_SYNC_KEY, String(Date.now() - 10 * 60_000))
+    expect(msSinceLastSync()).toBeGreaterThan(5 * 60_000)
   })
 })

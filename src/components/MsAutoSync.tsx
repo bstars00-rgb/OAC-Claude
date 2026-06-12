@@ -5,10 +5,19 @@ import { useRelationships } from '../data/useRelationships'
 import { useT } from '../i18n'
 import { useToast } from './Toast'
 import { restore as msRestore } from '../utils/graph'
-import { syncMicrosoft } from '../utils/msSync'
+import { syncMicrosoft, msSinceLastSync } from '../utils/msSync'
 
-// Periodic Outlook/Teams auto-sync (option B). Runs ONLY while the app is open
-// and a Microsoft account is connected, every `msAutoSyncMin` minutes (0 = off).
+const CATCHUP_GAP_MS = 5 * 60_000 // re-sync on focus/online only if 5+ min stale
+
+// Periodic Outlook/Teams auto-sync (option B). Runs while the app is open and a
+// Microsoft account is connected: every `msAutoSyncMin` minutes (0 = off), PLUS
+// an immediate catch-up when the tab regains focus or the network reconnects
+// (so returning to the app shows fresh mail without waiting for the timer).
+//
+// Note: a true "app fully closed" background sync is not possible here without a
+// backend — Microsoft token acquisition (MSAL) needs a window/iframe and can't
+// run in a Service Worker. The focus/online catch-up is the closest we get; on
+// reopening the tab it syncs immediately. Real always-on sync lands with MCP/server.
 // It imports new mail/Teams (de-duplicated) but does NOT run the per-company AI
 // summaries — those cost API tokens, so they stay on the manual Settings button.
 export function MsAutoSync() {
@@ -30,11 +39,12 @@ export function MsAutoSync() {
     if (!clientId.trim() || !interval || interval <= 0) return
     const conn = { clientId, tenant }
     let cancelled = false
+    let connected = false
     let timer: number | undefined
     let running = false
 
     const runOnce = async () => {
-      if (running || cancelled) return
+      if (running || cancelled || !connected) return
       running = true
       try {
         const l = latest.current
@@ -58,19 +68,29 @@ export function MsAutoSync() {
       }
     }
 
-    // Only start the loop if a session is actually connected (don't trigger a
-    // login popup automatically — that would be intrusive on every page load).
+    // Re-sync when the user returns to the tab or the network reconnects, but
+    // only if it's been a while — avoids hammering on every quick tab switch.
+    const onVisible = () => { if (document.visibilityState === 'visible' && msSinceLastSync() > CATCHUP_GAP_MS) runOnce() }
+    const onOnline = () => { if (msSinceLastSync() > CATCHUP_GAP_MS) runOnce() }
+
+    // Only start once a session is actually connected (don't trigger a login
+    // popup automatically — that would be intrusive on every page load).
     msRestore(conn)
       .then((name) => {
         if (cancelled || !name) return
+        connected = true
         runOnce() // initial catch-up sync on open
         timer = window.setInterval(runOnce, interval * 60_000)
+        document.addEventListener('visibilitychange', onVisible)
+        window.addEventListener('online', onOnline)
       })
       .catch(() => {})
 
     return () => {
       cancelled = true
       if (timer) clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', onOnline)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, tenant, interval])
