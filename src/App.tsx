@@ -4,6 +4,7 @@ import { Layout } from './components/Layout'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { CloudAutoSync } from './components/CloudAutoSync'
 import { MsAutoSync } from './components/MsAutoSync'
+import { Notifier } from './components/Notifier'
 import { ToastProvider } from './components/Toast'
 import { ThemeProvider } from './theme'
 import { LanguageProvider } from './i18n'
@@ -91,6 +92,7 @@ export default function App() {
     <ToastProvider>
       <CloudAutoSync />
       <MsAutoSync />
+      <Notifier />
       <Layout>
         <AppRoutes />
       </Layout>

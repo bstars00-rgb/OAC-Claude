@@ -6,6 +6,7 @@ import { useT } from '../i18n'
 import { useToast } from './Toast'
 import { restore as msRestore } from '../utils/graph'
 import { syncMicrosoft, msSinceLastSync } from '../utils/msSync'
+import { notifyPermission, showNotification } from '../utils/notify'
 
 const CATCHUP_GAP_MS = 5 * 60_000 // re-sync on focus/online only if 5+ min stale
 
@@ -56,10 +57,11 @@ export function MsAutoSync() {
           summarize: false, // auto-sync never spends API budget silently
         })
         if (!cancelled && r.added > 0) {
-          l.toast.notify(
-            l.lang === 'ko' ? 'Outlook 자동 동기화' : 'Outlook auto-sync',
-            l.lang === 'ko' ? `새 항목 ${r.added}건 · 업체 ${r.companies}곳` : `${r.added} new · ${r.companies} companies`,
-          )
+          const title = l.lang === 'ko' ? 'Outlook 자동 동기화' : 'Outlook auto-sync'
+          const body = l.lang === 'ko' ? `새 항목 ${r.added}건 · 업체 ${r.companies}곳` : `${r.added} new · ${r.companies} companies`
+          l.toast.notify(title, body)
+          // also raise a desktop notification (useful when the tab is in the background)
+          if (l.ai.notifyEnabled && notifyPermission() === 'granted') showNotification(title, { body, tag: 'oac-mail', url: '/' })
         }
       } catch {
         /* transient — try again next tick */

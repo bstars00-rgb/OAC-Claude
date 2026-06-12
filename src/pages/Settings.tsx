@@ -29,6 +29,7 @@ import { IntegrationsContent } from './Integrations'
 import { DataImportPanel } from '../components/DataImportPanel'
 import { AccountCleanup } from '../components/AccountCleanup'
 import { UsageCard } from '../components/UsageCard'
+import { notifySupported, notifyPermission, requestNotifyPermission, showNotification } from '../utils/notify'
 import { listMcpTools, callMcpTool, type McpTool } from '../utils/mcpClient'
 import {
   connect as msConnect,
@@ -97,6 +98,9 @@ export function Settings() {
 
       {/* API token usage & cost */}
       <UsageCard />
+
+      {/* Desktop notifications */}
+      <NotificationCard />
 
       {/* Cloud sync (Supabase) */}
       <CloudSyncCard />
@@ -475,6 +479,57 @@ function BackupCard() {
 
 function SaveIcon() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8M7 3v5h8" /></svg>
+}
+
+// B-2: desktop notification opt-in (due/overdue tasks + new synced mail).
+function NotificationCard() {
+  const { lang } = useT()
+  const ai = useAiSettings()
+  const toast = useToast()
+  const L = (ko: string, en: string) => (lang === 'ko' ? ko : en)
+  const [perm, setPerm] = useState(notifyPermission())
+
+  const toggle = async () => {
+    if (ai.notifyEnabled) { ai.setNotifyEnabled(false); return }
+    const ok = await requestNotifyPermission()
+    setPerm(notifyPermission())
+    if (ok) {
+      ai.setNotifyEnabled(true)
+      showNotification(L('알림이 켜졌습니다', 'Notifications on'), { body: L('마감·연체와 새 메일을 알려드립니다.', "You'll be notified of due tasks and new mail."), tag: 'oac-test' })
+    } else {
+      toast.notify(L('알림 권한이 거부되었습니다', 'Notification permission denied'), L('브라우저 사이트 설정에서 알림을 허용해 주세요.', 'Allow notifications in your browser site settings.'))
+    }
+  }
+
+  const on = ai.notifyEnabled && perm === 'granted'
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-3">
+        <CardHeader
+          title={L('데스크톱 알림', 'Desktop notifications')}
+          subtitle={L('앱이 열려 있는 동안 마감·연체 작업과 새로 동기화된 메일을 알려줍니다', 'While the app is open, get notified of due/overdue tasks and newly synced mail')}
+          icon={<BellIcon />}
+        />
+        {notifySupported() ? (
+          <button onClick={toggle} role="switch" aria-checked={on} aria-label={L('데스크톱 알림', 'Desktop notifications')} className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? 'bg-brand-600' : 'bg-slate-300 dark:bg-white/15'}`}>
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? 'left-[1.375rem]' : 'left-0.5'}`} />
+          </button>
+        ) : (
+          <Badge tone="slate">{L('미지원', 'Unsupported')}</Badge>
+        )}
+      </div>
+      {perm === 'denied' && (
+        <p className="mt-1 text-[11px] text-amber-600">{L('브라우저에서 알림이 차단돼 있습니다. 주소창의 사이트 설정에서 허용으로 바꿔 주세요.', 'Notifications are blocked in your browser — allow them in the site settings.')}</p>
+      )}
+      <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+        {L('탭이 백그라운드여도 동작합니다. 앱을 완전히 닫으면 알림이 멈춥니다(진짜 푸시는 서버가 필요).', 'Works even when the tab is in the background. Stops if you fully close the app (true push needs a server).')}
+      </p>
+    </Card>
+  )
+}
+
+function BellIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" /></svg>
 }
 
 // Shows when the Microsoft sync last ran, refreshing live.

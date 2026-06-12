@@ -54,6 +54,8 @@ interface AiSettings {
   // Outlook/Teams periodic auto-sync interval in minutes (0 = off). Only runs
   // while the app is open and a Microsoft account is connected.
   msAutoSyncMin: number
+  // Desktop notifications (due/overdue tasks, new synced mail) while the app is open.
+  notifyEnabled: boolean
 }
 
 interface AiSettingsCtx extends AiSettings {
@@ -71,6 +73,7 @@ interface AiSettingsCtx extends AiSettings {
   setMcpEndpoint: (v: string) => void
   setMcpToken: (v: string) => void
   setMsAutoSyncMin: (v: number) => void
+  setNotifyEnabled: (v: boolean) => void
   provider: AiProvider // derived from the selected model
   activeKey: string // the key for the active provider
   isLive: boolean
@@ -98,13 +101,14 @@ const read = (): AiSettings => {
         mcpEndpoint: typeof p.mcpEndpoint === 'string' ? p.mcpEndpoint : '',
         mcpToken: typeof p.mcpToken === 'string' ? p.mcpToken : '',
         msAutoSyncMin: typeof p.msAutoSyncMin === 'number' ? p.msAutoSyncMin : 0,
+        notifyEnabled: typeof p.notifyEnabled === 'boolean' ? p.notifyEnabled : false,
       }
     }
   } catch {
     /* ignore */
   }
   // Default to REAL mode (no demo data) — the user is starting to use OAC for real.
-  return { mode: 'demo', apiKey: '', openaiKey: '', model: AI_MODELS[0].id, demoData: false, msClientId: '', msTenant: 'common', supabaseUrl: '', supabaseAnonKey: '', userSignature: '', assistantMode: 'oac', mcpEndpoint: '', mcpToken: '', msAutoSyncMin: 0 }
+  return { mode: 'demo', apiKey: '', openaiKey: '', model: AI_MODELS[0].id, demoData: false, msClientId: '', msTenant: 'common', supabaseUrl: '', supabaseAnonKey: '', userSignature: '', assistantMode: 'oac', mcpEndpoint: '', mcpToken: '', msAutoSyncMin: 0, notifyEnabled: false }
 }
 
 const Ctx = createContext<AiSettingsCtx | null>(null)
@@ -134,13 +138,14 @@ export function AiSettingsProvider({ children }: { children: ReactNode }) {
   const setMcpEndpoint = (mcpEndpoint: string) => setSettings((s) => ({ ...s, mcpEndpoint }))
   const setMcpToken = (mcpToken: string) => setSettings((s) => ({ ...s, mcpToken }))
   const setMsAutoSyncMin = (msAutoSyncMin: number) => setSettings((s) => ({ ...s, msAutoSyncMin }))
+  const setNotifyEnabled = (notifyEnabled: boolean) => setSettings((s) => ({ ...s, notifyEnabled }))
 
   const provider = providerForModel(settings.model)
   const activeKey = provider === 'openai' ? settings.openaiKey : settings.apiKey
   const isLive = settings.mode === 'live' && activeKey.trim().length > 0
 
   return (
-    <Ctx.Provider value={{ ...settings, setMode, setApiKey, setOpenaiKey, setModel, setDemoData, setMsClientId, setMsTenant, setSupabaseUrl, setSupabaseAnonKey, setUserSignature, setAssistantMode, setMcpEndpoint, setMcpToken, setMsAutoSyncMin, provider, activeKey, isLive }}>
+    <Ctx.Provider value={{ ...settings, setMode, setApiKey, setOpenaiKey, setModel, setDemoData, setMsClientId, setMsTenant, setSupabaseUrl, setSupabaseAnonKey, setUserSignature, setAssistantMode, setMcpEndpoint, setMcpToken, setMsAutoSyncMin, setNotifyEnabled, provider, activeKey, isLive }}>
       {children}
     </Ctx.Provider>
   )
