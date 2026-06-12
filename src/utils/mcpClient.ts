@@ -20,18 +20,30 @@ interface JsonRpcResult<T> {
 }
 
 let rpcId = 0
+const PROTOCOL_VERSION = '2024-11-05'
+
+// Streamable-HTTP MCP servers hand back an `Mcp-Session-Id` on initialize and
+// expect it echoed on every later request. Track it per endpoint so the
+// list→call sequence stays in the same session.
+const sessionByEndpoint = new Map<string, string>()
 
 async function rpc<T>(endpoint: string, token: string, method: string, params?: unknown): Promise<T> {
   if (!endpoint.trim()) throw new Error('no-endpoint')
+  const sid = sessionByEndpoint.get(endpoint)
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       accept: 'application/json, text/event-stream',
+      'mcp-protocol-version': PROTOCOL_VERSION,
+      ...(sid ? { 'mcp-session-id': sid } : {}),
       ...(token.trim() ? { authorization: `Bearer ${token.trim()}` } : {}),
     },
     body: JSON.stringify({ jsonrpc: '2.0', id: ++rpcId, method, params: params ?? {} }),
   })
+  // capture/refresh the session id the server assigns (usually on initialize)
+  const newSid = res.headers.get('mcp-session-id')
+  if (newSid) sessionByEndpoint.set(endpoint, newSid)
   if (!res.ok) {
     const body = await res.text().catch(() => '')
     throw new Error(`MCP ${res.status}: ${body.slice(0, 200)}`)
@@ -50,7 +62,7 @@ async function rpc<T>(endpoint: string, token: string, method: string, params?: 
 export async function listMcpTools(endpoint: string, token: string): Promise<McpTool[]> {
   // initialize is best-effort — some servers don't require it for tools/list.
   await rpc(endpoint, token, 'initialize', {
-    protocolVersion: '2024-11-05',
+    protocolVersion: PROTOCOL_VERSION,
     capabilities: {},
     clientInfo: { name: 'OAC', version: '1.0' },
   }).catch(() => undefined)
