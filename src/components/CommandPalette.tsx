@@ -6,7 +6,9 @@ import { useCaptureStore } from '../data/captureStore'
 
 // A-3: Global search / command palette. Press Ctrl/⌘+K anywhere to search across
 // relationships, captures, open to-dos, and pages — then jump straight there.
-type Item = { id: string; group: string; title: string; sub?: string; to: string }
+// `search` carries extra hidden text (capture bodies, email content, owners) so
+// the palette matches on full content, not just the visible title/sub. (B-5)
+type Item = { id: string; group: string; title: string; sub?: string; to: string; search?: string }
 
 export function CommandPalette() {
   const navigate = useNavigate()
@@ -57,13 +59,15 @@ export function CommandPalette() {
     const capG = L('기록', 'Captures')
     const todoG = L('할 일', 'To-dos')
 
-    const relItems: Item[] = rel.list.map((e) => ({ id: 'r-' + e.id, group: relG, title: e.name, sub: `${e.detectedContext}${e.region ? ' · ' + e.region : ''}`, to: `/relationship/${e.id}` }))
-    const capItems: Item[] = store.entries.map((e) => ({ id: 'c-' + e.id, group: capG, title: e.timeline?.title || e.summary, sub: `${e.accountName} · ${e.date}`, to: `/relationship/${e.accountId}` }))
+    const relItems: Item[] = rel.list.map((e) => ({ id: 'r-' + e.id, group: relG, title: e.name, sub: `${e.detectedContext}${e.region ? ' · ' + e.region : ''}`, to: `/relationship/${e.id}`, search: `${e.owner ?? ''} ${e.currentFocus ?? ''} ${e.nextBestAction ?? ''}` }))
+    // capture search also covers the summary, the longer detail/body (e.g. email
+    // or report text), risks, and the raw note — so you can find a record by its content.
+    const capItems: Item[] = store.entries.map((e) => ({ id: 'c-' + e.id, group: capG, title: e.timeline?.title || e.summary, sub: `${e.accountName} · ${e.date}`, to: `/relationship/${e.accountId}`, search: `${e.summary} ${e.detail ?? ''} ${e.timeline?.detail ?? ''} ${(e.risks ?? []).join(' ')} ${e.rawText ?? ''}` }))
     const todoItems: Item[] = store.entries.flatMap((e) => e.todos.filter((td) => !td.done).map((td) => ({ id: 't-' + td.id, group: todoG, title: td.text, sub: `${e.accountName}${td.due ? ' · ' + L('마감 ', 'due ') + td.due : ''}`, to: `/relationship/${e.accountId}` })))
 
     const all = [...pages, ...relItems, ...capItems, ...todoItems]
     if (!term) return pages
-    const match = (it: Item) => (it.title + ' ' + (it.sub || '')).toLowerCase().includes(term)
+    const match = (it: Item) => (it.title + ' ' + (it.sub || '') + ' ' + (it.search || '')).toLowerCase().includes(term)
     // de-dup captures/todos that collapse to the same title+target
     const seen = new Set<string>()
     return all.filter(match).filter((it) => {
