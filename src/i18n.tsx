@@ -287,6 +287,11 @@ const DICT: Record<string, Entry> = {
   'data.emptyDesc': { en: 'Capture relationships in the OAC Assistant first. In a real deployment this view is fed by Excel & internal DB.', ko: '먼저 OAC 어시스턴트로 관계를 입력하세요. 실제 배포에서는 이 화면이 Excel·내부 DB로 채워집니다.' },
 }
 
+// The full translation table (en+ko) and its key set — exported for the i18n
+// coverage test (every t('...') reference must resolve to a real key).
+export const I18N_DICT = DICT
+export const I18N_KEYS = new Set(Object.keys(DICT))
+
 interface I18nCtx {
   lang: Lang
   setLang: (l: Lang) => void
