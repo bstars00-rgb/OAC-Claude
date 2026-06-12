@@ -46,12 +46,12 @@ export function UsageCard() {
           subtitle={L('월 정액과 별개로, 내 키로 호출한 토큰의 종량 비용입니다 (USD 청구)', 'Metered token cost on your own key — separate from the monthly subscription (billed in USD)')}
           icon={<CoinIcon />}
         />
-        {hasData && <button onClick={() => { if (window.confirm(L('사용량 기록을 초기화할까요?', 'Reset usage history?'))) clearUsage() }} className="shrink-0 text-[11px] text-slate-400 hover:text-rose-500">{L('초기화', 'Reset')}</button>}
+        {hasData && <button onClick={() => { if (window.confirm(L('사용량 기록을 초기화할까요?', 'Reset usage history?'))) clearUsage() }} className="shrink-0 text-[11px] text-slate-500 hover:text-rose-500">{L('초기화', 'Reset')}</button>}
       </div>
 
       {/* current model rate */}
       {price && (
-        <div className="mb-3 text-[11px] text-slate-500 dark:text-slate-400">
+        <div className="mb-3 text-[11px] text-slate-500 dark:text-slate-300">
           {L('현재 모델', 'Current model')}: <span className="font-semibold text-slate-700 dark:text-slate-200">{price.label}</span> · {L('입력', 'in')} ${price.inputPerM}/M · {L('출력', 'out')} ${price.outputPerM}/M ({L('백만 토큰당', 'per 1M tokens')})
         </div>
       )}
@@ -70,7 +70,7 @@ export function UsageCard() {
               <div className="text-[11px] font-semibold text-brand-700">{L('월말 예상', 'Projected month')}</div>
               <div className="mt-0.5 text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">{usd(proj.projected)}</div>
               <div className="text-[11px] text-slate-500">{krw(proj.projected)}</div>
-              <div className="mt-1 text-[10px] text-slate-400">{L(`일평균 ${usd(proj.avgPerDay)} × ${proj.daysInMonth}일`, `${usd(proj.avgPerDay)}/day × ${proj.daysInMonth}d`)}</div>
+              <div className="mt-1 text-[10px] text-slate-500">{L(`일평균 ${usd(proj.avgPerDay)} × ${proj.daysInMonth}일`, `${usd(proj.avgPerDay)}/day × ${proj.daysInMonth}d`)}</div>
             </div>
           </div>
 
@@ -81,7 +81,7 @@ export function UsageCard() {
               {series.map((s) => (
                 <div key={s.label} className="group flex flex-1 flex-col items-center justify-end gap-1" title={`${s.label}: ${usd(s.cost)}`}>
                   <div className="w-full rounded-t bg-gradient-to-t from-brand-600 to-violet-500" style={{ height: `${Math.max(2, (s.cost / maxDay) * 54)}px` }} />
-                  <span className="text-[8px] text-slate-400">{s.label.slice(3)}</span>
+                  <span className="text-[8px] text-slate-500">{s.label.slice(3)}</span>
                 </div>
               ))}
             </div>
@@ -93,7 +93,7 @@ export function UsageCard() {
               <div className="mb-1.5 text-[11px] font-semibold text-slate-500">{L('모델별 (이번 달)', 'By model (this month)')}</div>
               <table className="w-full text-left text-[11px]">
                 <thead>
-                  <tr className="text-slate-400">
+                  <tr className="text-slate-500">
                     <th className="py-1 pr-3 font-medium">{L('모델', 'Model')}</th>
                     <th className="py-1 pr-3 text-right font-medium">{L('입력', 'In')}</th>
                     <th className="py-1 pr-3 text-right font-medium">{L('출력', 'Out')}</th>
@@ -113,7 +113,7 @@ export function UsageCard() {
               </table>
             </div>
           )}
-          <p className="mt-3 text-[10px] leading-relaxed text-slate-400">
+          <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
             {L(`단가는 공개 정가 기준 추정이며 캐시·배치 할인은 반영하지 않습니다. ₩는 1 USD ≈ ₩${USD_TO_KRW.toLocaleString()} 기준 근사치입니다. 정확한 청구액은 콘솔에서 확인하세요.`, `Costs are estimates at list prices (no cache/batch discounts). ₩ uses 1 USD ≈ ₩${USD_TO_KRW.toLocaleString()}. Check your provider console for the exact bill.`)}
           </p>
         </>
@@ -131,7 +131,7 @@ function Tile({ L, title, totals }: { L: (ko: string, en: string) => string; tit
       </div>
       <div className="mt-0.5 text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">{usd(totals.cost)}</div>
       <div className="text-[11px] text-slate-500">{krw(totals.cost)}</div>
-      <div className="mt-1 text-[10px] text-slate-400">{L('입력', 'in')} {tok(totals.in)} · {L('출력', 'out')} {tok(totals.out)}</div>
+      <div className="mt-1 text-[10px] text-slate-500">{L('입력', 'in')} {tok(totals.in)} · {L('출력', 'out')} {tok(totals.out)}</div>
     </div>
   )
 }

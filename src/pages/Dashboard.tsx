@@ -95,7 +95,7 @@ function DemoDashboard() {
               <Badge tone="brand" dot>June 9, 2026</Badge>
             </div>
             <p className="mt-2 text-[15px] leading-relaxed text-slate-700">{getTodaysBriefing()}</p>
-            <p className="mt-2 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-slate-500">
               Generated from meetings, emails, Teams, Excel, and internal DB · AI Engine Demo
             </p>
           </div>
@@ -154,7 +154,7 @@ function DemoDashboard() {
                   <div key={m.id} className="px-5 py-3">
                     <div className="flex items-center justify-between gap-2">
                       <button onClick={() => navigate(`/relationship/${m.entityId}`)} className="text-sm font-semibold text-slate-800 hover:text-brand-700">{ent?.name}</button>
-                      <span className="text-[11px] text-slate-400">{formatDate(m.date)} · {m.followUps.length} follow-ups</span>
+                      <span className="text-[11px] text-slate-500">{formatDate(m.date)} · {m.followUps.length} follow-ups</span>
                     </div>
                     <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{m.aiSummary}</p>
                   </div>
@@ -199,7 +199,7 @@ function DemoDashboard() {
                       <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${t.priority === 'High' ? 'bg-rose-500' : t.priority === 'Medium' ? 'bg-amber-500' : 'bg-slate-300'}`} />
                       <div className="min-w-0 flex-1">
                         <button onClick={() => navigate(`/relationship/${t.entityId}`)} className="text-left text-sm font-medium text-slate-700 hover:text-brand-700">{t.title}</button>
-                        <div className="mt-0.5 text-[11px] text-slate-400">{ent?.name} · {t.owner} · due {formatDate(t.dueDate)}</div>
+                        <div className="mt-0.5 text-[11px] text-slate-500">{ent?.name} · {t.owner} · due {formatDate(t.dueDate)}</div>
                         <div className="mt-1 text-[11px] italic text-slate-500">“{t.aiReason}”</div>
                       </div>
                     </div>
@@ -220,7 +220,7 @@ function DemoDashboard() {
                   <li key={d.id} className="rounded-xl border border-slate-100 p-3">
                     <div className="text-xs font-semibold text-slate-500">{ent?.name}</div>
                     <div className="mt-0.5 text-sm font-medium text-slate-800">{d.subject}</div>
-                    <div className="mt-0.5 line-clamp-1 text-[11px] text-slate-400">{d.aiIntent}</div>
+                    <div className="mt-0.5 line-clamp-1 text-[11px] text-slate-500">{d.aiIntent}</div>
                     <Button size="sm" variant="secondary" className="mt-2 w-full" onClick={() => navigate(`/assistant?q=${encodeURIComponent(lang === 'ko' ? `${ent?.name}에 보낼 메일 작성해줘` : `Draft an email to ${ent?.name}`)}`)}>{t('l.openInEmail')}</Button>
                   </li>
                 )
@@ -327,7 +327,7 @@ function RealDashboard({ relationships }: { relationships: Entity[] }) {
                 <div key={e.id} className="px-5 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <button onClick={() => navigate(`/relationship/${e.accountId}`)} className="text-sm font-semibold text-slate-800 hover:text-brand-700">{e.accountName}</button>
-                    <span className="text-[11px] text-slate-400">{formatDate(e.date)} · {daysAgo(e.date)}</span>
+                    <span className="text-[11px] text-slate-500">{formatDate(e.date)} · {daysAgo(e.date)}</span>
                   </div>
                   <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{e.timeline.title} — {e.summary}</p>
                 </div>
@@ -353,7 +353,7 @@ function RealDashboard({ relationships }: { relationships: Entity[] }) {
         <div className="space-y-5">
           <Card padded={false}>
             <div className="px-5 pt-5"><CardHeader title={t('l.openFollowups')} subtitle={`${openTodos.length} ${t('l.acrossRel')}`} /></div>
-            {openTodos.length === 0 ? <p className="px-5 pb-5 text-sm text-slate-400">{t('dash.noTodos')}</p> : (
+            {openTodos.length === 0 ? <p className="px-5 pb-5 text-sm text-slate-500">{t('dash.noTodos')}</p> : (
               <ul className="divide-y divide-slate-100">
                 {openTodos.slice(0, 8).map((td) => (
                   <li key={td.id} className="px-5 py-3">
@@ -361,7 +361,7 @@ function RealDashboard({ relationships }: { relationships: Entity[] }) {
                       <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${td.priority === 'High' ? 'bg-rose-500' : td.priority === 'Medium' ? 'bg-amber-500' : 'bg-slate-300'}`} />
                       <div className="min-w-0 flex-1">
                         <button onClick={() => navigate(`/relationship/${td.accountId}`)} className="text-left text-sm font-medium text-slate-700 hover:text-brand-700">{td.text}</button>
-                        <div className="mt-0.5 text-[11px] text-slate-400">{td.accountName} · {t('cap.due')} {formatDate(td.due)}</div>
+                        <div className="mt-0.5 text-[11px] text-slate-500">{td.accountName} · {t('cap.due')} {formatDate(td.due)}</div>
                       </div>
                     </div>
                   </li>

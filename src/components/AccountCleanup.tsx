@@ -55,7 +55,7 @@ export function AccountCleanup() {
           <div className="flex flex-wrap items-center gap-2">
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={L('계정 검색…', 'Search accounts…')} className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-brand-400 focus:outline-none" />
             <Button size="sm" variant="secondary" onClick={() => setSel(new Set(noiseIds))} disabled={!noiseIds.length}>{L(`노이즈(1건) ${noiseIds.length}개 선택`, `Select ${noiseIds.length} one-off`)}</Button>
-            {sel.size > 0 && <button onClick={() => setSel(new Set())} className="text-[11px] text-slate-400 hover:text-slate-600">{L('선택 해제', 'Clear')}</button>}
+            {sel.size > 0 && <button onClick={() => setSel(new Set())} className="text-[11px] text-slate-500 hover:text-slate-600">{L('선택 해제', 'Clear')}</button>}
           </div>
 
           {/* action bar */}
@@ -78,7 +78,7 @@ export function AccountCleanup() {
 
           <div className="max-h-[360px] divide-y divide-slate-100 overflow-auto rounded-lg border border-slate-200 dark:divide-white/5 dark:border-white/10">
             {list.length === 0 ? (
-              <p className="p-4 text-center text-sm text-slate-400">{L('계정이 없습니다.', 'No accounts.')}</p>
+              <p className="p-4 text-center text-sm text-slate-500">{L('계정이 없습니다.', 'No accounts.')}</p>
             ) : list.map((a) => {
               const kinds = kindByAccount.get(a.accountId) ?? {}
               const kindStr = Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(' · ')
@@ -90,13 +90,13 @@ export function AccountCleanup() {
                       <span className="truncate text-sm font-semibold text-slate-800">{a.accountName}</span>
                       {a.entryCount === 1 && <Badge tone="amber">{L('1건', '1×')}</Badge>}
                     </span>
-                    <span className="block truncate text-[11px] text-slate-400">{a.entryCount} {L('기록', 'records')}{kindStr ? ` · ${kindStr}` : ''} · {formatDate(a.lastDate)}</span>
+                    <span className="block truncate text-[11px] text-slate-500">{a.entryCount} {L('기록', 'records')}{kindStr ? ` · ${kindStr}` : ''} · {formatDate(a.lastDate)}</span>
                   </span>
                 </label>
               )
             })}
           </div>
-          <p className="text-[11px] text-slate-400">{L('병합: 2개 이상 선택 → "병합 대상"에서 남길 계정을 누르면 나머지가 합쳐집니다. (백업/클라우드 켜져 있으면 복원 가능)', 'Merge: select 2+, then click the account to keep. (Restorable if backup/cloud is on.)')}</p>
+          <p className="text-[11px] text-slate-500">{L('병합: 2개 이상 선택 → "병합 대상"에서 남길 계정을 누르면 나머지가 합쳐집니다. (백업/클라우드 켜져 있으면 복원 가능)', 'Merge: select 2+, then click the account to keep. (Restorable if backup/cloud is on.)')}</p>
         </div>
       )}
     </Card>

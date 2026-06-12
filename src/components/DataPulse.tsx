@@ -82,7 +82,7 @@ function Pulse({ profile, snaps, lang }: { profile: ImportProfile; snaps: Datase
           const up = (delta ?? 0) >= 0
           return (
             <div key={label} className="rounded-lg bg-slate-50 px-2.5 py-2 dark:bg-white/5">
-              <div className="text-[10px] text-slate-400">{label}</div>
+              <div className="text-[10px] text-slate-500">{label}</div>
               <div className="text-sm font-bold tracking-tight text-slate-800">{fmt(cur, label)}</div>
               {delta !== undefined && (
                 <div className={`mt-0.5 text-[10px] font-bold ${up ? 'text-emerald-600' : 'text-rose-600'}`}>{up ? '▲' : '▼'} {Math.abs(delta).toFixed(0)}% {cmp}</div>

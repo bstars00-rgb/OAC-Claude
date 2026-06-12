@@ -50,9 +50,9 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
         </div>
         <div className="leading-tight">
           <div className="text-sm font-bold text-slate-900 dark:text-slate-100">Ohmyhotel</div>
-          <div className="text-[11px] font-medium text-slate-400">AI CRM</div>
+          <div className="text-[11px] font-medium text-slate-500">AI CRM</div>
         </div>
-        <button onClick={onClose} className="ml-auto text-slate-400 hover:text-slate-600 lg:hidden" aria-label="Close menu">✕</button>
+        <button onClick={onClose} className="ml-auto text-slate-500 hover:text-slate-600 lg:hidden" aria-label="Close menu">✕</button>
       </div>
 
       {/* Nav */}

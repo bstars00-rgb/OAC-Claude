@@ -162,7 +162,7 @@ export function WeeklyReport() {
           <div role="dialog" aria-modal="true" aria-label={L('주간 자동 리포트', 'Weekly auto report')} className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900" onMouseDown={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-white/5">
               <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100"><DocIcon /> {L('주간 자동 리포트', 'Weekly auto report')}</span>
-              <button onClick={() => setOpen(false)} aria-label={L('닫기', 'Close')} className="text-slate-400 hover:text-slate-600">✕</button>
+              <button onClick={() => setOpen(false)} aria-label={L('닫기', 'Close')} className="text-slate-500 hover:text-slate-600">✕</button>
             </div>
             <div className="max-h-[60vh] overflow-auto px-5 py-4">
               <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-slate-700 dark:text-slate-200">{aiText || text}</pre>
@@ -170,7 +170,7 @@ export function WeeklyReport() {
               {chats && (
                 <div className="mt-3 rounded-lg border border-slate-200 p-2 dark:border-white/10">
                   <div className="mb-1 px-1 text-[11px] font-semibold text-slate-500">{L('게시할 Teams 채팅 선택', 'Pick a Teams chat to post to')}</div>
-                  {chats.length === 0 ? <p className="px-1 py-2 text-xs text-slate-400">{L('최근 채팅이 없습니다.', 'No recent chats.')}</p> : (
+                  {chats.length === 0 ? <p className="px-1 py-2 text-xs text-slate-500">{L('최근 채팅이 없습니다.', 'No recent chats.')}</p> : (
                     <div className="max-h-40 space-y-0.5 overflow-auto">
                       {chats.map((c) => (
                         <button key={c.id} onClick={() => postToTeams(c)} disabled={teamsBusy} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-slate-700 transition hover:bg-brand-50 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-white/5">
@@ -187,7 +187,7 @@ export function WeeklyReport() {
               <Button size="sm" variant="secondary" onClick={copy}>{L('복사', 'Copy')}</Button>
               {ai.msClientId && <Button size="sm" variant="secondary" onClick={loadChats} disabled={teamsBusy}>{teamsBusy ? L('Teams…', 'Teams…') : L('Teams 공유', 'Share to Teams')}</Button>}
               <span className="ml-auto flex items-center gap-1.5">
-                <span className="text-[11px] text-slate-400">{L('내보내기', 'Export')}:</span>
+                <span className="text-[11px] text-slate-500">{L('내보내기', 'Export')}:</span>
                 <button onClick={exportWord} className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-brand-300 hover:text-brand-700">Word</button>
                 <button onClick={exportPdf} className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-brand-300 hover:text-brand-700">PDF</button>
                 <button onClick={exportXlsx} className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-brand-300 hover:text-brand-700">Excel</button>

@@ -116,15 +116,15 @@ export function Central() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={L('업체 검색…', 'Search company…')} className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none" />
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">{L('전사 관계', 'All relationships')} <Badge tone="slate">{accounts.length}</Badge></div>
           <div className="space-y-2">
-            {filtered.length === 0 && <Card className="py-6 text-center text-sm text-slate-400">{L('아직 기록이 없습니다.', 'No records yet.')}</Card>}
+            {filtered.length === 0 && <Card className="py-6 text-center text-sm text-slate-500">{L('아직 기록이 없습니다.', 'No records yet.')}</Card>}
             {filtered.map((a) => (
               <button key={a.name} onClick={() => setSelected(a.name)} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${selected === a.name ? 'border-brand-300 bg-brand-50/60' : 'border-slate-200 hover:bg-slate-50 dark:bg-white/5'}`}>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-600 to-violet-600 text-xs font-bold text-white">{initials(a.name)}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-slate-900">{a.name}</span>
-                  <span className="block truncate text-[11px] text-slate-400">{a.entries.length} {L('기록', 'records')} · {a.owners.join(', ')}</span>
+                  <span className="block truncate text-[11px] text-slate-500">{a.entries.length} {L('기록', 'records')} · {a.owners.join(', ')}</span>
                 </span>
-                <span className="shrink-0 text-[11px] text-slate-400">{formatDate(a.lastDate)}</span>
+                <span className="shrink-0 text-[11px] text-slate-500">{formatDate(a.lastDate)}</span>
               </button>
             ))}
           </div>
@@ -140,9 +140,9 @@ export function Central() {
                   <li key={e.id} className="rounded-lg border border-slate-100 p-2.5 dark:border-white/10">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium text-slate-800">{e.timeline?.title || e.summary}</span>
-                      <span className="text-[11px] text-slate-400">{formatDate(e.date)}</span>
+                      <span className="text-[11px] text-slate-500">{formatDate(e.date)}</span>
                     </div>
-                    <div className="mt-0.5 text-[11px] text-slate-400">{e.detectedContext} · {L('담당', 'by')} {e.owner}</div>
+                    <div className="mt-0.5 text-[11px] text-slate-500">{e.detectedContext} · {L('담당', 'by')} {e.owner}</div>
                     <p className="mt-1 whitespace-pre-line text-xs text-slate-600">{e.summary}</p>
                     {e.detail && <p className="mt-1 line-clamp-4 whitespace-pre-line text-[11px] text-slate-500">{e.detail}</p>}
                   </li>
@@ -150,12 +150,12 @@ export function Central() {
               </ul>
             </Card>
           ) : (
-            <Card className="py-12 text-center text-sm text-slate-400">{L('왼쪽에서 업체를 선택하면 전체 히스토리가 보입니다.', 'Pick a company to see its full history.')}</Card>
+            <Card className="py-12 text-center text-sm text-slate-500">{L('왼쪽에서 업체를 선택하면 전체 히스토리가 보입니다.', 'Pick a company to see its full history.')}</Card>
           )}
         </div>
       </div>
 
-      <p className="mt-4 text-[11px] text-slate-400">{L('이 화면은 팀 동료들이 클라우드에 동기화한 데이터를 모아 보여줍니다 (읽기 전용). 신규 입사자 교육·인수인계에 사용하세요.', 'This aggregates teammates’ cloud-synced data (read-only) — use it for onboarding & handover.')}</p>
+      <p className="mt-4 text-[11px] text-slate-500">{L('이 화면은 팀 동료들이 클라우드에 동기화한 데이터를 모아 보여줍니다 (읽기 전용). 신규 입사자 교육·인수인계에 사용하세요.', 'This aggregates teammates’ cloud-synced data (read-only) — use it for onboarding & handover.')}</p>
     </div>
   )
 }

@@ -70,12 +70,12 @@ export function DueAlerts() {
             <Badge tone={a.status === 'overdue' ? 'red' : a.status === 'today' ? 'amber' : 'slate'}>{label(a)}</Badge>
             <button onClick={() => navigate(`/relationship/${a.accountId}`)} className="min-w-0 flex-1 text-left">
               <span className="block truncate text-sm font-medium text-slate-700 hover:text-brand-700">{a.text}</span>
-              <span className="block truncate text-[11px] text-slate-400">{a.accountName} · {L('마감', 'due')} {formatDate(a.due)}</span>
+              <span className="block truncate text-[11px] text-slate-500">{a.accountName} · {L('마감', 'due')} {formatDate(a.due)}</span>
             </button>
           </li>
         ))}
       </ul>
-      {alerts.length > 6 && <p className="mt-1 text-[11px] text-slate-400">+{alerts.length - 6} {L('건 더', 'more')}</p>}
+      {alerts.length > 6 && <p className="mt-1 text-[11px] text-slate-500">+{alerts.length - 6} {L('건 더', 'more')}</p>}
     </Card>
   )
 }

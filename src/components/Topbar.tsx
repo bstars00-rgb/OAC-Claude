@@ -80,7 +80,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {}) {
           </div>
           <div className="hidden leading-tight sm:block">
             <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">Aiden Park</div>
-            <div className="text-[10px] text-slate-400">{t('top.role')}</div>
+            <div className="text-[10px] text-slate-500">{t('top.role')}</div>
           </div>
         </div>
       </div>

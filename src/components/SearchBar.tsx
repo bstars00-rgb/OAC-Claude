@@ -46,7 +46,7 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
             : 'border-slate-200 px-3 py-2 focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-100'
         }`}
       >
-        <svg className="shrink-0 text-slate-400" width={hero ? 20 : 16} height={hero ? 20 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg className="shrink-0 text-slate-500" width={hero ? 20 : 16} height={hero ? 20 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="11" cy="11" r="7" />
           <path d="M21 21l-4.3-4.3" />
         </svg>
@@ -59,10 +59,10 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
           onFocus={() => setOpen(true)}
           onKeyDown={(e) => e.key === 'Enter' && submit(query)}
           placeholder={hero ? L('이름으로 검색하거나 OAC에게 물어보세요', 'Search a name or ask OAC') : t('top.search')}
-          className={`w-full bg-transparent text-slate-800 placeholder:text-slate-400 focus:outline-none dark:text-slate-100 ${hero ? 'text-base' : 'text-sm'}`}
+          className={`w-full bg-transparent text-slate-800 placeholder:text-slate-500 focus:outline-none dark:text-slate-100 ${hero ? 'text-base' : 'text-sm'}`}
         />
         {query && (
-          <kbd className="hidden shrink-0 rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-400 sm:block">Enter</kbd>
+          <kbd className="hidden shrink-0 rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-500 sm:block">Enter</kbd>
         )}
       </div>
 
@@ -70,7 +70,7 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
         <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
           {results.length > 0 ? (
             <>
-              <div className="border-b border-slate-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <div className="border-b border-slate-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 {L('관계', 'Relationships')}
               </div>
               {results.map((e) => (
@@ -84,7 +84,7 @@ export function SearchBar({ variant = 'topbar' }: { variant?: 'topbar' | 'hero' 
                 >
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-slate-800">{e.name}</div>
-                    <div className="truncate text-xs text-slate-400">{e.detectedContext} · {e.region}</div>
+                    <div className="truncate text-xs text-slate-500">{e.detectedContext} · {e.region}</div>
                   </div>
                   <ContextBadge context={e.detectedContext} size="sm" />
                 </button>

@@ -34,7 +34,7 @@ export function Timeline({ entries }: { entries: TimelineEntry[] }) {
               {e.source}
             </span>
           </div>
-          <div className="mt-0.5 text-xs text-slate-400">
+          <div className="mt-0.5 text-xs text-slate-500">
             {formatDate(e.date)} · {daysAgo(e.date)}
           </div>
           {e.detail && <p className="mt-1 text-sm leading-relaxed text-slate-600">{e.detail}</p>}

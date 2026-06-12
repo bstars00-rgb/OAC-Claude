@@ -321,10 +321,10 @@ export function OACAssistant() {
             if (q && convs.length === 0) return null // hide empty projects while searching
             return (
               <div key={p.id} className="mt-2">
-                <div className="group flex items-center gap-1 px-1.5 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                <div className="group flex items-center gap-1 px-1.5 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">
                   <span className="flex-1 cursor-pointer truncate hover:text-slate-600" onDoubleClick={() => renameProject(p.id, p.name)} title={lang === 'ko' ? `${p.name} (더블클릭=이름변경)` : `${p.name} (double-click to rename)`}>{p.name}</span>
                   <button onClick={() => linkProject(p.id)} title={lang === 'ko' ? '고객사 연결' : 'Link relationship'} className={`text-[11px] transition ${p.accountId ? 'text-brand-500' : 'text-slate-300 opacity-0 hover:text-brand-600 group-hover:opacity-100'}`}>🔗</button>
-                  <button onClick={() => addChat(p.id)} title={lang === 'ko' ? '새 대화' : 'New chat'} className="text-sm text-slate-400 hover:text-brand-600">+</button>
+                  <button onClick={() => addChat(p.id)} title={lang === 'ko' ? '새 대화' : 'New chat'} className="text-sm text-slate-500 hover:text-brand-600">+</button>
                   {chat.projects.length > 1 && <button onClick={() => deleteProject(p.id)} className="text-slate-300 opacity-0 transition hover:text-rose-500 group-hover:opacity-100">×</button>}
                 </div>
                 {p.accountName && (
@@ -387,7 +387,7 @@ export function OACAssistant() {
               { tab: 'captures', label: t('cap.captures'), value: store.stats.entries },
             ] as const).map((m) => (
               <button key={m.tab} onClick={() => setRightTab(m.tab)} className={`rounded-xl border p-3 text-left transition ${rightTab === m.tab ? 'border-brand-300 bg-brand-50/60 dark:bg-brand-500/10' : 'border-slate-200 hover:bg-slate-50 dark:bg-white/5'}`}>
-                <div className="text-[11px] text-slate-400">{m.label}</div>
+                <div className="text-[11px] text-slate-500">{m.label}</div>
                 <div className="text-xl font-bold tracking-tight text-slate-800">{m.value}</div>
               </button>
             ))}
@@ -397,11 +397,11 @@ export function OACAssistant() {
             <div className="flex items-center justify-between px-5 pt-5">
               <CardHeader title={rightTab === 'accounts' ? t('cap.recentAccounts') : rightTab === 'todos' ? t('cap.openTodos') : rightTab === 'risks' ? t('cap.risks') : t('cap.captures')} subtitle={t('cap.liveStructured')} />
               {store.entries.length > 0 && (
-                <button onClick={() => { if (window.confirm(lang === 'ko' ? '워크스페이스 데이터를 모두 지울까요?' : 'Clear all workspace data?')) store.clearAll() }} className="mb-4 text-[11px] font-medium text-slate-400 hover:text-rose-600">{t('cap.clear')}</button>
+                <button onClick={() => { if (window.confirm(lang === 'ko' ? '워크스페이스 데이터를 모두 지울까요?' : 'Clear all workspace data?')) store.clearAll() }} className="mb-4 text-[11px] font-medium text-slate-500 hover:text-rose-600">{t('cap.clear')}</button>
               )}
             </div>
             {store.entries.length === 0 ? (
-              <p className="px-5 pb-5 text-sm text-slate-400">{t('cap.noAccounts')}</p>
+              <p className="px-5 pb-5 text-sm text-slate-500">{t('cap.noAccounts')}</p>
             ) : (
               <div className="max-h-[360px] divide-y divide-slate-100 overflow-auto dark:divide-white/5">
                 {rightTab === 'accounts' && store.accounts.map((a) => (
@@ -411,7 +411,7 @@ export function OACAssistant() {
                       <Badge tone={catTone[a.category] ?? 'slate'}>{catLabel[a.category]?.[lang] ?? a.category}</Badge>
                     </div>
                     <div className="mt-1"><ContextBadge context={a.detectedContext} size="sm" /></div>
-                    <div className="mt-1.5 flex items-center gap-3 text-[11px] text-slate-400">
+                    <div className="mt-1.5 flex items-center gap-3 text-[11px] text-slate-500">
                       <span className="text-amber-600">{a.openTodos} {t('cap.todosShort')}</span>
                       {a.riskCount > 0 && <span className="text-rose-600">{a.riskCount} {t('cap.risks')}</span>}
                       <span className="ml-auto">{daysAgo(a.lastDate)}</span>
@@ -422,13 +422,13 @@ export function OACAssistant() {
 
                 {rightTab === 'todos' && (() => {
                   const todos = store.entries.flatMap((e) => e.todos.filter((td) => !td.done).map((td) => ({ ...td, accountName: e.accountName, accountId: e.accountId, entryId: e.id })))
-                  if (!todos.length) return <p className="px-5 pb-5 pt-1 text-sm text-slate-400">{t('dash.noTodos')}</p>
+                  if (!todos.length) return <p className="px-5 pb-5 pt-1 text-sm text-slate-500">{t('dash.noTodos')}</p>
                   return todos.map((td) => (
                     <button key={td.id} onClick={() => store.toggleTodo(td.entryId, td.id)} className="flex w-full items-start gap-2 px-5 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-white/5">
                       <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-slate-300" />
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm text-slate-700">{td.text}</span>
-                        <span className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400"><span className="font-medium text-brand-600">{td.accountName}</span><Badge tone={td.priority === 'High' ? 'red' : td.priority === 'Medium' ? 'amber' : 'slate'}>{td.priority}</Badge>{td.due && <span>{t('cap.due')} {formatDate(td.due)}</span>}</span>
+                        <span className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500"><span className="font-medium text-brand-600">{td.accountName}</span><Badge tone={td.priority === 'High' ? 'red' : td.priority === 'Medium' ? 'amber' : 'slate'}>{td.priority}</Badge>{td.due && <span>{t('cap.due')} {formatDate(td.due)}</span>}</span>
                       </span>
                     </button>
                   ))
@@ -436,7 +436,7 @@ export function OACAssistant() {
 
                 {rightTab === 'risks' && (() => {
                   const risks = store.entries.flatMap((e) => e.risks.map((r, i) => ({ id: `${e.id}-${i}`, risk: r, accountName: e.accountName, accountId: e.accountId })))
-                  if (!risks.length) return <p className="px-5 pb-5 pt-1 text-sm text-slate-400">{lang === 'ko' ? '리스크가 없습니다.' : 'No risks.'}</p>
+                  if (!risks.length) return <p className="px-5 pb-5 pt-1 text-sm text-slate-500">{lang === 'ko' ? '리스크가 없습니다.' : 'No risks.'}</p>
                   return risks.map((r) => (
                     <button key={r.id} onClick={() => navigate(`/relationship/${r.accountId}`)} className="flex w-full items-start gap-2 px-5 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-white/5">
                       <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />
@@ -452,9 +452,9 @@ export function OACAssistant() {
                   <button key={e.id} onClick={() => navigate(`/relationship/${e.accountId}`)} className="block w-full px-5 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-white/5">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-medium text-slate-700">{e.timeline?.title || e.summary}</span>
-                      <span className="shrink-0 text-[11px] text-slate-400">{daysAgo(e.date)}</span>
+                      <span className="shrink-0 text-[11px] text-slate-500">{daysAgo(e.date)}</span>
                     </div>
-                    <span className="text-[11px] text-slate-400">{e.accountName} · {e.detectedContext}</span>
+                    <span className="text-[11px] text-slate-500">{e.accountName} · {e.detectedContext}</span>
                   </button>
                 ))}
               </div>
@@ -493,7 +493,7 @@ export function OACAssistant() {
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 text-white"><SparkIcon /></span>
           <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
             {msg.thinking ? (
-              <div className="flex items-center gap-2 text-slate-400">
+              <div className="flex items-center gap-2 text-slate-500">
                 <span className="oac-typing text-brand-500"><span /><span /><span /></span>
                 <span className="text-xs">{t('asst.thinking')}</span>
               </div>
@@ -529,7 +529,7 @@ export function OACAssistant() {
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><CheckIcon /> {t('asst.saved')}</span>
           <button onClick={() => s.isExisting ? navigate(`/relationship/${s.accountId}`) : undefined} className={`text-sm font-bold text-slate-900 ${s.isExisting ? 'hover:text-brand-700' : ''}`}>{s.accountName}</button>
           <Badge tone={catTone[s.category] ?? 'slate'}>{catLabel[s.category]?.[lang] ?? s.category}</Badge>
-          <span className="text-[11px] text-slate-400">{openTodos} {t('cap.todosShort')}{entry.risks.length > 0 ? ` · ${entry.risks.length} ${t('cap.risk')}` : ''}</span>
+          <span className="text-[11px] text-slate-500">{openTodos} {t('cap.todosShort')}{entry.risks.length > 0 ? ` · ${entry.risks.length} ${t('cap.risk')}` : ''}</span>
           <button onClick={() => setMsg({ showDetails: !msg.showDetails })} className="ml-auto text-[11px] font-medium text-brand-600 hover:text-brand-700">{msg.showDetails ? t('asst.hide') : t('asst.details')}</button>
         </div>
 
@@ -544,20 +544,20 @@ export function OACAssistant() {
           <div className="rounded-lg border border-slate-100 p-2.5">
             <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-sky-600"><span className="h-2 w-2 rounded-full bg-sky-500" />{t('cap.timeline')}</div>
             <div className="text-xs font-medium text-slate-700">{entry.timeline.title}</div>
-            <div className="text-[11px] text-slate-400">{formatDate(entry.timeline.date)}</div>
+            <div className="text-[11px] text-slate-500">{formatDate(entry.timeline.date)}</div>
             <p className="mt-1 line-clamp-4 text-xs text-slate-500">{entry.timeline.detail}</p>
           </div>
           <div className="rounded-lg border border-slate-100 p-2.5">
             <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-600"><span className="h-2 w-2 rounded-full bg-brand-500" />{t('cap.todo')} ({entry.todos.filter((x) => !x.done).length})</div>
-            {entry.todos.length === 0 ? <p className="text-xs text-slate-400">{t('cap.noTodo')}</p> : (
+            {entry.todos.length === 0 ? <p className="text-xs text-slate-500">{t('cap.noTodo')}</p> : (
               <ul className="space-y-1.5">
                 {entry.todos.map((td) => (
                   <li key={td.id}>
                     <button onClick={() => store.toggleTodo(entry.id, td.id)} className="group flex w-full items-start gap-2 text-left">
                       <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${td.done ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 group-hover:border-brand-400'}`}>{td.done && <CheckIcon />}</span>
                       <span className="min-w-0 flex-1">
-                        <span className={`text-xs ${td.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{td.text}</span>
-                        <span className="mt-0.5 flex items-center gap-1.5"><Badge tone={td.priority === 'High' ? 'red' : td.priority === 'Medium' ? 'amber' : 'slate'}>{td.priority}</Badge><span className="text-[10px] text-slate-400">{t('cap.due')} {formatDate(td.due)}</span></span>
+                        <span className={`text-xs ${td.done ? 'text-slate-500 line-through' : 'text-slate-700'}`}>{td.text}</span>
+                        <span className="mt-0.5 flex items-center gap-1.5"><Badge tone={td.priority === 'High' ? 'red' : td.priority === 'Medium' ? 'amber' : 'slate'}>{td.priority}</Badge><span className="text-[10px] text-slate-500">{t('cap.due')} {formatDate(td.due)}</span></span>
                       </span>
                     </button>
                   </li>
@@ -567,7 +567,7 @@ export function OACAssistant() {
           </div>
           <div className="rounded-lg border border-slate-100 p-2.5">
             <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-rose-600"><span className="h-2 w-2 rounded-full bg-rose-500" />{t('cap.risk')} ({entry.risks.length})</div>
-            {entry.risks.length === 0 ? <p className="text-xs text-slate-400">{t('cap.noRisk')}</p> : (
+            {entry.risks.length === 0 ? <p className="text-xs text-slate-500">{t('cap.noRisk')}</p> : (
               <ul className="space-y-1.5">{entry.risks.map((r, i) => <li key={i} className="flex gap-1.5 text-xs text-slate-600"><span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />{r}</li>)}</ul>
             )}
           </div>
@@ -677,8 +677,8 @@ function Composer({ onSubmit, t, lang }: { onSubmit: (text: string, atts: Attach
         <div className="mb-2 flex flex-wrap gap-1.5 px-1">
           {atts.map((a) => (
             <span key={a.id} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-600">
-              <FileIcon kind={a.kind} />{a.name} <span className="text-slate-400">{formatBytes(a.size)}</span>
-              <button onClick={() => setAtts((x) => x.filter((y) => y.id !== a.id))} className="text-slate-400 hover:text-rose-600">✕</button>
+              <FileIcon kind={a.kind} />{a.name} <span className="text-slate-500">{formatBytes(a.size)}</span>
+              <button onClick={() => setAtts((x) => x.filter((y) => y.id !== a.id))} className="text-slate-500 hover:text-rose-600">✕</button>
             </span>
           ))}
         </div>
@@ -696,7 +696,7 @@ function Composer({ onSubmit, t, lang }: { onSubmit: (text: string, atts: Attach
           onPaste={onPaste}
           rows={1}
           placeholder={t('asst.placeholder')}
-          className="min-h-[40px] max-h-[240px] flex-1 resize-none overflow-y-auto bg-transparent px-2 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none dark:text-slate-100"
+          className="min-h-[40px] max-h-[240px] flex-1 resize-none overflow-y-auto bg-transparent px-2 py-2 text-sm text-slate-800 placeholder:text-slate-500 focus:outline-none dark:text-slate-100"
         />
         <Button onClick={go} disabled={busy || (!input.trim() && atts.length === 0)} icon={<SendIcon />}>{t('asst.send')}</Button>
       </div>
@@ -711,7 +711,7 @@ function SettingsModal({ onClose, t }: { onClose: () => void; t: (k: string) => 
       <div role="dialog" aria-modal="true" aria-label={t('set.title')} className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{t('set.title')}</h3>
-          <button onClick={onClose} aria-label="Close" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10">✕</button>
+          <button onClick={onClose} aria-label="Close" className="rounded-md p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10">✕</button>
         </div>
 
         <div className="space-y-2">
@@ -818,7 +818,7 @@ function EmailCard({ email }: { email: { to: string; subject: string; body: stri
         )}
       </div>
       <div className="mb-1 flex items-center gap-1.5">
-        <span className="text-[11px] text-slate-400">To:</span>
+        <span className="text-[11px] text-slate-500">To:</span>
         <input value={to} onChange={(e) => setTo(e.target.value)} className="flex-1 rounded border border-slate-200 px-1.5 py-0.5 text-[11px] focus:border-brand-400 focus:outline-none" />
       </div>
       <textarea
@@ -831,7 +831,7 @@ function EmailCard({ email }: { email: { to: string; subject: string; body: stri
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <Button size="sm" variant="secondary" onClick={copy}>{L('복사', 'Copy')}</Button>
         {!sig && <span className="text-[10px] text-amber-600">{L('설정 → 이메일 서명에 이름·연락처를 등록하면 자동으로 들어갑니다', 'Add your signature in Settings → Email signature to auto-fill it')}</span>}
-        {!msReady && <span className="text-[10px] text-slate-400">{L('Microsoft 365 연결 시 실제 전송', 'Connect Microsoft 365 to send for real')}</span>}
+        {!msReady && <span className="text-[10px] text-slate-500">{L('Microsoft 365 연결 시 실제 전송', 'Connect Microsoft 365 to send for real')}</span>}
       </div>
     </div>
   )
@@ -883,7 +883,7 @@ function EmptyState({ onPick, lang, t }: { onPick: (q: string) => void; lang: 'e
       <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-lg shadow-brand-600/20"><SparkIcon big /></span>
       <h2 className="mt-4 text-lg font-bold text-slate-900">{t('asst.emptyTitle')}</h2>
       <p className="mt-1 max-w-md text-sm text-slate-500">{t('asst.emptyDesc')}</p>
-      <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t('asst.examplesHeader')}</div>
+      <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{t('asst.examplesHeader')}</div>
       <div className="mt-3 grid w-full max-w-xl grid-cols-1 gap-2">
         {EXAMPLES.map((ex, i) => (
           <button key={i} onClick={() => onPick(ex[lang])} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-sm text-slate-700 transition hover:border-brand-300 hover:bg-brand-50/50 hover:text-brand-700">{ex[lang]}</button>

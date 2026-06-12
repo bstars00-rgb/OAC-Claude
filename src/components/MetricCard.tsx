@@ -25,8 +25,8 @@ export function MetricCard({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/[0.03] dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</span>
-        {icon && <span className="text-slate-400">{icon}</span>}
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-300">{label}</span>
+        {icon && <span className="text-slate-500">{icon}</span>}
       </div>
       <div className="mt-2 flex items-end gap-2">
         <span className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{value}</span>
@@ -36,7 +36,7 @@ export function MetricCard({
           </span>
         )}
       </div>
-      {hint && <p className="mt-1 text-[11px] text-slate-400">{hint}</p>}
+      {hint && <p className="mt-1 text-[11px] text-slate-500">{hint}</p>}
     </div>
   )
 }

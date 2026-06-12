@@ -190,7 +190,7 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
           <RelationshipSearchBar list={list} onPick={onPick} placeholder={L('다른 업체·호텔·파트너 검색…', 'Search another company, hotel, partner…')} />
           {recents.items.filter((r) => r.id !== entity.id).length > 0 && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-medium text-slate-400">{L('최근', 'Recent')}</span>
+              <span className="text-[11px] font-medium text-slate-500">{L('최근', 'Recent')}</span>
               {recents.items.filter((r) => r.id !== entity.id).slice(0, 6).map((r) => (
                 <button key={r.id} onClick={() => onPick(r)} className="rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600 transition hover:border-brand-300 hover:text-brand-700 dark:bg-white/5">
                   {r.name}
@@ -214,7 +214,7 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
           <div className="flex items-center gap-3">
             <Donut value={entity.relationshipHealthScore} label={`${entity.relationshipHealthScore}`} tone={entity.relationshipHealthScore < 60 ? '#e11d48' : '#1f48f0'} />
             <div className="text-right">
-              <div className="text-[10px] uppercase tracking-wide text-slate-400">{t('l.healthScore')}</div>
+              <div className="text-[10px] uppercase tracking-wide text-slate-500">{t('l.healthScore')}</div>
               <div className="text-sm font-semibold text-slate-700">{band}</div>
             </div>
           </div>
@@ -244,7 +244,7 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
       {/* Main AI summary */}
       <InsightBox label={t('l.relSummary')} title={`${entity.name} — ${t('l.whatsHappening')}`} variant={entity.relationshipHealthScore < 60 ? 'critical' : 'ai'}>
         {entity.summary}
-        <div className="mt-2 text-xs text-slate-400">{t('l.generatedFrom')}</div>
+        <div className="mt-2 text-xs text-slate-500">{t('l.generatedFrom')}</div>
       </InsightBox>
 
       {/* Latest from the OAC Assistant */}
@@ -259,7 +259,7 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
               <li key={u.id} className="rounded-lg border border-slate-100 bg-white/70 p-2.5 dark:bg-white/5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium text-slate-800">{u.timeline.title}</span>
-                  <span className="text-[11px] text-slate-400">{formatDate(u.date)} · {daysAgo(u.date)}</span>
+                  <span className="text-[11px] text-slate-500">{formatDate(u.date)} · {daysAgo(u.date)}</span>
                 </div>
                 <p className="mt-0.5 text-xs text-slate-600">{u.summary}</p>
                 {u.detail && <p className="mt-1 line-clamp-3 whitespace-pre-line text-[11px] text-slate-500">{u.detail}</p>}
@@ -296,12 +296,12 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
             <CardHeader title={t('l.currentFocusOpp')} />
             <div className="space-y-3">
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('l.currentFocus')}</div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{t('l.currentFocus')}</div>
                 <p className="text-sm font-medium text-slate-700">{entity.currentFocus || L('아직 정리된 포커스가 없습니다.', 'No focus captured yet.')}</p>
               </div>
               {entity.opportunity && (
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('l.opportunity')}</div>
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{t('l.opportunity')}</div>
                   <p className="text-sm text-slate-600">{entity.opportunity}</p>
                 </div>
               )}
@@ -356,7 +356,7 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
       detail: u.detail ? `${u.summary}\n${u.detail.split('\n')[0]}` : u.summary,
     }))
     entries.sort((a, b) => b.date.localeCompare(a.date))
-    if (!entries.length) return <Card><p className="py-6 text-center text-sm text-slate-400">{L('아직 활동 기록이 없습니다. OAC 어시스턴트에 입력하거나 Microsoft 365를 동기화하세요.', 'No activity yet. Add notes in the assistant or sync Microsoft 365.')}</p></Card>
+    if (!entries.length) return <Card><p className="py-6 text-center text-sm text-slate-500">{L('아직 활동 기록이 없습니다. OAC 어시스턴트에 입력하거나 Microsoft 365를 동기화하세요.', 'No activity yet. Add notes in the assistant or sync Microsoft 365.')}</p></Card>
     return (
       <Card>
         <CardHeader title={L('활동 타임라인', 'Activity Timeline')} subtitle={L('메일·Teams·메모·검수·AI 업데이트 통합', 'Mail · Teams · notes · reviews · AI updates')} />
@@ -382,10 +382,10 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
         {items.length ? items.slice(0, 12).map((e) => (
           <div key={e.id} className="mb-2.5 rounded-lg border border-slate-100 p-3 last:mb-0 dark:border-white/10">
             <div className="truncate text-sm font-medium text-slate-700">{e.timeline.title}</div>
-            <div className="mt-0.5 text-[11px] text-slate-400">{e.detectedContext} · {formatDate(e.date)}</div>
+            <div className="mt-0.5 text-[11px] text-slate-500">{e.detectedContext} · {formatDate(e.date)}</div>
             <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-xs text-slate-500">{e.detail || e.summary}</p>
           </div>
-        )) : <p className="text-sm text-slate-400">{empty}</p>}
+        )) : <p className="text-sm text-slate-500">{empty}</p>}
       </Card>
     )
     return (
@@ -398,7 +398,7 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
 
   function TasksTab() {
     const todos = overlay.flatMap((u) => u.todos.map((td) => ({ ...td, entryId: u.id })))
-    if (!todos.length) return <Card><p className="py-6 text-center text-sm text-slate-400">{L('진행 중 할 일이 없습니다. 어시스턴트에 "다음주까지 법무 검토 필요" 처럼 입력하면 할 일로 잡힙니다.', 'No open to-dos. Tell the assistant a follow-up and it becomes a task.')}</p></Card>
+    if (!todos.length) return <Card><p className="py-6 text-center text-sm text-slate-500">{L('진행 중 할 일이 없습니다. 어시스턴트에 "다음주까지 법무 검토 필요" 처럼 입력하면 할 일로 잡힙니다.', 'No open to-dos. Tell the assistant a follow-up and it becomes a task.')}</p></Card>
     return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {todos.map((td) => (
@@ -406,8 +406,8 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
             <button onClick={() => store.toggleTodo(td.entryId, td.id)} className="flex w-full items-start gap-2 text-left">
               <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${td.done ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300'}`}>{td.done && <span className="text-[9px] text-white">✓</span>}</span>
               <span className="min-w-0 flex-1">
-                <span className={`text-sm font-medium ${td.done ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{td.text}</span>
-                <span className="mt-1 flex items-center gap-2 text-[11px] text-slate-400"><Badge tone={td.priority === 'High' ? 'red' : td.priority === 'Medium' ? 'amber' : 'slate'}>{td.priority}</Badge> {td.due ? `${L('마감', 'due')} ${formatDate(td.due)}` : ''}</span>
+                <span className={`text-sm font-medium ${td.done ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{td.text}</span>
+                <span className="mt-1 flex items-center gap-2 text-[11px] text-slate-500"><Badge tone={td.priority === 'High' ? 'red' : td.priority === 'Medium' ? 'amber' : 'slate'}>{td.priority}</Badge> {td.due ? `${L('마감', 'due')} ${formatDate(td.due)}` : ''}</span>
               </span>
             </button>
           </Card>
@@ -453,7 +453,7 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
               <ul className="space-y-2.5">
                 {reviewEntries.slice(0, 6).map((u) => (
                   <li key={u.id} className="rounded-lg border border-slate-100 p-2.5 dark:border-white/10">
-                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium text-slate-800">{u.timeline.title}</span><span className="text-[11px] text-slate-400">{formatDate(u.date)}</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium text-slate-800">{u.timeline.title}</span><span className="text-[11px] text-slate-500">{formatDate(u.date)}</span></div>
                     <p className="mt-0.5 text-xs text-slate-600">{u.summary}</p>
                     {u.detail && <p className="mt-1 line-clamp-3 whitespace-pre-line text-[11px] text-slate-500">{u.detail}</p>}
                   </li>
@@ -461,7 +461,7 @@ function RelationshipDetail({ entity, list, recents, onPick, navigateTo }: { ent
               </ul>
             </Card>
           ) : (
-            <Card><p className="py-4 text-center text-sm text-slate-400">{L('AI 검수/업데이트가 아직 없습니다. 어시스턴트에 "SLA 검수해줘" 등으로 요청하세요.', 'No AI reviews yet. Ask the assistant, e.g. "review the SLA".')}</p></Card>
+            <Card><p className="py-4 text-center text-sm text-slate-500">{L('AI 검수/업데이트가 아직 없습니다. 어시스턴트에 "SLA 검수해줘" 등으로 요청하세요.', 'No AI reviews yet. Ask the assistant, e.g. "review the SLA".')}</p></Card>
           )}
         </div>
         <div className="space-y-5">
@@ -576,7 +576,7 @@ function RelationshipSearchBar({
   return (
     <div ref={boxRef} className="relative">
       <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-sm transition focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-100 dark:bg-white/5">
-        <span className="text-slate-400"><SearchIcon /></span>
+        <span className="text-slate-500"><SearchIcon /></span>
         <input
           autoFocus={autoFocus}
           value={q}
@@ -584,7 +584,7 @@ function RelationshipSearchBar({
           onFocus={() => setOpen(true)}
           onKeyDown={onKey}
           placeholder={placeholder}
-          className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+          className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-500 focus:outline-none"
         />
         {q && <button onClick={() => setQ('')} className="text-slate-300 hover:text-slate-500">✕</button>}
       </div>
@@ -600,7 +600,7 @@ function RelationshipSearchBar({
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-600 to-violet-600 text-xs font-bold text-white">{initials(e.name)}</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold text-slate-800">{e.name}</span>
-                <span className="block truncate text-[11px] text-slate-400">{e.detectedContext} · {e.region}</span>
+                <span className="block truncate text-[11px] text-slate-500">{e.detectedContext} · {e.region}</span>
               </span>
               <Badge tone={bandTone[healthBand(e.relationshipHealthScore)]}>{e.relationshipHealthScore}</Badge>
             </button>
@@ -641,7 +641,7 @@ function RelationshipHub({ list, recents, onPick }: { list: Entity[]; recents: R
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 text-sm font-bold text-white">{initials(e.name)}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-slate-900">{e.name}</span>
-                  <span className="mt-0.5 block truncate text-[11px] text-slate-400">{e.detectedContext}</span>
+                  <span className="mt-0.5 block truncate text-[11px] text-slate-500">{e.detectedContext}</span>
                 </span>
                 <Badge tone={bandTone[healthBand(e.relationshipHealthScore)]} dot>{e.relationshipHealthScore}</Badge>
               </button>
@@ -655,11 +655,11 @@ function RelationshipHub({ list, recents, onPick }: { list: Entity[]; recents: R
             <div className="mb-2.5 flex items-center justify-between">
               <CardHeader title={L('최근 검색', 'Recent searches')} />
               {recentEntities.length > 0 && (
-                <button onClick={recents.clear} className="text-[11px] font-medium text-slate-400 hover:text-slate-600">{L('지우기', 'Clear')}</button>
+                <button onClick={recents.clear} className="text-[11px] font-medium text-slate-500 hover:text-slate-600">{L('지우기', 'Clear')}</button>
               )}
             </div>
             {recentEntities.length === 0 ? (
-              <p className="text-xs text-slate-400">{L('검색하면 여기에 최근 본 업체가 쌓입니다.', 'Companies you open will appear here for quick access.')}</p>
+              <p className="text-xs text-slate-500">{L('검색하면 여기에 최근 본 업체가 쌓입니다.', 'Companies you open will appear here for quick access.')}</p>
             ) : (
               <ul className="space-y-1">
                 {recentEntities.map((r) => (

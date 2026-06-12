@@ -41,7 +41,7 @@ function ProfileTrends({ profile, snaps, lang }: { profile: ImportProfile; snaps
             <div key={label} className="rounded-xl border border-slate-200 p-3 dark:border-white/10">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="text-[11px] text-slate-400">{label}</div>
+                  <div className="text-[11px] text-slate-500">{label}</div>
                   <div className="text-base font-bold tracking-tight text-slate-800">{fmt(cur, isYen(label))}</div>
                 </div>
                 {delta !== undefined && (
@@ -51,7 +51,7 @@ function ProfileTrends({ profile, snaps, lang }: { profile: ImportProfile; snaps
                 )}
               </div>
               <div className="mt-1.5">
-                {series.length > 1 ? <Sparkline data={series} width={240} height={32} tone={profile === 'booking' ? '#7c3aed' : '#0ea5e9'} /> : <div className="text-[10px] text-slate-400">{L('스냅샷이 2개 이상이면 추세선이 표시됩니다', 'Trend appears once you have 2+ snapshots')}</div>}
+                {series.length > 1 ? <Sparkline data={series} width={240} height={32} tone={profile === 'booking' ? '#7c3aed' : '#0ea5e9'} /> : <div className="text-[10px] text-slate-500">{L('스냅샷이 2개 이상이면 추세선이 표시됩니다', 'Trend appears once you have 2+ snapshots')}</div>}
               </div>
             </div>
           )

@@ -41,7 +41,7 @@ export function CardHeader({
         )}
         <div>
           <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
-          {subtitle && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
+          {subtitle && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-300">{subtitle}</p>}
         </div>
       </div>
       {action}

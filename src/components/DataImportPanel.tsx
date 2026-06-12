@@ -263,7 +263,7 @@ export function DataImportPanel() {
                 {localFolder ? (
                   <>
                     <Button size="sm" onClick={localAuto} disabled={driveBusy || busy}>{driveBusy ? L('가져오는 중…', 'Importing…') : L('자동 가져오기', 'Auto-import')}</Button>
-                    <button onClick={disconnectLocal} className="text-[11px] text-slate-400 hover:text-rose-500">{L('해제', 'Disconnect')}</button>
+                    <button onClick={disconnectLocal} className="text-[11px] text-slate-500 hover:text-rose-500">{L('해제', 'Disconnect')}</button>
                   </>
                 ) : (
                   <Button size="sm" onClick={connectLocal}>{L('로컬 폴더 연결', 'Connect local folder')}</Button>
@@ -301,7 +301,7 @@ export function DataImportPanel() {
               <button onClick={() => fileRef.current?.click()} disabled={busy} className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 py-7 text-center transition hover:border-brand-400 hover:bg-brand-50/30">
                 <UploadIcon />
                 <span className="text-sm font-medium text-slate-600">{busy ? L('읽는 중…', 'Reading…') : L('.xlsx 파일 선택', 'Choose .xlsx file')}</span>
-                <span className="text-[11px] text-slate-400">{L('파일은 브라우저에서만 처리되며 어디로도 전송되지 않습니다', 'Parsed in your browser — never uploaded anywhere')}</span>
+                <span className="text-[11px] text-slate-500">{L('파일은 브라우저에서만 처리되며 어디로도 전송되지 않습니다', 'Parsed in your browser — never uploaded anywhere')}</span>
               </button>
 
               {/* OneDrive / SharePoint folder browser */}
@@ -321,7 +321,7 @@ export function DataImportPanel() {
                       </div>
                       <div className="max-h-60 overflow-y-auto">
                         {driveEntries.length === 0 ? (
-                          <div className="p-3 text-[11px] text-slate-400">{L('이 폴더에 폴더·스프레드시트가 없어요', 'No folders or spreadsheets here')}</div>
+                          <div className="p-3 text-[11px] text-slate-500">{L('이 폴더에 폴더·스프레드시트가 없어요', 'No folders or spreadsheets here')}</div>
                         ) : (
                           driveEntries.map((e) => (
                             <button
@@ -332,33 +332,33 @@ export function DataImportPanel() {
                             >
                               <span className="shrink-0">{e.isFolder ? '📁' : '📄'}</span>
                               <span className="flex-1 truncate font-medium text-slate-700">{e.name}</span>
-                              <span className="shrink-0 text-[10px] text-slate-400">{e.isFolder ? L('폴더', 'folder') : e.lastModified}</span>
+                              <span className="shrink-0 text-[10px] text-slate-500">{e.isFolder ? L('폴더', 'folder') : e.lastModified}</span>
                             </button>
                           ))
                         )}
                       </div>
                     </div>
                   )}
-                  <p className="mt-1 text-[10px] text-slate-400">{L('“REPORT” 폴더로 들어가 주간 .xlsx를 선택하세요', 'Open your “REPORT” folder and pick the weekly .xlsx')}</p>
+                  <p className="mt-1 text-[10px] text-slate-500">{L('“REPORT” 폴더로 들어가 주간 .xlsx를 선택하세요', 'Open your “REPORT” folder and pick the weekly .xlsx')}</p>
                 </div>
               )}
 
               <div className="mt-2 text-right">
-                <button onClick={() => setOpenImport(false)} className="text-[11px] text-slate-400 hover:text-slate-600">{L('닫기', 'Close')}</button>
+                <button onClick={() => setOpenImport(false)} className="text-[11px] text-slate-500 hover:text-slate-600">{L('닫기', 'Close')}</button>
               </div>
             </div>
           ) : (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
                 <Badge tone="green" dot>{fileName}</Badge>
-                <span className="text-slate-400">{parsed.rows.length} {L('행', 'rows')} · {parsed.headers.length} {L('열', 'cols')}</span>
+                <span className="text-slate-500">{parsed.rows.length} {L('행', 'rows')} · {parsed.headers.length} {L('열', 'cols')}</span>
                 {preset === 'ohmyhotel' && <Badge tone="brand" dot>{L(`Ohmyhotel 형식 자동 인식 · ¥ · ${profile === 'checkout' ? '월 단위' : '주 단위'}`, `Ohmyhotel format detected · ¥ · ${profile === 'checkout' ? 'monthly' : 'weekly'}`)}</Badge>}
-                <button onClick={reset} className="ml-auto text-[11px] text-slate-400 hover:text-rose-500">{L('다른 파일', 'Change file')}</button>
+                <button onClick={reset} className="ml-auto text-[11px] text-slate-500 hover:text-rose-500">{L('다른 파일', 'Change file')}</button>
               </div>
 
               {preset === 'ohmyhotel' && (
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] font-medium text-slate-400">{L('이 기준으로 묶기:', 'Group by:')}</span>
+                  <span className="text-[11px] font-medium text-slate-500">{L('이 기준으로 묶기:', 'Group by:')}</span>
                   {[
                     { label: L('호텔', 'Hotel'), cands: ['Hotel Name'] },
                     { label: L('판매처(Seller)', 'Seller'), cands: ['Seller Name'] },
@@ -426,7 +426,7 @@ export function DataImportPanel() {
             const mb = bytes / 1_048_576
             const near = mb > 3.5 // localStorage is ~5MB
             return (
-              <div className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[11px] ${near ? 'bg-amber-50 text-amber-700' : 'text-slate-400'}`}>
+              <div className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[11px] ${near ? 'bg-amber-50 text-amber-700' : 'text-slate-500'}`}>
                 <span>{snapshots.length} {L('스냅샷', 'snapshots')} · {mb < 1 ? `${Math.round(bytes / 1024)}KB` : `${mb.toFixed(1)}MB`} / ~5MB</span>
                 {near && <span>⚠️ {L('용량 한계 근접 — 오래된 스냅샷을 삭제하거나 클라우드 동기화를 켜세요', 'Near limit — delete old snapshots or enable cloud sync')}</span>}
               </div>
@@ -437,13 +437,13 @@ export function DataImportPanel() {
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={s.profile === 'checkout' ? 'sky' : 'violet'} dot>{s.profile === 'checkout' ? 'Check Out' : 'Booking'}</Badge>
                 <span className="text-sm font-semibold text-slate-800">{s.periodLabel}</span>
-                <span className="text-[11px] text-slate-400">{s.groups.length} {s.mapping.dimension} · {s.rowCount} {L('행', 'rows')} · {s.fileName}</span>
-                <button onClick={() => ds.removeSnapshot(s.id)} className="ml-auto text-[11px] text-slate-400 hover:text-rose-500">{L('삭제', 'Delete')}</button>
+                <span className="text-[11px] text-slate-500">{s.groups.length} {s.mapping.dimension} · {s.rowCount} {L('행', 'rows')} · {s.fileName}</span>
+                <button onClick={() => ds.removeSnapshot(s.id)} className="ml-auto text-[11px] text-slate-500 hover:text-rose-500">{L('삭제', 'Delete')}</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {s.mapping.metrics.map((m) => (
                   <span key={m.label} className="rounded-lg bg-slate-50 px-2.5 py-1 text-[11px] dark:bg-white/5">
-                    <span className="text-slate-400">{m.label}</span> <span className="font-semibold text-slate-700">{fmt(s.totals[m.label] ?? 0)}</span>
+                    <span className="text-slate-500">{m.label}</span> <span className="font-semibold text-slate-700">{fmt(s.totals[m.label] ?? 0)}</span>
                   </span>
                 ))}
               </div>
@@ -451,7 +451,7 @@ export function DataImportPanel() {
               <div className="mt-2.5 overflow-x-auto">
                 <table className="w-full text-left text-[11px]">
                   <thead>
-                    <tr className="text-slate-400">
+                    <tr className="text-slate-500">
                       <th className="py-1 pr-3 font-medium">{s.mapping.dimension}</th>
                       <th className="py-1 pr-3 text-right font-medium">{L('건수', 'Count')}</th>
                       {s.mapping.metrics.map((m) => <th key={m.label} className="py-1 pr-3 text-right font-medium">{m.label}</th>)}
@@ -467,7 +467,7 @@ export function DataImportPanel() {
                     ))}
                   </tbody>
                 </table>
-                {s.groups.length > 8 && <div className="mt-1 text-[10px] text-slate-400">+{s.groups.length - 8} {L('개 더', 'more')}</div>}
+                {s.groups.length > 8 && <div className="mt-1 text-[10px] text-slate-500">+{s.groups.length - 8} {L('개 더', 'more')}</div>}
               </div>
             </div>
           ))}

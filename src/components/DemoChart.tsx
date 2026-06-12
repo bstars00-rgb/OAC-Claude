@@ -47,7 +47,7 @@ export function PieChart({
             <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: s.color }} />
             <span className="min-w-0 flex-1 truncate text-slate-600 dark:text-slate-300" title={s.label}>{s.label}</span>
             <span className="shrink-0 font-semibold text-slate-700 dark:text-slate-200">{s.pct.toFixed(0)}%</span>
-            <span className="w-20 shrink-0 text-right text-slate-400">{fmt(s.value)}</span>
+            <span className="w-20 shrink-0 text-right text-slate-500">{fmt(s.value)}</span>
           </li>
         ))}
       </ul>
@@ -123,7 +123,7 @@ export function BarChart({
               className="w-full max-w-[42px] rounded-t-md transition-all"
               style={{ height: Math.max(h, 3), background: `linear-gradient(to top, ${tone}, ${tone}bb)` }}
             />
-            <span className="max-w-full truncate text-[10px] text-slate-400" title={d.label}>
+            <span className="max-w-full truncate text-[10px] text-slate-500" title={d.label}>
               {d.label}
             </span>
           </div>

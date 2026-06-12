@@ -39,13 +39,13 @@ function Fallback({ error, ko, onReset }: { error: Error; ko: boolean; onReset: 
         <h2 className="mt-4 text-lg font-bold text-slate-900 dark:text-slate-100">
           {ko ? '이 화면에서 문제가 발생했어요' : 'Something went wrong on this screen'}
         </h2>
-        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-300">
           {ko
             ? '앱의 다른 부분은 정상입니다. 다시 시도하거나, 왼쪽 메뉴로 다른 화면으로 이동하세요. 저장된 데이터는 그대로 있습니다.'
             : 'The rest of the app is fine. Retry, or use the left menu to go to another screen. Your saved data is intact.'}
         </p>
         <details className="mt-3 text-left">
-          <summary className="cursor-pointer text-[11px] font-semibold text-slate-400 hover:text-slate-600">
+          <summary className="cursor-pointer text-[11px] font-semibold text-slate-500 hover:text-slate-600">
             {ko ? '오류 상세' : 'Error details'}
           </summary>
           <pre className="mt-1.5 max-h-32 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2.5 text-[11px] text-rose-600 dark:bg-white/5">{error.message}</pre>

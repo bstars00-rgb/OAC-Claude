@@ -75,7 +75,7 @@ export function Settings() {
               <select value={ai.model} onChange={(e) => ai.setModel(e.target.value)} className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none">
                 {AI_MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
               </select>
-              <p className="mt-1 text-[11px] text-slate-400">{lang === 'ko' ? 'Claude와 ChatGPT 키를 모두 저장해두면, 모델만 바꿔 언제든 둘 다 사용할 수 있어요.' : 'Save both keys once — switch the model anytime to use Claude or ChatGPT.'}</p>
+              <p className="mt-1 text-[11px] text-slate-500">{lang === 'ko' ? 'Claude와 ChatGPT 키를 모두 저장해두면, 모델만 바꿔 언제든 둘 다 사용할 수 있어요.' : 'Save both keys once — switch the model anytime to use Claude or ChatGPT.'}</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-500">Anthropic (Claude) API Key</label>
@@ -222,7 +222,7 @@ function TeamCard() {
             <Button size="sm" variant="secondary" onClick={() => join(org.role, org.orgId)} disabled={busy}>{busy ? L('동기화 중…', 'Syncing…') : L('내 데이터 전사 공유 갱신', 'Publish my data to org')}</Button>
             <Button size="sm" variant="secondary" onClick={leave}>{L('조직 나가기', 'Leave org')}</Button>
           </div>
-          <p className="text-[11px] text-slate-400">{L('팀원에게 이 조직 ID를 알려주고 "조직 참여"하게 하면 전사 화면에 모입니다.', 'Share this org ID with teammates to join — everyone’s data aggregates in Central.')}</p>
+          <p className="text-[11px] text-slate-500">{L('팀원에게 이 조직 ID를 알려주고 "조직 참여"하게 하면 전사 화면에 모입니다.', 'Share this org ID with teammates to join — everyone’s data aggregates in Central.')}</p>
         </div>
       ) : (
         <div className="mt-1 space-y-2">
@@ -350,7 +350,7 @@ function CloudSyncCard() {
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">Anon (public) key</label>
             <input value={ai.supabaseAnonKey} onChange={(e) => ai.setSupabaseAnonKey(e.target.value.trim())} placeholder="eyJhbGciOi..." className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs focus:border-brand-400 focus:outline-none" />
-            <p className="mt-1 text-[11px] text-slate-400">{L('anon 키는 공개돼도 안전합니다(RLS로 보호). service_role 키는 절대 넣지 마세요.', 'The anon key is safe to expose (RLS-protected). Never paste the service_role key.')}</p>
+            <p className="mt-1 text-[11px] text-slate-500">{L('anon 키는 공개돼도 안전합니다(RLS로 보호). service_role 키는 절대 넣지 마세요.', 'The anon key is safe to expose (RLS-protected). Never paste the service_role key.')}</p>
           </div>
         </div>
       ) : !userEmail ? (
@@ -360,7 +360,7 @@ function CloudSyncCard() {
             <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@company.com" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none" />
           </div>
           <Button size="sm" onClick={sendLink} disabled={!email.includes('@') || busy === 'link'}>{busy === 'link' ? L('전송 중…', 'Sending…') : L('매직링크 보내기', 'Send magic link')}</Button>
-          <button onClick={() => { ai.setSupabaseUrl(''); ai.setSupabaseAnonKey('') }} className="text-[11px] text-slate-400 hover:text-slate-600">{L('설정 변경', 'Edit config')}</button>
+          <button onClick={() => { ai.setSupabaseUrl(''); ai.setSupabaseAnonKey('') }} className="text-[11px] text-slate-500 hover:text-slate-600">{L('설정 변경', 'Edit config')}</button>
         </div>
       ) : (
         <div className="mt-1 space-y-2">
@@ -467,7 +467,7 @@ function BackupCard() {
         <Button size="sm" variant="secondary" onClick={() => fileRef.current?.click()}>{L('백업에서 복원', 'Restore from backup')}</Button>
       </div>
       {error && <div className="mt-2 max-w-md rounded-lg border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-700">{error}</div>}
-      <p className="mt-2 max-w-xl text-[11px] leading-relaxed text-slate-400">
+      <p className="mt-2 max-w-xl text-[11px] leading-relaxed text-slate-500">
         {L(
           'OAC는 데이터를 이 브라우저에 저장합니다(같은 브라우저면 종료 후 다시 열어도 유지). 다른 기기로 옮기거나 만일에 대비해 정기적으로 백업하세요. 보안을 위해 API 키는 백업에 포함되지 않습니다(복원 후 다시 입력).',
           'OAC stores data in this browser (it persists across restarts on the same browser). Back up regularly to move to another device or guard against loss. API keys are excluded from backups for security — re-enter them after restoring.',
@@ -521,7 +521,7 @@ function NotificationCard() {
       {perm === 'denied' && (
         <p className="mt-1 text-[11px] text-amber-600">{L('브라우저에서 알림이 차단돼 있습니다. 주소창의 사이트 설정에서 허용으로 바꿔 주세요.', 'Notifications are blocked in your browser — allow them in the site settings.')}</p>
       )}
-      <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+      <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
         {L('탭이 백그라운드여도 동작합니다. 앱을 완전히 닫으면 알림이 멈춥니다(진짜 푸시는 서버가 필요).', 'Works even when the tab is in the background. Stops if you fully close the app (true push needs a server).')}
       </p>
     </Card>
@@ -545,7 +545,7 @@ function LastSync({ L }: { L: (ko: string, en: string) => string }) {
   if (!ts) return null
   const mins = Math.floor((Date.now() - ts) / 60_000)
   const rel = mins < 1 ? L('방금', 'just now') : mins < 60 ? L(`${mins}분 전`, `${mins}m ago`) : L(`${Math.floor(mins / 60)}시간 전`, `${Math.floor(mins / 60)}h ago`)
-  return <p className="mt-1 text-[10px] text-slate-400">{L('마지막 동기화', 'Last synced')}: {rel}</p>
+  return <p className="mt-1 text-[10px] text-slate-500">{L('마지막 동기화', 'Last synced')}: {rel}</p>
 }
 
 // C-10: connect the Ohmyhotel internal DB through an MCP-over-HTTP server.
@@ -609,7 +609,7 @@ function McpCard() {
               <div key={tl.name} className="flex items-center justify-between gap-2 px-1 py-1.5">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-slate-700">{tl.name}</div>
-                  {tl.description && <div className="truncate text-[11px] text-slate-400">{tl.description}</div>}
+                  {tl.description && <div className="truncate text-[11px] text-slate-500">{tl.description}</div>}
                 </div>
                 <button onClick={() => run(tl.name)} disabled={busy} className="shrink-0 rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 disabled:opacity-50">{L('호출', 'Call')}</button>
               </div>
@@ -617,7 +617,7 @@ function McpCard() {
           </div>
         )}
         {result && <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2.5 text-[11px] text-slate-600 dark:bg-white/5 dark:text-slate-300">{result}</pre>}
-        <p className="text-[11px] text-slate-400">{L('MCP 서버가 준비되면 엔드포인트만 입력하면 됩니다. 토큰은 API 키와 동일하게 이 브라우저에만 보관됩니다.', 'Once an MCP server is ready, just enter its endpoint. The token, like the API keys, never leaves this browser.')}</p>
+        <p className="text-[11px] text-slate-500">{L('MCP 서버가 준비되면 엔드포인트만 입력하면 됩니다. 토큰은 API 키와 동일하게 이 브라우저에만 보관됩니다.', 'Once an MCP server is ready, just enter its endpoint. The token, like the API keys, never leaves this browser.')}</p>
       </div>
     </Card>
   )
@@ -750,7 +750,7 @@ function MicrosoftCard() {
                 </button>
               ))}
             </div>
-            <p className="mt-1.5 max-w-md text-[11px] leading-relaxed text-slate-400">
+            <p className="mt-1.5 max-w-md text-[11px] leading-relaxed text-slate-500">
               {L(
                 '앱이 "단일 테넌트"면 common이 막힙니다 (AADSTS50194). Azure 앱 개요의 "디렉터리(테넌트) ID"(GUID)를 여기에 붙여넣으세요. 또는 Azure 인증 설정에서 앱을 멀티테넌트로 바꾸면 common이 동작합니다.',
                 'If your app is "single tenant", common is blocked (AADSTS50194). Paste the "Directory (tenant) ID" (GUID) from your Azure app Overview here — or switch the app to multi-tenant in Azure Authentication to use common.',
@@ -765,7 +765,7 @@ function MicrosoftCard() {
         <div className="mt-1 space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-sm text-slate-700">
             <span className="font-medium">{connectedName}</span>
-            <span className="text-slate-400">·</span>
+            <span className="text-slate-500">·</span>
             <span className="text-xs text-slate-500">{GRAPH_SCOPES.join(', ')}</span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -784,14 +784,14 @@ function MicrosoftCard() {
                   <button
                     key={o.v}
                     onClick={() => ai.setMsAutoSyncMin(o.v)}
-                    className={`px-2.5 py-1 transition ${ai.msAutoSyncMin === o.v ? 'bg-brand-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50 dark:bg-transparent dark:text-slate-400'}`}
+                    className={`px-2.5 py-1 transition ${ai.msAutoSyncMin === o.v ? 'bg-brand-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50 dark:bg-transparent dark:text-slate-300'}`}
                   >
                     {L(o.ko, o.en)}
                   </button>
                 ))}
               </div>
             </div>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
+            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
               {ai.msAutoSyncMin > 0
                 ? L(`${ai.msAutoSyncMin}분마다, 그리고 탭으로 돌아오거나 인터넷이 재연결될 때 자동으로 새 메일·Teams를 가져옵니다(중복 제외). 탭을 닫았다 다시 열면 즉시 따라잡습니다. API 비용이 드는 AI 요약은 자동 동기화에서 실행하지 않습니다 — 요약은 위 수동 버튼에서.`, `Syncs every ${ai.msAutoSyncMin} min, plus instantly when you return to the tab or reconnect. Reopening the tab catches up immediately. The API-costing AI summary does NOT run on auto-sync — use the manual button.`)
                 : L('자동 동기화가 꺼져 있습니다. 간격을 선택하면 주기적으로 + 탭 복귀/재연결 시 자동으로 가져옵니다.', 'Auto-sync is off. Pick an interval to import periodically, and on tab-return / reconnect.')}
