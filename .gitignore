@@ -9,3 +9,9 @@ node_modules/.tmp
 # Claude Code local files
 .claude/
 *.tsbuildinfo
+
+# Playwright
+test-results
+playwright-report
+.playwright
+blob-report
