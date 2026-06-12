@@ -240,10 +240,10 @@ function DimensionExplorer({ L }: { L: (ko: string, en: string) => string }) {
               <button key={v.id} onClick={() => setView(v.id)} className={`px-2.5 py-1.5 transition ${view === v.id ? 'bg-brand-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50 dark:bg-transparent dark:text-slate-300'}`}>{L(v.ko, v.en)}</button>
             ))}
           </div>
-          <select value={activeDim} onChange={(e) => setDim(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs focus:border-brand-400 focus:outline-none dark:border-white/10 dark:bg-transparent">
+          <select aria-label={L('차원', 'Dimension')} value={activeDim} onChange={(e) => setDim(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs focus:border-brand-400 focus:outline-none dark:border-white/10 dark:bg-transparent">
             {dims.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
-          <select value={activeMetric} onChange={(e) => setMetricLabel(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs focus:border-brand-400 focus:outline-none dark:border-white/10 dark:bg-transparent">
+          <select aria-label={L('지표', 'Metric')} value={activeMetric} onChange={(e) => setMetricLabel(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs focus:border-brand-400 focus:outline-none dark:border-white/10 dark:bg-transparent">
             {metrics.map((m) => <option key={m.label} value={m.label}>{m.label}</option>)}
           </select>
         </div>

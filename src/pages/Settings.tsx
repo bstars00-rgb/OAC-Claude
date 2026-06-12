@@ -72,7 +72,7 @@ export function Settings() {
           <div className="mt-4 space-y-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-500">{t('set.model')}</label>
-              <select value={ai.model} onChange={(e) => ai.setModel(e.target.value)} className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none">
+              <select aria-label={t('set.model')} value={ai.model} onChange={(e) => ai.setModel(e.target.value)} className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none">
                 {AI_MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
               </select>
               <p className="mt-1 text-[11px] text-slate-500">{lang === 'ko' ? 'Claude와 ChatGPT 키를 모두 저장해두면, 모델만 바꿔 언제든 둘 다 사용할 수 있어요.' : 'Save both keys once — switch the model anytime to use Claude or ChatGPT.'}</p>

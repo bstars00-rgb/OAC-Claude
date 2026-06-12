@@ -382,7 +382,7 @@ export function DataImportPanel() {
                 </div>
                 <div>
                   <label className="mb-1 block text-[11px] font-medium text-slate-500">{L('관계 기준 컬럼 (차원)', 'Group-by column (dimension)')}</label>
-                  <select value={dimension} onChange={(e) => setDimension(e.target.value)} className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-brand-400 focus:outline-none">
+                  <select aria-label={L('관계 기준 컬럼 (차원)', 'Group-by column (dimension)')} value={dimension} onChange={(e) => setDimension(e.target.value)} className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-brand-400 focus:outline-none">
                     {parsed.headers.map((h) => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
